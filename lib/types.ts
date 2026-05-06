@@ -1,5 +1,6 @@
 export type CustomerStatus = 'active' | 'banned';
 export type Nationality = 'malaysian' | 'foreigner';
+export type Membership = 'member' | null;
 
 export interface Customer {
   id: string;
@@ -13,6 +14,7 @@ export interface Customer {
   guardian_ic: string | null;
   guardian_phone: string | null;
   status: CustomerStatus;
+  membership: Membership;
   warning_count: number;
   ban_reason: string | null;
   banned_at: string | null;

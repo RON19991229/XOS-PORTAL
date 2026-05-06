@@ -49,7 +49,13 @@ export default function CheckinPage() {
           <h1 className="font-display text-4xl md:text-5xl leading-[0.85] mb-3">
             {t(lang, 'welcome')}
           </h1>
-          <div className="h-1 w-16 bg-accent mx-auto" />
+          <div className="h-1 w-16 bg-accent mx-auto mb-5" />
+          <p className="font-display text-sm md:text-base text-bone leading-snug">
+            {t(lang, 'taglinePrimary')}
+          </p>
+          <p className="font-mono text-[11px] text-neutral-500 mt-1.5">
+            {t(lang, 'taglineSecondary')}
+          </p>
         </div>
 
         <p className="font-display text-xs tracking-[0.2em] text-neutral-500 mb-4 text-center">

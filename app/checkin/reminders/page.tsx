@@ -8,11 +8,17 @@ import { Lang, t } from '@/lib/i18n';
 import { Customer } from '@/lib/types';
 import CheckinHeader from '@/components/CheckinHeader';
 
+interface VisitStats {
+  totalVisits: number;
+  lastVisitAt: string | null;
+}
+
 export default function RemindersPage() {
   const router = useRouter();
   const supabase = createClient();
   const [lang, setLang] = useState<Lang>('en');
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [stats, setStats] = useState<VisitStats | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -26,7 +32,28 @@ export default function RemindersPage() {
       router.replace('/checkin');
       return;
     }
-    setCustomer(JSON.parse(data));
+    const c: Customer = JSON.parse(data);
+    setCustomer(c);
+
+    // Fetch visit stats (best-effort, non-blocking)
+    (async () => {
+      const { data: visits } = await supabase
+        .from('visits')
+        .select('visited_at')
+        .eq('customer_id', c.id)
+        .eq('status', 'approved')
+        .order('visited_at', { ascending: false });
+
+      if (visits && visits.length > 0) {
+        setStats({
+          totalVisits: visits.length,
+          lastVisitAt: visits[0].visited_at,
+        });
+      } else {
+        setStats({ totalVisits: 0, lastVisitAt: null });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   const handleAcknowledge = async () => {
@@ -44,7 +71,6 @@ export default function RemindersPage() {
       setLoading(false);
       // Database trigger may reject due to 30-minute cooldown
       if (insertError.message?.includes('COOLDOWN')) {
-        // Extract minutes-remaining from the message if possible
         const match = insertError.message.match(/wait (\d+) minute/);
         const remaining = match ? match[1] : '30';
         setErrorMsg(
@@ -66,11 +92,45 @@ export default function RemindersPage() {
 
   if (!customer) return null;
 
+  // Format last-visit date in user's language
+  const formatLastVisit = (iso: string) => {
+    const d = new Date(iso);
+    const datePart = d.toLocaleDateString(
+      lang === 'zh' ? 'zh-CN' : lang === 'ms' ? 'ms-MY' : 'en-MY',
+      { year: 'numeric', month: 'short', day: '2-digit', timeZone: 'Asia/Kuala_Lumpur' }
+    );
+    const timePart = d.toLocaleTimeString('en-MY', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Kuala_Lumpur',
+    });
+    return `${datePart} · ${timePart}`;
+  };
+
   return (
     <main className="min-h-screen flex flex-col bg-ink">
       <CheckinHeader />
 
       <section className="flex-1 px-5 py-8 max-w-md mx-auto w-full">
+        {/* Welcome Back card */}
+        <div className="border-2 border-accent bg-gradient-to-br from-ink-soft to-ink p-4 mb-6 text-center">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-accent">
+            // {t(lang, 'welcomeBack')}
+          </p>
+          <h2 className="font-display text-2xl md:text-3xl leading-[0.95] mt-2 mb-2">
+            {t(lang, 'welcomeBackHello')}{' '}
+            <span className="text-accent">{customer.name.toUpperCase().split(' ')[0]}</span>
+          </h2>
+          {stats && stats.lastVisitAt && (
+            <p className="font-mono text-[11px] text-neutral-400 leading-relaxed">
+              {t(lang, 'lastVisit')}: {formatLastVisit(stats.lastVisitAt)}
+              <br />
+              {t(lang, 'totalVisits')}: <span className="text-accent">{stats.totalVisits}</span>
+            </p>
+          )}
+        </div>
+
         <div className="mb-5">
           <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3">
             // {t(lang, 'gymRulesReminder')}
@@ -80,10 +140,6 @@ export default function RemindersPage() {
           </h1>
           <div className="h-1 w-16 bg-accent" />
         </div>
-
-        <p className="font-mono text-xs text-neutral-400 mb-1">
-          {t(lang, 'welcomeBack')}, <span className="text-accent">{customer.name}</span>
-        </p>
 
         {/* Rule 1: RE-RACK */}
         <div className="border-2 border-ink-line mb-4 overflow-hidden">

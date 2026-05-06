@@ -17,6 +17,7 @@ interface VisitRow {
   customer_status: 'active' | 'banned';
   warning_count: number;
   ban_reason: string | null;
+  membership: 'member' | null;
 }
 
 interface TodayListProps {
@@ -53,7 +54,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
     // Only select the columns the UI actually uses (smaller payload)
     const { data } = await supabase
       .from('todays_visits')
-      .select('id, visited_at, visit_status, customer_id, ic, name, phone, nationality, customer_status, warning_count, ban_reason');
+      .select('id, visited_at, visit_status, customer_id, ic, name, phone, nationality, customer_status, warning_count, ban_reason, membership');
     if (data) setVisits(data as VisitRow[]);
     setLoading(false);
   };
@@ -272,7 +273,12 @@ function VisitRow({
             <span className="text-xs text-neutral-400">→</span>
           </div>
         </div>
-        <div className="font-bold text-sm truncate">{nameDisplay}</div>
+        <div className="font-bold text-sm truncate flex items-center gap-1.5">
+          {visit.membership === 'member' && (
+            <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
+          )}
+          {nameDisplay}
+        </div>
         <div className="font-mono text-[11px] text-neutral-600 truncate">
           {visit.ic} · {visit.phone || '—'}
         </div>
@@ -280,7 +286,12 @@ function VisitRow({
 
       {/* Desktop: table layout */}
       <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-mono text-sm font-bold">{time}</Link>
-      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-bold text-sm truncate">{nameDisplay}</Link>
+      <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
+        {visit.membership === 'member' && (
+          <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
+        )}
+        <span className="truncate">{nameDisplay}</span>
+      </Link>
       <Link href={`${baseHref}/${visit.customer_id}`} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
         {visit.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
         {visit.ic}

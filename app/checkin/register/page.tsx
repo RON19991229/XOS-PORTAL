@@ -93,18 +93,20 @@ export default function RegisterPage() {
       return;
     }
 
-    const hasEmergencyRel = !!relationship;
-    const hasEmergencyPhone = !!emergencyPhone.digits.trim();
-    if (hasEmergencyRel !== hasEmergencyPhone) {
-      setError('Please fill both Emergency Relationship AND Phone, or leave both empty');
+    // Emergency contact is now MANDATORY (per user request 2026-05-06).
+    // Both relationship AND phone must be filled.
+    if (!relationship) {
+      setError(t(lang, 'emergencyRequired'));
       return;
     }
-    if (hasEmergencyPhone) {
-      const empPhoneError = validatePhone(emergencyPhone.code, emergencyPhone.digits);
-      if (empPhoneError) {
-        setError('Emergency: ' + empPhoneError);
-        return;
-      }
+    if (!emergencyPhone.digits.trim()) {
+      setError(t(lang, 'emergencyRequired'));
+      return;
+    }
+    const empPhoneError = validatePhone(emergencyPhone.code, emergencyPhone.digits);
+    if (empPhoneError) {
+      setError('Emergency: ' + empPhoneError);
+      return;
     }
 
     if (isMinor) {
@@ -128,9 +130,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     const fullPhone = buildPhone(phone.code, phone.digits);
-    const fullEmergencyPhone = hasEmergencyPhone
-      ? buildPhone(emergencyPhone.code, emergencyPhone.digits)
-      : null;
+    const fullEmergencyPhone = buildPhone(emergencyPhone.code, emergencyPhone.digits);
     const fullGuardianPhone = isMinor
       ? buildPhone(guardianPhone.code, guardianPhone.digits)
       : null;
@@ -222,7 +222,23 @@ export default function RegisterPage() {
           <h1 className="font-display text-4xl md:text-5xl leading-[0.85] mb-3">
             {t(lang, 'register')}
           </h1>
-          <div className="h-1 w-16 bg-accent" />
+          <div className="h-1 w-16 bg-accent mb-4" />
+
+          {/* Welcome card explaining "register once" */}
+          <div className="border-2 border-success-green bg-gradient-to-br from-ink-soft to-ink p-4 text-center">
+            <p className="font-mono text-[10px] tracking-[0.3em] text-success-green mb-2">
+              {t(lang, 'welcomeToXFitness')}
+            </p>
+            <p className="font-display text-2xl text-success-green leading-none mb-3">
+              X FITNESS
+            </p>
+            <p className="font-display text-sm text-bone leading-snug">
+              {t(lang, 'taglinePrimary')}
+            </p>
+            <p className="font-mono text-[10px] text-neutral-400 mt-1">
+              {t(lang, 'taglineSecondary')}
+            </p>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -257,12 +273,13 @@ export default function RegisterPage() {
 
           <div>
             <label className="field-label">
-              {t(lang, 'relationship')}
+              {t(lang, 'relationship')} <span className="text-danger">*</span>
             </label>
             <select
               value={relationship}
               onChange={(e) => setRelationship(e.target.value)}
               className="input-field"
+              required
             >
               <option value="">{t(lang, 'relationshipChoose')}</option>
               {RELATIONSHIPS.map((r) => (
@@ -273,7 +290,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="field-label">
-              {t(lang, 'emergencyPhone')}
+              {t(lang, 'emergencyPhone')} <span className="text-danger">*</span>
             </label>
             <PhoneInput
               value={emergencyPhone}

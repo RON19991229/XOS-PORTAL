@@ -301,6 +301,24 @@ export default function CustomerDetail({
     await fetchAll();
   };
 
+  // Toggle membership tag (admin only). NULL = no tag, 'member' = member.
+  const handleToggleMembership = async () => {
+    if (!customer) return;
+    const newValue = customer.membership === 'member' ? null : 'member';
+    setActionLoading(true);
+    const { error } = await supabase
+      .from('customers')
+      .update({ membership: newValue })
+      .eq('id', customerId);
+    if (error) {
+      alert('Failed to update membership: ' + error.message);
+    } else {
+      await logAudit('toggle_membership', { from: customer.membership, to: newValue });
+    }
+    setActionLoading(false);
+    await fetchAll();
+  };
+
   if (loading) {
     return <div className="dashboard-light min-h-screen px-6 py-8 font-mono">Loading...</div>;
   }
@@ -369,6 +387,16 @@ export default function CustomerDetail({
         <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-3 break-words">
           {customer.name.toUpperCase()}
         </h1>
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {isBanned ? (
+            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-danger text-white">✕ BANNED</span>
+          ) : (
+            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-success text-white">✓ ACTIVE</span>
+          )}
+          {customer.membership === 'member' && (
+            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-success-green text-white">⭐ MEMBER</span>
+          )}
+        </div>
         <div className="h-1 w-12 bg-accent mb-5" />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -396,6 +424,20 @@ export default function CustomerDetail({
         {isAdmin && (
           <button onClick={openEditModal} className="font-display text-sm tracking-wider px-4 py-2.5 bg-ink text-bone">
             ✎ EDIT
+          </button>
+        )}
+
+        {isAdmin && (
+          <button
+            onClick={handleToggleMembership}
+            disabled={actionLoading}
+            className={`font-display text-sm tracking-wider px-4 py-2.5 ${
+              customer.membership === 'member'
+                ? 'bg-white border-2 border-success-green text-success-green'
+                : 'bg-success-green text-white'
+            }`}
+          >
+            {customer.membership === 'member' ? '— REMOVE MEMBER TAG' : '⭐ MARK AS MEMBER'}
           </button>
         )}
 

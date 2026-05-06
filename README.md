@@ -1,7 +1,29 @@
-# X FITNESS Walk-in 系统 v2
+# X FITNESS Walk-in 系统 v2.2
 
 > 替代 Google Form 的健身房 walk-in 入场系统  
-> Next.js 14 + Supabase + Tailwind + Netlify
+> Next.js 14 + Supabase + Tailwind + Vercel/Netlify
+
+---
+
+## 🆕 v2.2 新功能 (2026-05-06)
+
+| 功能 | 说明 |
+|------|------|
+| 🟢 **Approved 满屏绿色** | 改成 #16c75b 满屏绿，远处也能看见。BANNED 保持满屏红 |
+| 👋 **Welcome / Welcome Back 标语** | 入口页 + 注册页 + 老顾客 reminders 页都加了 "Register once. Quick check-in next time. / 只需一次注册，下次快速 check-in" |
+| 📊 **老顾客统计** | Reminders 页面显示 "Hello, [姓名]" + 上次入场时间 + 总入场次数 |
+| 🚨 **Emergency 必填** | Emergency relationship + phone 现在是必填项（带红星*）。现有老顾客不受影响（admin 可后台补填） |
+| ⭐ **Membership 标签** | 默认无标签。Admin 可在 customer detail 页一键标记/取消标记会员，TodayList / CustomerList / History 显示绿色 ⭐ MEMBER 徽章 |
+| 📅 **History 页面（14 天）** | Admin 和 Staff 都能看。按日期分组（每天有总数 / 通过 / 拒绝），支持 7天 / 14天 / 30天 切换。**只 admin 能导出 CSV** |
+| 📥 **Excel 批量导入** | Admin 端新增 IMPORT 页。下载模板 → 填写 → 上传 → 预览（NEW / EXISTS / INVALID 三色） → 确认导入。失败行可下载错误报告 CSV |
+
+### v2.2 部署步骤
+
+1. **Supabase SQL Editor** 跑 `migration-v2.2-features.sql`（加 membership 列、history view、todays_visits view 重建、history RPC）
+2. 上传新代码到 GitHub
+3. Vercel 自动部署
+
+> v2.1 的两个 SQL（cooldown trigger + performance）必须先跑过。v2.2 是**增量**迁移。
 
 ---
 

@@ -23,7 +23,7 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
     // Only select the columns the list view actually shows
     let query = supabase
       .from('customers')
-      .select('id, name, ic, phone, nationality, status, warning_count')
+      .select('id, name, ic, phone, nationality, status, warning_count, membership')
       .order('created_at', { ascending: false });
     if (filter === 'active') query = query.eq('status', 'active');
     if (filter === 'banned') query = query.eq('status', 'banned');
@@ -126,7 +126,12 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
               >
                 <div className="md:hidden w-full">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-sm truncate flex-1">{c.name.toUpperCase()}</span>
+                    <span className="font-bold text-sm truncate flex-1 flex items-center gap-1.5">
+                      {c.membership === 'member' && (
+                        <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
+                      )}
+                      <span className="truncate">{c.name.toUpperCase()}</span>
+                    </span>
                     <StatusBadge customer={c} />
                   </div>
                   <div className="font-mono text-[11px] text-neutral-600 truncate">
@@ -134,9 +139,12 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
                   </div>
                 </div>
 
-                <div className="hidden md:block font-bold text-sm truncate">
-                  {c.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
-                  {c.name.toUpperCase()}
+                <div className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
+                  {c.nationality === 'foreigner' && <span className="text-accent">🌍</span>}
+                  {c.membership === 'member' && (
+                    <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
+                  )}
+                  <span className="truncate">{c.name.toUpperCase()}</span>
                 </div>
                 <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{c.ic}</div>
                 <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{c.phone}</div>

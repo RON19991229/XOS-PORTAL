@@ -23,12 +23,15 @@ export default function DashboardNav({ role, userName }: DashboardNavProps) {
   const links = role === 'admin'
     ? [
         { href: '/admin', label: 'TODAY' },
+        { href: '/admin/history', label: 'HISTORY' },
         { href: '/admin/customers', label: 'CUSTOMERS' },
         { href: '/admin/reports', label: 'REPORTS' },
+        { href: '/admin/import', label: 'IMPORT' },
         { href: '/admin/audit', label: 'AUDIT' },
       ]
     : [
         { href: '/staff', label: 'TODAY' },
+        { href: '/staff/history', label: 'HISTORY' },
         { href: '/staff/customers', label: 'CUSTOMERS' },
       ];
 

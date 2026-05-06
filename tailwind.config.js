@@ -20,6 +20,7 @@ module.exports = {
         'accent-dark': '#E6C100',
         danger: '#ff3b30',
         success: '#34c759',
+        'success-green': '#16c75b',
       },
       animation: {
         'pulse-slow': 'pulse 3s ease-in-out infinite',
