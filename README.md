@@ -5,6 +5,32 @@
 
 ---
 
+## 🚨 v2.6.1 HOTFIX (2026-05-08)
+
+**Bug**: v2.5.0 部署后，新顾客 walk in 在 Customers 列表显示 `0 visits`，即使 Today / History 页面正常显示这些 visits。
+
+**根本原因**: `trg_maintain_customer_visit_stats` trigger 默认以 `SECURITY INVOKER` 运行，继承调用者权限。顾客 check-in 时以 `anon` 角色 INSERT 到 visits 表，trigger 接着尝试 UPDATE `customers.visit_count`，但 customers 表的 RLS 只给 anon 配了 INSERT + SELECT policy（没有 UPDATE）。**Postgres 不抛 error，静默把 UPDATE 影响的行数过滤为 0** — visits 累积成功但 visit_count 永远卡 0。
+
+**修复**: trigger 函数改用 `SECURITY DEFINER` + `SET search_path = public`（防止 schema spoofing）。Migration 包含数据回填，把所有现存顾客的 visit_count 从 visits 表重新计算 — 已经被 bug 影响的顾客会立即获得正确的 count。
+
+### 部署步骤
+
+1. **Supabase SQL Editor** 跑 `migration-v2.6.1-visit-stats-rls-hotfix.sql`（idempotent，可重跑）
+2. 推 GitHub → Vercel 自动部署 (前端没变化 — 只是版本号 bump)
+3. 验证: 之前 `0 visits` 的顾客应立即显示正确次数
+
+### 验证 SQL
+
+```sql
+-- 看看回填后的 top customers
+select name, visit_count, last_visit_at
+from customers
+order by visit_count desc
+limit 10;
+```
+
+---
+
 ## 🆕 v2.6.0 新功能 (2026-05-08)
 
 | 项目 | 说明 |

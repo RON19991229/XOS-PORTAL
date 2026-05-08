@@ -17,9 +17,22 @@ alter table customers
 
 -- 2. Trigger function: maintain visit_count and last_visit_at ---
 -- Only counts approved visits (denied attempts shouldn't bump activity).
+--
+-- IMPORTANT: SECURITY DEFINER is required because the customer-facing
+-- /checkin/reminders page inserts visits as the `anon` role, but the
+-- customers table only has INSERT/SELECT policies for anon (no UPDATE).
+-- Without SECURITY DEFINER, the trigger's UPDATE silently affects 0
+-- rows due to RLS, leaving visit_count stuck at 0 (we shipped this bug
+-- in v2.5.0 — fixed in v2.6.1 hotfix).
+--
+-- SECURITY DEFINER is locked down with `set search_path = public` to
+-- prevent schema-spoofing. The function only does narrow updates with
+-- values from NEW/OLD records, so there's no path for privilege abuse.
 create or replace function maintain_customer_visit_stats()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   if (TG_OP = 'INSERT') then
