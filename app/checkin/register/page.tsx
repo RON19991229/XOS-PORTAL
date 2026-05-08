@@ -14,6 +14,7 @@ import {
 import CheckinHeader from '@/components/CheckinHeader';
 import PhoneInput from '@/components/PhoneInput';
 import TermsContent from '@/components/TermsContent';
+import ScrollHint from '@/components/ScrollHint';
 
 const RELATIONSHIPS = [
   'rel_friend',
@@ -110,9 +111,10 @@ export default function RegisterPage() {
     }
 
     if (isMinor) {
-      const gicError = validateMyIC(guardianIc);
-      if (gicError) {
-        setError('Guardian IC: ' + gicError);
+      // Same masking as the main IC field — a generic message protects against
+      // users probing which constraint failed.
+      if (validateMyIC(guardianIc) !== null) {
+        setError('Guardian: ' + t(lang, 'invalidIc'));
         return;
       }
       const gphoneError = validatePhone(guardianPhone.code, guardianPhone.digits);
@@ -378,6 +380,9 @@ export default function RegisterPage() {
         {/* Bottom spacer — see /checkin/page.tsx for rationale */}
         <div className="h-20" aria-hidden="true" />
       </section>
+
+      {/* ScrollHint — auto-hides if the page already fits in the viewport */}
+      <ScrollHint />
     </main>
   );
 }

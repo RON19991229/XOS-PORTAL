@@ -326,16 +326,120 @@ export function validatePhone(countryCode: string, digits: string): string | nul
 }
 
 /**
- * Validate Malaysian IC: must be exactly 12 digits.
+ * Malaysian IC State / Country (BP) codes.
+ *
+ * The 7th-8th digits of a 12-digit MyKad encode the holder's place of birth.
+ * Source: Jabatan Pendaftaran Negara (JPN) — official list of state and
+ * country codes, plus Sarawak's expanded ranges added per a 2016 Borneo Post
+ * confirmation from Sarawak NRD (apart from 13, 50–53 are also issued).
+ *
+ * We use this to reject typos / random digits where the BP code is invalid
+ * (e.g. 69, 70, 73, 80, 81, 94-97 are reserved/N/A).
+ *
+ * Keep these as Sets for O(1) lookup; we don't store the human-readable
+ * place names because the customer-facing UI doesn't need them — we only
+ * need a yes/no "is this a real BP code?" answer.
  */
-export function validateMyIC(ic: string): string | null {
+export const MY_STATE_BP_CODES = new Set([
+  '01','21','22','23','24',           // Johor
+  '02','25','26','27',                // Kedah
+  '03','28','29',                     // Kelantan
+  '04','30',                          // Malacca
+  '05','31','59',                     // Negeri Sembilan
+  '06','32','33',                     // Pahang
+  '07','34','35',                     // Penang
+  '08','36','37','38','39',           // Perak
+  '09','40',                          // Perlis
+  '10','41','42','43','44',           // Selangor
+  '11','45','46',                     // Terengganu
+  '12','47','48','49',                // Sabah
+  '13','50','51','52','53',           // Sarawak
+  '14','54','55','56','57',           // KL
+  '15','58',                          // Labuan
+  '16',                               // Putrajaya
+]);
+
+export const MY_COUNTRY_BP_CODES = new Set([
+  '60', // Brunei
+  '61', // Indonesia
+  '62', // Cambodia
+  '63', // Laos
+  '64', // Myanmar
+  '65', // Philippines
+  '66', // Singapore
+  '67', // Thailand
+  '68', // Vietnam
+  '71','72', // Born outside Malaysia prior to 2001
+  '74', // China
+  '75', // India
+  '76', // Pakistan
+  '77', // Saudi Arabia
+  '78', // Sri Lanka
+  '79', // Bangladesh
+  '82', // Unknown state
+  '83','84','85','86','87','88','89','90','91','92','93', // Other regions
+  '98', // Stateless
+  '99', // Refugee / Mecca / Unspecified
+]);
+
+/**
+ * Check if the 7th-8th digits of an IC are a recognised BP code.
+ */
+export function isValidBpCode(ic: string): boolean {
+  if (!/^\d{12}$/.test(ic)) return false;
+  const bp = ic.slice(6, 8);
+  return MY_STATE_BP_CODES.has(bp) || MY_COUNTRY_BP_CODES.has(bp);
+}
+
+/**
+ * IC validation error codes — useful for the import flow which surfaces
+ * the reason to admins. The CUSTOMER-facing id-input page deliberately
+ * collapses ALL of these into a single generic "invalid IC" message
+ * (i18n key `invalidIc`) so users who type random digits don't learn
+ * which constraint to bypass next.
+ */
+export type ICValidationError =
+  | { code: 'too_short_or_long'; message: string }
+  | { code: 'invalid_dob';        message: string }
+  | { code: 'invalid_bp';         message: string };
+
+/**
+ * Validate a Malaysian IC against ALL known constraints:
+ *   1. Exactly 12 digits
+ *   2. First 6 digits encode a valid past date (YYMMDD, with 00-29 → 2000s,
+ *      30-99 → 1900s)
+ *   3. 7th-8th digits are a recognised BP code (state or country of birth)
+ *
+ * NOTE: we deliberately do NOT validate the trailing 4-digit serial number
+ * via the rumoured ISO 7064 Mod 11,2 checksum, because JPN has not publicly
+ * acknowledged any checksum and we don't want to reject real ICs.
+ *
+ * Returns null if valid, otherwise an error object.
+ */
+export function validateMyICDetailed(ic: string): ICValidationError | null {
   if (!/^\d{12}$/.test(ic)) {
-    return 'Malaysian IC must be exactly 12 digits';
+    return { code: 'too_short_or_long', message: 'Malaysian IC must be exactly 12 digits' };
   }
   if (!parseICDob(ic)) {
-    return 'IC contains invalid date of birth';
+    return { code: 'invalid_dob', message: 'IC contains invalid date of birth' };
+  }
+  if (!isValidBpCode(ic)) {
+    return { code: 'invalid_bp', message: 'IC contains invalid place-of-birth code' };
   }
   return null;
+}
+
+/**
+ * Backwards-compatible string-returning version of validateMyICDetailed.
+ * Returns null if valid, or a human-readable error message string.
+ *
+ * Used by callers that just need to know yes/no + a message (e.g. the
+ * import flow). The customer-facing id-input page calls this but discards
+ * the message and shows a generic i18n string instead.
+ */
+export function validateMyIC(ic: string): string | null {
+  const err = validateMyICDetailed(ic);
+  return err ? err.message : null;
 }
 
 /**

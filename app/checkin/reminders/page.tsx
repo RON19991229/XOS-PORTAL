@@ -115,30 +115,33 @@ export default function RemindersPage() {
     <main className="min-h-screen flex flex-col bg-ink">
       <CheckinHeader />
 
-      <section className="flex-1 px-5 py-8 max-w-md mx-auto w-full">
-        {/* Welcome Back card */}
-        <div className="border-2 border-accent bg-gradient-to-br from-ink-soft to-ink p-4 mb-6 text-center">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent">
+      <section className="flex-1 px-5 py-6 max-w-md mx-auto w-full">
+        {/* HELLO, RON — compact stack (replaces the v2.5 yellow-bordered
+            card). HELLO line stays bold/big to keep the personalized feel,
+            but ditching the box saves ~110px and lets the user see the
+            CTA much sooner. visit-stats sits inline as a single mono line. */}
+        <div className="mb-5">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-1">
             // {t(lang, 'welcomeBack')}
           </p>
-          <h2 className="font-display text-2xl md:text-3xl leading-[0.95] mt-2 mb-2">
+          <h2 className="font-display text-2xl leading-none mb-2">
             {t(lang, 'welcomeBackHello')}{' '}
             <span className="text-accent">{customer.name.toUpperCase().split(' ')[0]}</span>
           </h2>
           {stats && stats.lastVisitAt && (
-            <p className="font-mono text-[11px] text-neutral-400 leading-relaxed">
+            <p className="font-mono text-[10px] text-neutral-400 leading-relaxed">
               {t(lang, 'lastVisit')}: {formatLastVisit(stats.lastVisitAt)}
-              <br />
+              {' · '}
               {t(lang, 'totalVisits')}: <span className="text-accent">{stats.totalVisits}</span>
             </p>
           )}
         </div>
 
-        <div className="mb-5">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3">
+        <div className="mb-4">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-2">
             // {t(lang, 'gymRulesReminder')}
           </p>
-          <h1 className="font-display text-3xl md:text-4xl leading-[0.9] mb-3">
+          <h1 className="font-display text-3xl md:text-4xl leading-[0.9] mb-2">
             {t(lang, 'beforeYouTrain')}
           </h1>
           <div className="h-1 w-16 bg-accent" />
@@ -162,7 +165,7 @@ export default function RemindersPage() {
         </div>
 
         {/* Rule 2: NO SLIPPERS */}
-        <div className="border-2 border-ink-line mb-4 overflow-hidden">
+        <div className="border-2 border-ink-line mb-5 overflow-hidden">
           <div className="bg-accent text-ink px-4 py-2 font-display text-xs tracking-widest flex items-center gap-2">
             ⚠ {t(lang, 'rule2')}
           </div>
@@ -178,22 +181,11 @@ export default function RemindersPage() {
           </div>
         </div>
 
-        {/* T&C reminder link — yellow dashed card */}
-        <button
-          type="button"
-          onClick={() => setShowTerms(true)}
-          className="w-full border border-dashed border-accent bg-accent/[0.05] py-3 px-4 mb-6 text-center transition-colors hover:bg-accent/10"
-        >
-          <span className="text-accent text-base">📄</span>
-          <span className="block font-mono text-[11px] tracking-[0.2em] text-accent mt-1">
-            {t(lang, 'viewTerms')}
-          </span>
-          <span className="block text-[11px] text-neutral-400 mt-1">
-            {t(lang, 'viewTermsSub')}
-          </span>
-        </button>
-
-        <div className="checkin-cta-wrap">
+        {/* CTA — comes BEFORE T&C now (Option C). The CTA is the highest
+            priority thing on this page; users have already agreed to T&C
+            at registration. data-scroll-target tells ScrollHint where to
+            scroll to on mount (so the button is visible above the fold). */}
+        <div className="checkin-cta-wrap" data-scroll-target>
           {!loading && (
             <span className="checkin-cta-finger" aria-hidden="true">👇</span>
           )}
@@ -219,6 +211,21 @@ export default function RemindersPage() {
             {errorMsg}
           </div>
         )}
+
+        {/* T&C — small underlined link below the CTA. Customers already
+            agreed at registration, so this is reference-only. Keeping it
+            visible (just less prominent) preserves the "always available"
+            promise without competing with the CTA. */}
+        <button
+          type="button"
+          onClick={() => setShowTerms(true)}
+          className="w-full mt-4 text-center text-[11px] text-neutral-400 hover:text-accent transition-colors"
+        >
+          {t(lang, 'viewTermsSub')}{' · '}
+          <span className="text-accent underline underline-offset-4 font-mono tracking-wider">
+            {t(lang, 'viewTerms')}
+          </span>
+        </button>
 
         {/* Bottom spacer — gives users a visual cue that page has ended,
             and prevents the CTA from being flush with bottom edge.

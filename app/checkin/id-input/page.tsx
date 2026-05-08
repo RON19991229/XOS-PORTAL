@@ -13,6 +13,7 @@ import {
   digitsOnly,
 } from '@/lib/utils';
 import CheckinHeader from '@/components/CheckinHeader';
+import ScrollHint from '@/components/ScrollHint';
 
 export default function IdInputPage() {
   const router = useRouter();
@@ -52,7 +53,14 @@ export default function IdInputPage() {
 
     let validationError: string | null = null;
     if (nationality === 'malaysian') {
-      validationError = validateMyIC(id);
+      // For Malaysians: validateMyIC checks length, valid DOB, AND valid BP
+      // code (place of birth, the 7th-8th digits). If ANY check fails, we
+      // show a generic message — never the specific reason — so users who
+      // type random digits don't learn which constraint to bypass next.
+      // (Admins still get specific reasons in the CSV import flow.)
+      if (validateMyIC(id) !== null) {
+        validationError = t(lang, 'invalidIc');
+      }
     } else {
       validationError = validatePassport(id);
     }
@@ -243,6 +251,9 @@ export default function IdInputPage() {
         {/* Bottom spacer — see /checkin/page.tsx for rationale */}
         <div className="h-20" aria-hidden="true" />
       </section>
+
+      {/* ScrollHint — auto-hides if the page already fits in the viewport */}
+      <ScrollHint />
     </main>
   );
 }

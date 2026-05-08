@@ -6,6 +6,7 @@ import { Lang, t } from '@/lib/i18n';
 import BrandMark from '@/components/BrandMark';
 import LanguageToggle from '@/components/LanguageToggle';
 import TaglineMarquee from '@/components/TaglineMarquee';
+import ScrollHint from '@/components/ScrollHint';
 
 export default function CheckinPage() {
   const router = useRouter();
@@ -88,6 +89,9 @@ export default function CheckinPage() {
             had ended (and not realize they could scroll). */}
         <div className="h-20" aria-hidden="true" />
       </section>
+
+      {/* ScrollHint — auto-hides if the page already fits in the viewport */}
+      <ScrollHint />
     </main>
   );
 }

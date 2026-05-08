@@ -1,7 +1,73 @@
-# X FITNESS Walk-in 系统 v2.3
+# X FITNESS Walk-in 系统 v2.6
 
 > 替代 Google Form 的健身房 walk-in 入场系统  
 > Next.js 14 + Supabase + Tailwind + Vercel
+
+---
+
+## 🆕 v2.6.0 新功能 (2026-05-08)
+
+| 项目 | 说明 |
+|------|------|
+| 🪪 **Admin 可修正 Nationality + IC/Passport** | EDIT CUSTOMER modal 不再锁定 IC。如果顾客注册时选错国籍（如马来西亚人选了 Foreigner），admin 现在可以一键修正。会自动重算 dob（马来西亚人 IC 解析），保留原本的 gender 设定。所有改动写入 audit_log，包含 before/after 值便于追踪。Staff 仍是只读权限不变。 |
+| 🛡 **Malaysian IC 防伪验证** | id-input 页面现在会拒绝乱填的 IC：除了 12 位数字 + 有效出生日期 (YYMMDD) 之外，还会验证第 7-8 位的 BP code（出生地代码）。完整支持 JPN 官方所有州属代码（含 Sarawak 13/50–53、KL 14/54–57 等扩展范围）+ 国外出生代码（60–93、98、99）。**错误时只显示通用 "请输入有效的 IC" 信息，不告诉用户为什么 fail**，以防有心人故意 try-and-error 编出能通过验证的假 IC。 |
+| 🎯 **Reminders 页 UI 精简 (Option C)** | 顾客最大反馈是「不知道 CHECK IN button 存在」。改动：(1) 删除 WELCOME BACK 大黄框 card（节省 ~110px），HELLO RON 改成紧凑文字栈 22px 大字仍醒目。(2) 删除 T&C 大黄色虚线卡片，移到 CTA **下面** 变成小 underlined link（顾客早已在注册时 agree 过，作 reference 即可）。(3) **Smart auto-scroll**：ScrollHint 自动测量 CTA 位置，scroll 到 CTA 在 viewport 65% 位置 — 不管屏幕多高，CHECK IN button 一进页面就直接看到。 |
+| 📜 **ScrollHint 全顾客端 apply** | v2.5 在 reminders 页加的 "MORE BELOW" 滚动提示现在 apply 到所有有内容的顾客端页面（/checkin, /checkin/id-input, /checkin/register, /checkin/reminders）。组件智能检测页面是否真的溢出 viewport — 短页面（如错误页、approved/banned 全屏页）不会显示 hint 也不会 auto-scroll。支持 `data-scroll-target` 属性自定义 auto-scroll 目标位置；reminders 页的 CTA 加了这个标记，其他页保留 100px fallback 行为。 |
+
+### v2.6.0 部署步骤
+
+1. 推 GitHub → Vercel 自动部署
+2. **不需要 SQL migration** — 这一版纯前端 + audit_log 字段都是已存在的 JSONB
+
+### IC 验证规则细节
+
+通过验证需满足全部 3 项：
+
+1. **格式**：恰好 12 位数字
+2. **出生日期**：第 1-6 位 YYMMDD 解析为合法过去日期（00-29 → 2000-2029，30-99 → 1930-1999；不允许未来日期）
+3. **BP code（第 7-8 位）**：必须是 JPN 已发行的合法代码
+
+**支持的州属代码**（86 个）：
+
+| 州属 | BP 代码 |
+|------|---------|
+| Johor | 01, 21, 22, 23, 24 |
+| Kedah | 02, 25, 26, 27 |
+| Kelantan | 03, 28, 29 |
+| Malacca | 04, 30 |
+| Negeri Sembilan | 05, 31, 59 |
+| Pahang | 06, 32, 33 |
+| Penang | 07, 34, 35 |
+| Perak | 08, 36, 37, 38, 39 |
+| Perlis | 09, 40 |
+| Selangor | 10, 41, 42, 43, 44 |
+| Terengganu | 11, 45, 46 |
+| Sabah | 12, 47, 48, 49 |
+| Sarawak | 13, 50, 51, 52, 53 |
+| Kuala Lumpur | 14, 54, 55, 56, 57 |
+| Labuan | 15, 58 |
+| Putrajaya | 16 |
+
+**支持的国外出生代码**：60–68（东南亚）、71–72（2001 前出生于国外）、74–79（中印巴等）、82–93（其他地区）、98（无国籍）、99（难民/麦加/未指明）
+
+**保留代码（拒绝）**：00、17–20、69–70、73、80–81、94–97 — JPN 标记为 N/A 的代码
+
+> ⚠ 注意：故意没实作传闻中的 ISO 7064 Mod 11,2 checksum，因为 JPN 从未公开承认 IC 末 4 位有 checksum，硬套规则会误伤真实顾客。
+
+---
+
+## 🆕 v2.5.0 新功能 (2026-05-07)
+
+| 项目 | 说明 |
+|------|------|
+| 📜 **Reminders 页 ScrollHint** | 顾客在 /checkin/reminders 页有时不会往下滑去看完整规则。现在会自动 scroll 100px 提示有更多内容，加上底部固定的渐变遮罩 + 跳动黄色 ▼ "MORE BELOW" 标签。一旦用户主动滚动 200px+ 或滚到底部 80px 内就自动消失 |
+| 🔔 **Today dashboard 通知** | 新顾客 check-in 时 admin/staff 的 Today 页面会有右上角 toast 卡片（最多堆叠 4 张，6 秒自动消失）+ 黄色闪光高亮新行 + Web Audio API 生成的 "ding" 提示音（OK 升调 A5+E6，DENIED 降调 A4+E4）。0 KB asset，全部 prefers-reduced-motion 友好 |
+| 🔍 **Customers 进阶筛选 + 排序** | 新增 4 行筛选：STATUS、TYPE（⭐MEMBER/WALK-IN/🇲🇾LOCAL/🌍FOREIGN）、ACTIVITY（🔥FREQUENT 10+/💤INACTIVE 30天+/✨NEW 一周内）、SORT 6 种（含 visits asc/desc, last_visit asc/desc）。新增 VISITS + LAST SEEN 列。Customer 表新增 visit_count 和 last_visit_at 字段，由 v2.5 trigger 自动维护 |
+
+### v2.5.0 部署步骤
+
+1. **Supabase SQL Editor** 跑 `migration-v2.5-visit-stats.sql` — 加 visit_count + last_visit_at 列、INSERT/UPDATE/DELETE trigger、回填现有数据、加索引（idempotent，可重跑）
+2. 推 GitHub → Vercel 自动部署
 
 ---
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Customer, Visit, Warning, CustomerNote } from '@/lib/types';
-import { formatDateTime, calcAge, COUNTRY_CODES, digitsOnly, buildPhone, validatePhone } from '@/lib/utils';
+import { formatDateTime, calcAge, COUNTRY_CODES, digitsOnly, buildPhone, validatePhone, validateMyIC, validatePassport, parseICDob } from '@/lib/utils';
 import PhoneInput from './PhoneInput';
 
 interface CustomerDetailProps {
@@ -62,6 +62,11 @@ export default function CustomerDetail({
   const [editEmergencyPhone, setEditEmergencyPhone] = useState({ code: '+60', digits: '' });
   const [editGuardianIc, setEditGuardianIc] = useState('');
   const [editGuardianPhone, setEditGuardianPhone] = useState({ code: '+60', digits: '' });
+  // Admin can correct nationality + IC/passport when wrong (e.g. Malaysian
+  // customer accidentally selected "Foreigner" at registration).
+  // Only exposed to admins — staff role shows these as read-only further down.
+  const [editNationality, setEditNationality] = useState<'malaysian' | 'foreigner'>('malaysian');
+  const [editIc, setEditIc] = useState('');
   const [editError, setEditError] = useState('');
 
   const fetchAll = async () => {
@@ -113,6 +118,8 @@ export default function CustomerDetail({
     setEditEmergencyPhone(parseStoredPhone(customer.emergency_phone));
     setEditGuardianIc(customer.guardian_ic || '');
     setEditGuardianPhone(parseStoredPhone(customer.guardian_phone));
+    setEditNationality(customer.nationality);
+    setEditIc(customer.ic);
     setEditError('');
     setShowEditModal(true);
   };
@@ -125,6 +132,33 @@ export default function CustomerDetail({
       setEditError('Name is required');
       return;
     }
+
+    // ─── Nationality + IC/Passport (admin-only) ───────────────────────
+    // The admin sees these editable fields; staff sees them read-only
+    // (we still receive the original values via state).
+    // Validate the IC/passport against its (potentially new) nationality.
+    const trimmedIc = editIc.trim();
+    if (!trimmedIc) {
+      setEditError('IC / Passport cannot be empty');
+      return;
+    }
+    if (editNationality === 'malaysian') {
+      // We surface the SPECIFIC reason here (unlike the customer-facing
+      // page) because admins legitimately need to know why a number was
+      // rejected when correcting a record.
+      const icErr = validateMyIC(trimmedIc);
+      if (icErr) {
+        setEditError('IC: ' + icErr);
+        return;
+      }
+    } else {
+      const passErr = validatePassport(trimmedIc);
+      if (passErr) {
+        setEditError('Passport: ' + passErr);
+        return;
+      }
+    }
+
     const phoneError = validatePhone(editPhone.code, editPhone.digits);
     if (phoneError) {
       setEditError(phoneError);
@@ -162,12 +196,44 @@ export default function CustomerDetail({
       }
     }
 
+    // Check IC uniqueness if changed (DB has a unique constraint anyway,
+    // but a friendly pre-check gives a better error message)
+    if (trimmedIc !== customer.ic) {
+      const { data: dupIc } = await supabase
+        .from('customers')
+        .select('id, name')
+        .eq('ic', trimmedIc)
+        .neq('id', customerId)
+        .maybeSingle();
+      if (dupIc) {
+        setActionLoading(false);
+        setEditError(`IC / Passport "${trimmedIc}" is already used by ${dupIc.name}`);
+        return;
+      }
+    }
+
     const updates: Record<string, unknown> = {
       name: editName.trim().toUpperCase(),
       phone: newPhone,
       emergency_relationship: editEmergencyRel || null,
       emergency_phone: newEmergencyPhone,
+      nationality: editNationality,
+      ic: trimmedIc,
     };
+
+    // If nationality is now malaysian, recompute dob from the IC.
+    // We do NOT touch the gender field — admins can override gender
+    // separately via the Toggle Gender UI, and we don't want to clobber
+    // an intentional manual setting just because the IC was corrected.
+    if (editNationality === 'malaysian') {
+      const dob = parseICDob(trimmedIc);
+      updates.dob = dob ? dob.toISOString().split('T')[0] : null;
+    } else {
+      // Switching to foreigner — clear the IC-derived dob.
+      // (Foreigners don't have a derivable DOB; admin will edit separately
+      //  if needed in a future feature.)
+      updates.dob = null;
+    }
 
     if (editGuardianIc.trim()) {
       updates.guardian_ic = editGuardianIc.trim();
@@ -184,11 +250,26 @@ export default function CustomerDetail({
 
     if (error) {
       setActionLoading(false);
-      setEditError('Update failed: ' + error.message);
+      // Friendly handling of unique-constraint hits at DB level (race
+      // conditions where the pre-check passed but another insert beat us)
+      if (error.code === '23505' && error.message.includes('ic')) {
+        setEditError('IC / Passport already exists in the system');
+      } else {
+        setEditError('Update failed: ' + error.message);
+      }
       return;
     }
 
-    await logAudit('edit_customer', { fields: Object.keys(updates) });
+    await logAudit('edit_customer', {
+      fields: Object.keys(updates),
+      // For nationality / IC changes, capture before-and-after for the
+      // audit trail — these are sensitive corrections.
+      ...(trimmedIc !== customer.ic && { ic_before: customer.ic, ic_after: trimmedIc }),
+      ...(editNationality !== customer.nationality && {
+        nationality_before: customer.nationality,
+        nationality_after: editNationality,
+      }),
+    });
     setShowEditModal(false);
     setActionLoading(false);
     await fetchAll();
@@ -677,12 +758,79 @@ export default function CustomerDetail({
       {showEditModal && (
         <Modal title="EDIT CUSTOMER" onClose={() => setShowEditModal(false)}>
           <div className="space-y-4">
-            <div>
-              <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">
-                {customer.nationality === 'malaysian' ? 'IC (cannot change)' : 'PASSPORT (cannot change)'}
-              </label>
-              <input value={customer.ic} disabled className="input-field bg-neutral-100" />
-            </div>
+            {/* Admin: nationality + IC/passport are editable, e.g. when a
+                Malaysian customer accidentally chose "Foreigner" at registration.
+                Staff: shown as read-only (no role check on the field — the
+                whole edit modal is hidden for staff via the trigger button). */}
+            {role === 'admin' ? (
+              <>
+                <div className="bg-accent/10 border-l-4 border-accent px-3 py-2">
+                  <p className="font-mono text-[9px] tracking-widest text-neutral-700">
+                    ⚠ ADMIN-ONLY FIELDS BELOW
+                  </p>
+                  <p className="text-[11px] text-neutral-600 mt-0.5">
+                    Changing nationality or IC/Passport rewrites the record&apos;s
+                    identity. Use only to correct registration mistakes.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">
+                    NATIONALITY *
+                  </label>
+                  <select
+                    value={editNationality}
+                    onChange={(e) => {
+                      const next = e.target.value as 'malaysian' | 'foreigner';
+                      setEditNationality(next);
+                      // When switching to malaysian, strip any non-digits
+                      // from the current IC field so the user gets a clean
+                      // canvas for the 12-digit IC.
+                      if (next === 'malaysian') {
+                        setEditIc(digitsOnly(editIc).slice(0, 12));
+                      }
+                    }}
+                    className="input-field"
+                  >
+                    <option value="malaysian">🇲🇾 Malaysian</option>
+                    <option value="foreigner">🌍 Foreigner</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">
+                    {editNationality === 'malaysian' ? 'IC NUMBER *' : 'PASSPORT *'}
+                  </label>
+                  <input
+                    value={editIc}
+                    onChange={(e) => {
+                      if (editNationality === 'malaysian') {
+                        setEditIc(digitsOnly(e.target.value).slice(0, 12));
+                      } else {
+                        setEditIc(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 20));
+                      }
+                    }}
+                    className="input-field font-mono"
+                    inputMode={editNationality === 'malaysian' ? 'numeric' : 'text'}
+                    autoCapitalize="characters"
+                    maxLength={editNationality === 'malaysian' ? 12 : 20}
+                    placeholder={editNationality === 'malaysian' ? '12 digits, no dash' : 'Passport number'}
+                  />
+                  {editNationality === 'malaysian' && (
+                    <p className="text-right text-[10px] font-mono text-neutral-500 mt-1">
+                      {editIc.length}/12
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">
+                  {customer.nationality === 'malaysian' ? 'IC (cannot change)' : 'PASSPORT (cannot change)'}
+                </label>
+                <input value={customer.ic} disabled className="input-field bg-neutral-100" />
+              </div>
+            )}
 
             <div>
               <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">
@@ -724,7 +872,7 @@ export default function CustomerDetail({
               <PhoneInput value={editEmergencyPhone} onChange={setEditEmergencyPhone} />
             </div>
 
-            {customer.nationality === 'malaysian' && (
+            {editNationality === 'malaysian' && (
               <>
                 <div>
                   <label className="font-mono text-[10px] tracking-widest text-neutral-600 block mb-1">
