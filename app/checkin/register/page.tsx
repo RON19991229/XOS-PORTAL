@@ -137,21 +137,26 @@ export default function RegisterPage() {
       ? buildPhone(guardianPhone.code, guardianPhone.digits)
       : null;
 
-    const { data: existingPhone } = await supabase
-      .from('customers')
-      .select('id, status, ic')
-      .eq('phone', fullPhone)
-      .maybeSingle();
+    // Check if phone is already registered using secure RPC.
+    // Returns only id + status — never the IC/name/etc of whoever owns
+    // that phone, so this can't be abused to look someone up by phone.
+    const { data: existingPhoneRows } = await supabase
+      .rpc('lookup_customer_by_phone', { p_phone: fullPhone });
+    const existingPhone = existingPhoneRows && existingPhoneRows.length > 0
+      ? existingPhoneRows[0]
+      : null;
 
     if (existingPhone) {
       setLoading(false);
       if (existingPhone.status === 'banned') {
-        const { data: banned } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('id', existingPhone.id)
-          .single();
-        sessionStorage.setItem('xf-customer', JSON.stringify(banned));
+        // The user typed in their own IC, so it's safe to look up by IC
+        // via the checkin RPC and route them to /banned.
+        const { data: bannedRows } = await supabase
+          .rpc('lookup_customer_for_checkin', { p_ic: ic });
+        const banned = bannedRows && bannedRows.length > 0 ? bannedRows[0] : null;
+        if (banned) {
+          sessionStorage.setItem('xf-customer', JSON.stringify(banned));
+        }
         router.push('/checkin/banned');
         return;
       }
@@ -169,7 +174,10 @@ export default function RegisterPage() {
       dob = dobDate.toISOString().split('T')[0];
     }
 
-    const { data: customer, error: insertError } = await supabase
+    // Insert the new customer. We don't use .select() here because anon
+    // has no SELECT privilege on the customers table — instead we fetch
+    // the row back via the secure RPC after a successful insert.
+    const { error: insertError } = await supabase
       .from('customers')
       .insert({
         nationality,
@@ -181,21 +189,33 @@ export default function RegisterPage() {
         emergency_phone: fullEmergencyPhone,
         guardian_ic: isMinor ? guardianIc : null,
         guardian_phone: fullGuardianPhone,
-      })
-      .select()
-      .single();
+      });
 
-    if (insertError || !customer) {
+    if (insertError) {
       setLoading(false);
-      if (insertError?.code === '23505') {
+      if (insertError.code === '23505') {
         if (insertError.message.includes('phone')) {
           setError(t(lang, 'duplicatePhone'));
         } else {
           setError(t(lang, 'duplicateIc'));
         }
+      } else if (insertError.message?.includes('RATE_LIMIT')) {
+        setError(t(lang, 'error') + ': System busy, please ask staff for help.');
       } else {
-        setError(t(lang, 'error') + ': ' + (insertError?.message || ''));
+        setError(t(lang, 'error') + ': ' + insertError.message);
       }
+      return;
+    }
+
+    // Fetch the customer we just inserted via the secure RPC.
+    // This returns only the minimal fields /checkin needs.
+    const { data: insertedRows } = await supabase
+      .rpc('lookup_customer_for_checkin', { p_ic: ic });
+    const customer = insertedRows && insertedRows.length > 0 ? insertedRows[0] : null;
+
+    if (!customer) {
+      setLoading(false);
+      setError(t(lang, 'error'));
       return;
     }
 
