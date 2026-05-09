@@ -38,12 +38,14 @@ export default function RemindersPage() {
     const c: Customer = JSON.parse(data);
     setCustomer(c);
 
-    // Fetch visit stats (best-effort, non-blocking)
+    // Fetch visit stats (best-effort, non-blocking).
+    // Filter by `ic` not `customer_id` because anon's column-level grant on
+    // visits is (ic, visited_at, status) — `customer_id` is admin-only.
     (async () => {
       const { data: visits } = await supabase
         .from('visits')
         .select('visited_at')
-        .eq('customer_id', c.id)
+        .eq('ic', c.ic)
         .eq('status', 'approved')
         .order('visited_at', { ascending: false });
 

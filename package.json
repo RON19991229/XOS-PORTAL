@@ -1,6 +1,6 @@
 {
   "name": "xfitness-walkin",
-  "version": "2.6.1",
+  "version": "2.7.2",
   "private": true,
   "scripts": {
     "dev": "next dev",

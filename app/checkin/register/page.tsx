@@ -137,23 +137,29 @@ export default function RegisterPage() {
       ? buildPhone(guardianPhone.code, guardianPhone.digits)
       : null;
 
-    const { data: existingPhone } = await supabase
-      .from('customers')
-      .select('id, status, ic')
-      .eq('phone', fullPhone)
-      .maybeSingle();
+    // Phone duplicate check via secure RPC.
+    // Returns only id + status — never the IC/name/etc of whoever owns
+    // that phone, so this can't be abused to look someone up by phone.
+    const { data: existingPhoneRows } = await supabase
+      .rpc('lookup_customer_by_phone', { p_phone: fullPhone });
+    const existingPhone = existingPhoneRows && existingPhoneRows.length > 0
+      ? existingPhoneRows[0]
+      : null;
 
     if (existingPhone) {
       setLoading(false);
       if (existingPhone.status === 'banned') {
-        const { data: banned } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('id', existingPhone.id)
-          .single();
-        sessionStorage.setItem('xf-customer', JSON.stringify(banned));
-        router.push('/checkin/banned');
-        return;
+        // The user just typed their own IC, so look them up via the checkin
+        // RPC to display the banned page. RPC returns minimal fields, but
+        // the banned page only renders name + ic — which the RPC includes.
+        const { data: bannedRows } = await supabase
+          .rpc('lookup_customer_for_checkin', { p_ic: ic });
+        const banned = bannedRows && bannedRows.length > 0 ? bannedRows[0] : null;
+        if (banned) {
+          sessionStorage.setItem('xf-customer', JSON.stringify(banned));
+          router.push('/checkin/banned');
+          return;
+        }
       }
       setError(t(lang, 'duplicatePhone'));
       return;
@@ -169,7 +175,12 @@ export default function RegisterPage() {
       dob = dobDate.toISOString().split('T')[0];
     }
 
-    const { data: customer, error: insertError } = await supabase
+    // Insert the new customer. We don't .select() back the row because anon
+    // no longer has SELECT permission on customers (PII protection — see
+    // migration-v2.7-security-hardening.sql). Instead we re-fetch the just-
+    // inserted row via the secure RPC, which returns the minimal subset
+    // needed for the rest of the /checkin/* flow.
+    const { error: insertError } = await supabase
       .from('customers')
       .insert({
         nationality,
@@ -181,21 +192,33 @@ export default function RegisterPage() {
         emergency_phone: fullEmergencyPhone,
         guardian_ic: isMinor ? guardianIc : null,
         guardian_phone: fullGuardianPhone,
-      })
-      .select()
-      .single();
+      });
 
-    if (insertError || !customer) {
+    if (insertError) {
       setLoading(false);
-      if (insertError?.code === '23505') {
+      if (insertError.code === '23505') {
         if (insertError.message.includes('phone')) {
           setError(t(lang, 'duplicatePhone'));
         } else {
           setError(t(lang, 'duplicateIc'));
         }
       } else {
-        setError(t(lang, 'error') + ': ' + (insertError?.message || ''));
+        setError(t(lang, 'error') + ': ' + insertError.message);
       }
+      return;
+    }
+
+    // Re-fetch the newly inserted customer via the RPC (read-back).
+    const { data: createdRows } = await supabase
+      .rpc('lookup_customer_for_checkin', { p_ic: ic });
+    const customer = createdRows && createdRows.length > 0 ? createdRows[0] : null;
+
+    if (!customer) {
+      // INSERT succeeded but lookup somehow returned nothing — shouldn't
+      // happen, but handle gracefully so the user sees a clear message
+      // instead of a blank page.
+      setLoading(false);
+      setError(t(lang, 'error'));
       return;
     }
 

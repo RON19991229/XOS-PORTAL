@@ -103,18 +103,22 @@ export default function IdInputPage() {
       }
     }
 
-    // Look up customer in DB
-    const { data: customer, error: dbError } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('ic', id)
-      .maybeSingle();
+    // Look up customer via secure RPC.
+    // Returns minimal fields only: id, nationality, ic, name, dob, status,
+    // membership, gender. Phone, emergency contact, and guardian info are
+    // NOT exposed to the anon role — they're only readable by authenticated
+    // staff/admin via `customers` table. The RPC matches on exact IC, so it
+    // cannot be used to enumerate or pattern-search.
+    const { data: customers, error: dbError } = await supabase
+      .rpc('lookup_customer_for_checkin', { p_ic: id });
 
     if (dbError) {
       setLoading(false);
       setError(t(lang, 'error'));
       return;
     }
+
+    const customer = customers && customers.length > 0 ? customers[0] : null;
 
     sessionStorage.setItem('xf-ic', id);
 
