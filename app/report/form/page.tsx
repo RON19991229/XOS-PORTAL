@@ -1,5 +1,14 @@
 'use client';
 
+// ===========================================================================
+// /report/form — public complaint form — WARM WHITE theme (v2.12)
+// Submit logic, honeypot, cooldown, photo compression, ref-code generation
+// and the self-describing answers payload are UNCHANGED from v2.11.1.
+// This redesign touches presentation only: white card sections, progress
+// bar, scroll reveals, chip/checkbox micro-animations, and one-tap
+// WhatsApp (urgent callout, form footer, success screen follow-up).
+// ===========================================================================
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
@@ -8,12 +17,13 @@ import {
   reportFields,
   reportCopy,
   QID,
+  WHATSAPP_URL,
   type ReportField,
   type StoredAnswer,
 } from '@/lib/report-config';
 import { safeLocal, safeSession } from '@/lib/safe-storage';
-import BrandMark from '@/components/BrandMark';
 import LanguageToggle from '@/components/LanguageToggle';
+import { ReportBrand, ShieldHeart, WaButton, WaCard, Reveal } from '@/components/ReportUI';
 
 const BUCKET = 'incident-photos';
 const MAX_DIM = 1400; // evidence photos: keep a bit more detail than mugshots
@@ -72,6 +82,9 @@ function compressImage(file: File): Promise<Blob> {
 
 type Values = Record<string, string>;
 type MultiValues = Record<string, string[]>;
+
+// Order of the four numbered section cards (matches ReportField['group']).
+const GROUP_ORDER: ReportField['group'][] = ['incident', 'person', 'followup', 'contact'];
 
 export default function ReportFormPage() {
   const router = useRouter();
@@ -134,8 +147,28 @@ export default function ReportFormPage() {
 
   const byGroup = (g: ReportField['group']) => reportFields.filter((f) => f.group === g);
 
+  // Progress bar: light up a segment once its section has any answer.
+  const qidGroup = useMemo(() => {
+    const m: Record<string, ReportField['group']> = {};
+    reportFields.forEach((f) => {
+      m[f.qid] = f.group;
+    });
+    return m;
+  }, []);
+  const groupTouched = useMemo(() => {
+    const t = new Set<ReportField['group']>();
+    Object.entries(values).forEach(([qid, v]) => {
+      if (v && v.trim() && qidGroup[qid]) t.add(qidGroup[qid]);
+    });
+    Object.entries(multi).forEach(([qid, arr]) => {
+      if (arr.length > 0 && qidGroup[qid]) t.add(qidGroup[qid]);
+    });
+    if (photoFile) t.add('person');
+    return t;
+  }, [values, multi, photoFile, qidGroup]);
+
   // -------------------------------------------------------------------------
-  // Submit
+  // Submit (unchanged from v2.11.1)
   // -------------------------------------------------------------------------
   const handleSubmit = async () => {
     setError('');
@@ -249,17 +282,17 @@ export default function ReportFormPage() {
   // -------------------------------------------------------------------------
   if (done) {
     return (
-      <main className="min-h-screen flex flex-col bg-ink">
-        <header className="flex items-center justify-between px-5 py-3 border-b border-ink-line">
-          <BrandMark size="sm" />
+      <main className="report-light min-h-screen flex flex-col">
+        <header className="rl-hdr">
+          <ReportBrand />
         </header>
-        <section className="flex-1 px-5 py-8 max-w-md mx-auto w-full text-center">
-          <div className="w-[82px] h-[82px] mx-auto mb-6 rounded-full flex items-center justify-center bg-success-green/15">
-            <div className="w-[58px] h-[58px] rounded-full bg-success-green flex items-center justify-center shadow-[0_0_26px_rgba(22,199,91,0.5)]">
+        <section className="flex-1 px-6 pt-8 pb-12 max-w-md mx-auto w-full text-center">
+          <div className="rl-okmark">
+            <div className="rl-okmark-inner">
               <svg viewBox="0 0 24 24" width="30" height="30" fill="none" aria-hidden="true">
                 <path
                   d="M5 12.5l4.5 4.5L19 7.5"
-                  stroke="#0a0a0a"
+                  stroke="#fff"
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -268,63 +301,86 @@ export default function ReportFormPage() {
             </div>
           </div>
 
-          <h1 className="font-display text-2xl leading-tight mb-4">{c.okTitle}</h1>
+          <h1 className="font-display text-[21px] leading-[1.3] mb-4 mt-0">{c.okTitle}</h1>
 
           {/* reference number — big, screenshot-friendly */}
-          <div className="bg-[linear-gradient(180deg,rgba(255,214,10,0.12),rgba(255,214,10,0.03))] border-2 border-accent rounded-2xl p-4 mb-4">
-            <div className="font-mono text-[10px] tracking-[0.2em] text-neutral-400 mb-2">
+          <div className="rl-refcard mb-3.5 mt-4">
+            <div className="font-mono text-[9.5px] tracking-[0.22em] mb-2" style={{ color: '#9A7B00' }}>
               {c.refLabel}
             </div>
-            <div className="font-display text-[34px] tracking-wider text-accent leading-none">
-              {refCode}
-            </div>
-            <div className="flex items-center justify-center gap-1.5 text-[11.5px] text-[#e8b84a] mt-2.5">
+            <div className="font-display text-[38px] tracking-[0.06em] leading-none">{refCode}</div>
+            <div className="text-[11px] font-semibold mt-2.5" style={{ color: '#9A7B00' }}>
               📸 {c.refScreenshot}
             </div>
           </div>
 
-          <div className="text-left text-[13.5px] leading-relaxed text-neutral-300 bg-ink-soft border border-ink-line rounded-xl p-4 mb-2">
+          <div
+            className="text-left text-[12.5px] leading-[1.7] rounded-2xl p-4 mb-2"
+            style={{
+              background: 'var(--rl-card)',
+              border: '1px solid var(--rl-line)',
+              boxShadow: 'var(--rl-shadow)',
+              color: '#57504A',
+            }}
+          >
             {c.okMsg}
           </div>
-          <p className="text-[12px] text-neutral-400 mb-6 leading-relaxed">{c.refFollowUp}</p>
+          <p className="text-[12px] mb-6 leading-relaxed" style={{ color: 'var(--rl-muted)' }}>
+            {c.refFollowUp}
+          </p>
 
           {/* what happens next */}
-          <div className="text-left mb-6">
-            <div className="font-mono text-[10px] tracking-[0.2em] text-neutral-500 mb-4">
+          <div className="text-left mb-5 px-0.5">
+            <div className="font-mono text-[9.5px] tracking-[0.2em] mb-3.5" style={{ color: 'var(--rl-faint)' }}>
               {c.stepsTitle}
             </div>
             {c.steps.map((s, i) => (
-              <div key={i} className="flex gap-3.5 mb-4 relative">
-                <div
-                  className={`w-[26px] h-[26px] flex-shrink-0 rounded-full flex items-center justify-center font-display text-[11px] ${
-                    i === 0
-                      ? 'bg-success-green text-ink'
-                      : 'bg-ink border-2 border-accent text-accent'
-                  }`}
-                >
-                  {i === 0 ? '✓' : i + 1}
-                </div>
-                {i < c.steps.length - 1 && (
-                  <span className="absolute left-[12px] top-[26px] w-0.5 h-[calc(100%-6px)] bg-ink-line" />
-                )}
+              <div key={i} className={`rl-step flex gap-3.5 relative pb-4 ${i === 0 ? 'done' : ''}`}>
+                {i < c.steps.length - 1 && <span className="rl-step-ln" />}
+                <span className="rl-step-bub">{i === 0 ? '✓' : i + 1}</span>
                 <div>
-                  <h5 className="font-body font-bold text-[13px]">{s.h}</h5>
-                  <p className="text-[11.5px] text-neutral-400 leading-snug">{s.p}</p>
+                  <h5 className="font-bold text-[13px] m-0 mb-0.5 mt-0.5">{s.h}</h5>
+                  <p className="text-[11.5px] leading-snug m-0" style={{ color: 'var(--rl-muted)' }}>
+                    {s.p}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
+          {/* WhatsApp follow-up with the reference number prefilled */}
           <div
-            className="text-[12px] leading-relaxed text-neutral-300 bg-[rgba(255,180,168,0.06)] border border-[rgba(255,180,168,0.25)] rounded-xl p-3.5 mb-8 [&_b]:text-[#ffb4a8]"
+            className="text-left rounded-2xl p-4 mb-4"
+            style={{
+              background: 'linear-gradient(135deg,#F0FBF4,#E7F8EE)',
+              border: '1.5px solid rgba(37,211,102,.35)',
+            }}
+          >
+            <h4 className="m-0 mb-1 text-[13px] font-bold">{c.waFollowTitle}</h4>
+            <p className="m-0 mb-3 text-[11.5px] leading-[1.55]" style={{ color: 'var(--rl-muted)' }}>
+              {c.waFollowSub}
+            </p>
+            <WaButton
+              href={WHATSAPP_URL}
+              prefill={c.waFollowPrefill.replace('{ref}', refCode)}
+              size="full"
+            >
+              {c.waFollowBtn} · {refCode}
+            </WaButton>
+          </div>
+
+          <div
+            className="text-[12px] leading-relaxed rounded-xl p-3.5 mb-7 text-left [&_b]:font-bold"
+            style={{
+              background: 'rgba(255,138,115,0.08)',
+              border: '1px solid rgba(255,138,115,0.35)',
+              color: '#8C5040',
+            }}
             dangerouslySetInnerHTML={{ __html: c.okFoot }}
           />
 
-          <button
-            onClick={() => router.push('/')}
-            className="font-display text-sm tracking-wider px-6 py-3 border-2 border-ink-line text-neutral-300 hover:border-accent hover:text-accent transition-colors"
-          >
-            {c.back} →
+          <button onClick={() => router.push('/')} className="rl-backbtn">
+            ← {c.back}
           </button>
 
           <div className="h-16" aria-hidden="true" />
@@ -334,7 +390,7 @@ export default function ReportFormPage() {
   }
 
   // -------------------------------------------------------------------------
-  // Field renderer
+  // Field renderer (same config-driven types as v2.11.1, warm-white styling)
   // -------------------------------------------------------------------------
   const renderField = (f: ReportField) => {
     const label = f.label[lang];
@@ -343,27 +399,25 @@ export default function ReportFormPage() {
     const isOptionalContact = f.group === 'contact';
 
     const labelEl = (
-      <label className="field-label">
+      <label className="rl-label">
         {label}{' '}
         {f.required ? (
-          <span className="text-danger">*</span>
+          <span style={{ color: 'var(--rl-danger)' }}>*</span>
         ) : isOptionalContact ? (
-          <span className="text-neutral-600 font-mono font-normal tracking-normal normal-case">
-            · {c.optional}
-          </span>
+          <span className="rl-label-opt">· {c.optional}</span>
         ) : null}
       </label>
     );
 
     if (f.type === 'textarea') {
       return (
-        <div className="mb-5" key={f.qid}>
+        <div className="mb-[18px]" key={f.qid}>
           {labelEl}
-          {hint && <p className="text-[11.5px] text-neutral-500 mb-2 leading-snug">{hint}</p>}
+          {hint && <p className="rl-hint">{hint}</p>}
           <textarea
             value={values[f.qid] ?? ''}
             onChange={(e) => setVal(f.qid, e.target.value)}
-            className="input-field min-h-[90px] resize-y"
+            className="rl-input"
           />
         </div>
       );
@@ -371,16 +425,16 @@ export default function ReportFormPage() {
 
     if (f.type === 'text' || f.type === 'tel' || f.type === 'date' || f.type === 'time') {
       return (
-        <div className="mb-5" key={f.qid}>
+        <div className="mb-[18px]" key={f.qid}>
           {labelEl}
-          {hint && <p className="text-[11.5px] text-neutral-500 mb-2 leading-snug">{hint}</p>}
+          {hint && <p className="rl-hint">{hint}</p>}
           <input
             type={f.type === 'tel' ? 'tel' : f.type}
             inputMode={f.type === 'tel' ? 'tel' : undefined}
             value={values[f.qid] ?? ''}
             onChange={(e) => setVal(f.qid, e.target.value)}
             placeholder={ph}
-            className="input-field"
+            className="rl-input"
           />
         </div>
       );
@@ -388,10 +442,10 @@ export default function ReportFormPage() {
 
     if (f.type === 'radio') {
       return (
-        <div className="mb-5" key={f.qid}>
+        <div className="mb-[18px]" key={f.qid}>
           {labelEl}
-          {hint && <p className="text-[11.5px] text-neutral-500 mb-2 leading-snug">{hint}</p>}
-          <div className="flex gap-2 flex-wrap">
+          {hint && <p className="rl-hint">{hint}</p>}
+          <div className="rl-chips">
             {(f.options ?? []).map((o) => {
               const sel = values[f.qid] === o.value;
               return (
@@ -399,21 +453,23 @@ export default function ReportFormPage() {
                   type="button"
                   key={o.value}
                   onClick={() => setVal(f.qid, sel ? '' : o.value)}
-                  className={`flex-1 min-w-[88px] py-3 px-2 border-2 text-[13px] transition-colors rounded-lg ${
-                    sel
-                      ? 'border-accent bg-accent/10 text-accent'
-                      : 'border-ink-line bg-ink-soft text-neutral-300 hover:border-neutral-600'
-                  }`}
+                  className={`rl-chip ${sel ? 'on' : ''}`}
                 >
                   {o.label[lang]}
                 </button>
               );
             })}
           </div>
-          {f.qid === QID.urgency && values[f.qid] === 'Happening now' && (
-            <div className="mt-3 flex gap-2.5 items-start bg-danger/10 border-2 border-danger/50 rounded-lg p-3.5">
-              <span className="text-lg leading-none mt-0.5">⚠️</span>
-              <p className="text-[12.5px] leading-relaxed text-[#ffb4a8]">{c.urgentNow}</p>
+          {f.qid === QID.urgency && (
+            <div className={`rl-urgent ${values[f.qid] === 'Happening now' ? 'show' : ''}`}>
+              <div className="rl-urgent-inner">
+                <p>⚠️ {c.urgentNow}</p>
+                <div className="mt-3">
+                  <WaButton href={WHATSAPP_URL} prefill={c.waUrgentPrefill} size="full">
+                    {c.waUrgentBtn}
+                  </WaButton>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -423,13 +479,13 @@ export default function ReportFormPage() {
     if (f.type === 'select') {
       const showOther = f.allowOther && values[f.qid] === 'Other';
       return (
-        <div className="mb-5" key={f.qid}>
+        <div className="mb-[18px]" key={f.qid}>
           {labelEl}
-          {hint && <p className="text-[11.5px] text-neutral-500 mb-2 leading-snug">{hint}</p>}
+          {hint && <p className="rl-hint">{hint}</p>}
           <select
             value={values[f.qid] ?? ''}
             onChange={(e) => setVal(f.qid, e.target.value)}
-            className="input-field"
+            className="rl-input"
           >
             <option value="">—</option>
             {(f.options ?? []).map((o) => (
@@ -444,7 +500,7 @@ export default function ReportFormPage() {
               value={otherText[f.qid] ?? ''}
               onChange={(e) => setOtherText((p) => ({ ...p, [f.qid]: e.target.value }))}
               placeholder={c.otherPlaceholder}
-              className="input-field mt-2"
+              className="rl-input mt-2"
             />
           )}
         </div>
@@ -454,10 +510,10 @@ export default function ReportFormPage() {
     if (f.type === 'multiselect') {
       const chosen = multi[f.qid] ?? [];
       return (
-        <div className="mb-5" key={f.qid}>
+        <div className="mb-[18px]" key={f.qid}>
           {labelEl}
-          {hint && <p className="text-[11.5px] text-neutral-500 mb-2 leading-snug">{hint}</p>}
-          <div className="flex flex-col gap-2">
+          {hint && <p className="rl-hint">{hint}</p>}
+          <div className="rl-checks">
             {(f.options ?? []).map((o) => {
               const sel = chosen.includes(o.value);
               return (
@@ -465,30 +521,20 @@ export default function ReportFormPage() {
                   type="button"
                   key={o.value}
                   onClick={() => toggleMulti(f.qid, o.value)}
-                  className={`flex items-center gap-3 py-3 px-3.5 border-2 text-[13.5px] text-left transition-colors rounded-lg ${
-                    sel
-                      ? 'border-accent bg-accent/10'
-                      : 'border-ink-line bg-ink-soft hover:border-neutral-600'
-                  }`}
+                  className={`rl-checkrow ${sel ? 'on' : ''}`}
                 >
-                  <span
-                    className={`w-[18px] h-[18px] flex-shrink-0 border-2 rounded flex items-center justify-center ${
-                      sel ? 'border-accent bg-accent text-ink' : 'border-neutral-600'
-                    }`}
-                  >
-                    {sel && (
-                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none">
-                        <path
-                          d="M5 12.5l4.5 4.5L19 7.5"
-                          stroke="currentColor"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
+                  <span className="rl-checkbox">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" aria-hidden="true">
+                      <path
+                        d="M5 12.5l4.5 4.5L19 7.5"
+                        stroke="#FFD60A"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </span>
-                  <span className={sel ? 'text-accent' : 'text-neutral-200'}>{o.label[lang]}</span>
+                  <span>{o.label[lang]}</span>
                 </button>
               );
             })}
@@ -499,7 +545,7 @@ export default function ReportFormPage() {
               value={otherText[f.qid] ?? ''}
               onChange={(e) => setOtherText((p) => ({ ...p, [f.qid]: e.target.value }))}
               placeholder={c.otherPlaceholder}
-              className="input-field mt-2"
+              className="rl-input mt-2"
             />
           )}
         </div>
@@ -511,44 +557,53 @@ export default function ReportFormPage() {
 
   const hasPhoto = !!photoFile;
 
+  // Section card metadata: [title, small tag]
+  const secMeta: Record<ReportField['group'], { t: string; opt: string | null }> = {
+    incident: { t: c.sec1, opt: null },
+    person: { t: c.sec2, opt: c.secAllOptional },
+    followup: { t: c.sec3, opt: c.secAllOptional },
+    contact: { t: c.sec4, opt: c.secFullyOptional },
+  };
+
   // -------------------------------------------------------------------------
   // Form
   // -------------------------------------------------------------------------
   return (
-    <main className="min-h-screen flex flex-col bg-ink">
-      <header className="flex items-center justify-between px-5 py-3 border-b border-ink-line">
-        <BrandMark size="sm" />
-        <LanguageToggle current={lang} onChange={handleLang} />
+    <main className="report-light min-h-screen flex flex-col">
+      <header className="rl-hdr">
+        <ReportBrand />
+        <LanguageToggle current={lang} onChange={handleLang} variant="light" />
       </header>
 
       {/* HERO — warm, supportive */}
-      <div className="px-5 pt-7 pb-5 text-center border-b border-ink-line bg-[radial-gradient(120%_80%_at_50%_0%,rgba(255,180,168,0.10),rgba(255,214,10,0.04)_45%,transparent_75%)]">
-        <svg width="52" height="52" viewBox="0 0 48 48" fill="none" className="mx-auto mb-3.5" aria-hidden="true">
-          <path
-            d="M24 4l16 6v11c0 10-6.8 18.3-16 21-9.2-2.7-16-11-16-21V10l16-6z"
-            fill="rgba(255,214,10,.10)"
-            stroke="#FFD60A"
-            strokeWidth="2"
-          />
-          <path
-            d="M24 20.5c-1.6-3-6.5-2.6-6.5 1.4 0 3 3.4 5.3 6.5 7.6 3.1-2.3 6.5-4.6 6.5-7.6 0-4-4.9-4.4-6.5-1.4z"
-            fill="#ffb4a8"
-          />
-        </svg>
-        <p className="font-body font-semibold text-[19px] leading-snug text-[#f3e9e7] max-w-[320px] mx-auto">
+      <div className="rl-hero" style={{ padding: '26px 24px 20px' }}>
+        <div className="rl-rise rl-d1 inline-block">
+          <ShieldHeart size={56} />
+        </div>
+        <h1 className="rl-rise rl-d2 font-bold text-[17px] leading-snug m-0 max-w-[320px] mx-auto">
           {c.heroQ}
-        </p>
-        <p className="font-display text-[22px] leading-tight text-accent mt-1.5">{c.heroHelp}</p>
-        <p className="text-[12.5px] leading-relaxed text-neutral-400 mt-3.5 max-w-[300px] mx-auto">
+        </h1>
+        <div className="rl-rise rl-d3 mt-1.5">
+          <span className="rl-shout text-[21px] leading-tight">
+            {c.heroHelp}
+            <span className="rl-hl" style={{ animationDelay: '0.35s' }} />
+          </span>
+        </div>
+        <p
+          className="rl-rise rl-d4 text-[12.5px] leading-relaxed max-w-[300px] mx-auto mt-3 mb-0"
+          style={{ color: 'var(--rl-muted)' }}
+        >
           {c.heroReassure}
         </p>
-        <div className="flex items-center justify-center gap-2 mt-4 font-mono text-[10px] tracking-wider text-success-green">
-          <span className="w-1.5 h-1.5 rounded-full bg-success-green shadow-[0_0_8px_#16c75b]" />
-          {c.trust}
+        <div className="rl-rise rl-d5 mt-3.5">
+          <span className="rl-trust">
+            <span className="rl-trust-dot" />
+            {c.trust}
+          </span>
         </div>
       </div>
 
-      <section className="flex-1 px-5 py-6 max-w-md mx-auto w-full">
+      <section className="flex-1 px-[18px] pb-12 max-w-md mx-auto w-full">
         {/* honeypot — visually hidden, off-screen; real users never fill it */}
         <input
           type="text"
@@ -560,110 +615,126 @@ export default function ReportFormPage() {
           className="absolute -left-[9999px] w-px h-px opacity-0"
         />
 
-        {error && (
-          <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider mb-5 rounded-lg animate-shake">
-            {error}
-          </div>
-        )}
-
-        {/* GROUP: incident */}
-        <div className="mb-6">
-          <div className="font-mono text-[10px] tracking-[0.22em] text-accent mb-2">{c.firstKick}</div>
-          <div className="h-[3px] w-11 bg-accent rounded" />
+        {/* progress — lights up as each section gets an answer */}
+        <div className="rl-stepbar">
+          {GROUP_ORDER.map((g) => (
+            <span key={g} className={groupTouched.has(g) ? 'fill' : ''}>
+              <i />
+            </span>
+          ))}
         </div>
-        {byGroup('incident').map(renderField)}
 
-        {/* GROUP: person (+ photo) */}
-        <div className="bg-[linear-gradient(180deg,rgba(255,214,10,0.04),transparent)] border-2 border-ink-line rounded-xl p-4 mb-6">
-          <div className="font-body font-bold text-[13px] text-accent mb-4 flex items-center gap-2">
-            <span>👤</span>
-            {c.personKick}
-          </div>
-          {byGroup('person').map(renderField)}
+        {error && <div className="rl-error animate-shake mb-4">{error}</div>}
 
-          {/* photo uploader lives inside the person description */}
-          <input ref={fileRef} type="file" accept="image/*" onChange={onPhoto} className="hidden" />
-          <div className="mb-0">
-            <label className="field-label">
-              {c.addPhoto}{' '}
-              <span className="text-neutral-600 font-mono font-normal tracking-normal normal-case">
-                · {c.optional}
-              </span>
-            </label>
-            {hasPhoto ? (
-              <div className="border-[1.5px] border-success-green bg-success-green/5 rounded-xl p-3 flex items-center gap-3">
-                <span className="font-display text-xl leading-none text-success-green">✓</span>
-                <span className="flex-1 min-w-0 font-body text-[12px] text-success-green truncate">
-                  {c.photoChosen} · {photoName}
-                </span>
-                <button
-                  type="button"
-                  onClick={removePhoto}
-                  className="flex-shrink-0 font-mono text-[10px] tracking-wider px-2.5 py-1.5 border border-danger/50 text-danger rounded-md hover:bg-danger/10 transition-colors"
-                >
-                  ✕ {c.removePhoto}
-                </button>
+        {GROUP_ORDER.map((g, gi) => (
+          <Reveal key={g}>
+            <section className="rl-sec">
+              <div className="rl-kick">
+                <span className="rl-kick-n">{gi + 1}</span>
+                <h3 className="rl-kick-t m-0">{secMeta[g].t}</h3>
+                {secMeta[g].opt && <span className="rl-kick-opt">{secMeta[g].opt}</span>}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={pickPhoto}
-                className="w-full border-[1.5px] border-dashed border-ink-line bg-ink-soft text-neutral-400 hover:border-accent hover:text-accent rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors"
-              >
-                <span className="font-display text-2xl leading-none">+</span>
-                <span className="font-body text-[11.5px] font-medium">{c.photoCap}</span>
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* GROUP: followup */}
-        {byGroup('followup').map(renderField)}
+              {byGroup(g).map(renderField)}
 
-        {/* GROUP: contact */}
-        <div className="mt-7 mb-5">
-          <div className="font-mono text-[10px] tracking-[0.22em] text-accent mb-2">
-            {c.contactKick}
-          </div>
-          <div className="h-[3px] w-11 bg-accent rounded" />
-        </div>
-        {byGroup('contact').map(renderField)}
+              {/* photo uploader lives at the end of the person section */}
+              {g === 'person' && (
+                <>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={onPhoto}
+                    className="hidden"
+                  />
+                  <div>
+                    <label className="rl-label">
+                      {c.addPhoto} <span className="rl-label-opt">· {c.optional}</span>
+                    </label>
+                    {hasPhoto ? (
+                      <div className="rl-photo-got">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" fill="#0FA958" />
+                          <path
+                            d="M7.5 12.5l3 3 6-6.5"
+                            stroke="#fff"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <span
+                          className="flex-1 min-w-0 text-[12px] font-semibold truncate"
+                          style={{ color: 'var(--rl-green)' }}
+                        >
+                          {c.photoChosen} · {photoName}
+                        </span>
+                        <button type="button" onClick={removePhoto} className="rl-photo-rm">
+                          ✕ {c.removePhoto}
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={pickPhoto} className="rl-photo-drop">
+                        <span className="font-display text-[22px] leading-none">+</span>
+                        <span className="text-[11.5px] font-semibold">{c.photoCap}</span>
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+          </Reveal>
+        ))}
 
         {/* NOTICE */}
-        <div className="bg-success-green/[0.06] border-[1.5px] border-success-green/35 rounded-xl p-4 my-6">
-          <h4 className="font-body font-bold text-[12px] text-success-green mb-2.5 flex items-center gap-1.5">
-            🛡 {c.noticeH}
-          </h4>
-          <ul className="space-y-1.5">
-            {c.notice.map((n, i) => (
-              <li key={i} className="text-[11.5px] text-neutral-400 leading-snug pl-4 relative">
-                <span className="absolute left-0 text-success-green text-[10px]">✓</span>
-                {n}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <Reveal>
+          <div className="rl-notice mb-[18px] mt-1">
+            <h4
+              className="m-0 mb-2.5 text-[12.5px] font-bold flex items-center gap-1.5"
+              style={{ color: 'var(--rl-green)' }}
+            >
+              🛡 {c.noticeH}
+            </h4>
+            <ul className="m-0 p-0 list-none space-y-1.5">
+              {c.notice.map((n, i) => (
+                <li key={i} className="rl-notice-li">
+                  {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
 
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="btn-primary rounded-xl flex items-center justify-center gap-2"
+        <Reveal>
+          <button type="button" onClick={handleSubmit} disabled={submitting} className="rl-submit">
+            {submitting ? (
+              <span className="flex gap-1.5">
+                <span className="loading-dot inline-block w-2 h-2 bg-accent rounded-full" />
+                <span className="loading-dot inline-block w-2 h-2 bg-accent rounded-full" />
+                <span className="loading-dot inline-block w-2 h-2 bg-accent rounded-full" />
+              </span>
+            ) : (
+              <>{c.submit} →</>
+            )}
+          </button>
+          <p className="text-center text-[11px] mt-2.5 leading-relaxed" style={{ color: 'var(--rl-muted)' }}>
+            {c.submitSub}
+          </p>
+        </Reveal>
+
+        {/* WhatsApp — rather talk it through? */}
+        <Reveal className="mt-4">
+          <WaCard title={c.waRatherTitle} sub={c.waRatherSub} cta={c.waChat} href={WHATSAPP_URL} />
+        </Reveal>
+
+        <p
+          className="text-center text-[9.5px] mt-4 leading-[1.7] px-2"
+          style={{ color: 'var(--rl-faint)' }}
         >
-          {submitting ? (
-            <span className="flex gap-1.5">
-              <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-              <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-              <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-            </span>
-          ) : (
-            <>{c.submit} →</>
-          )}
-        </button>
-        <p className="text-center text-[11px] text-neutral-500 mt-3 leading-relaxed">{c.submitSub}</p>
-        <p className="text-center text-[10px] text-neutral-600 mt-4 leading-relaxed px-2">{c.pdpa}</p>
+          {c.pdpa}
+        </p>
 
-        <div className="h-16" aria-hidden="true" />
+        <div className="h-14" aria-hidden="true" />
       </section>
     </main>
   );

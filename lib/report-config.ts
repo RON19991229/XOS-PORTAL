@@ -32,6 +32,12 @@
 
 import { Lang } from './i18n';
 
+// ---------------------------------------------------------------------------
+// Official WhatsApp — one-tap chat with management (shown on all /report
+// pages). Change the number here if it ever changes.
+// ---------------------------------------------------------------------------
+export const WHATSAPP_URL = 'https://wa.me/601172603994';
+
 type L = Record<Lang, string>;
 
 export type ReportFieldType =
@@ -354,10 +360,25 @@ export interface ReportCopy {
   heroHelp: string;
   heroReassure: string;
   trust: string;
-  // section kickers
-  firstKick: string;
-  personKick: string;
-  contactKick: string;
+  // section cards (numbered 1-4 on the warm-white form)
+  sec1: string;
+  sec2: string;
+  sec3: string;
+  sec4: string;
+  secAllOptional: string;   // small tag on cards 2 & 3
+  secFullyOptional: string; // small tag on card 4
+  // WhatsApp — one-tap chat with management
+  waTalkTitle: string;      // landing card title
+  waTalkSub: string;        // landing card subtitle
+  waChat: string;           // small CHAT button
+  waRatherTitle: string;    // form-bottom card title
+  waRatherSub: string;      // form-bottom card subtitle
+  waUrgentBtn: string;      // button inside the "happening now" callout
+  waUrgentPrefill: string;  // prefilled WhatsApp message (urgent)
+  waFollowTitle: string;    // success-screen card title
+  waFollowSub: string;      // success-screen card subtitle
+  waFollowBtn: string;      // success-screen button (ref code appended)
+  waFollowPrefill: string;  // prefilled follow-up message; {ref} = reference no.
   // person / photo
   addPhoto: string;
   photoCap: string;
@@ -405,9 +426,23 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     heroReassure:
       'If something happened at X FITNESS that made you feel unsafe or uncomfortable, please tell us. We take every report seriously.',
     trust: '100% CONFIDENTIAL \u00b7 SEEN BY OUR MANAGEMENT ONLY',
-    firstKick: '// FIRST, LET US KNOW WHAT HAPPENED TO YOU',
-    personKick: 'Description of the person involved',
-    contactKick: '// YOUR DETAILS (100% OPTIONAL)',
+    sec1: 'WHAT HAPPENED TO YOU',
+    sec2: 'THE PERSON INVOLVED',
+    sec3: 'A FEW MORE THINGS',
+    sec4: 'YOUR DETAILS',
+    secAllOptional: 'ALL OPTIONAL',
+    secFullyOptional: '100% OPTIONAL',
+    waTalkTitle: 'Prefer to talk to a person?',
+    waTalkSub: 'WhatsApp our management directly.',
+    waChat: 'CHAT',
+    waRatherTitle: 'Rather talk it through?',
+    waRatherSub: 'You can WhatsApp management instead of using this form.',
+    waUrgentBtn: 'WHATSAPP US NOW',
+    waUrgentPrefill: 'URGENT - I need help at X FITNESS right now',
+    waFollowTitle: 'Want to follow up on WhatsApp?',
+    waFollowSub: 'Message us with your reference number — we will pick it up from there.',
+    waFollowBtn: 'WHATSAPP US',
+    waFollowPrefill: 'Hi X FITNESS, I would like to follow up on my report {ref}',
     addPhoto: 'Add a photo of the person / scene',
     photoCap: 'Tap to add a photo',
     photoChosen: 'Photo added',
@@ -458,9 +493,23 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     heroReassure:
       '如果你在 X FITNESS 遇到让你感到不安或不舒服的事，请告诉我们。每一份举报我们都会认真对待。',
     trust: '100% 保密 \u00b7 仅本店管理层可查看',
-    firstKick: '// 首先，告诉我们发生了什么',
-    personKick: '涉事人员描述',
-    contactKick: '// 你的资料（完全选填）',
+    sec1: '发生了什么事',
+    sec2: '涉事人员',
+    sec3: '再补充几点',
+    sec4: '你的资料',
+    secAllOptional: '全部选填',
+    secFullyOptional: '完全选填',
+    waTalkTitle: '想直接跟真人聊？',
+    waTalkSub: '直接 WhatsApp 我们的管理层。',
+    waChat: '联系',
+    waRatherTitle: '更想用聊的方式说？',
+    waRatherSub: '你也可以不填表单，直接 WhatsApp 管理层。',
+    waUrgentBtn: '立即 WHATSAPP 我们',
+    waUrgentPrefill: '紧急 - 我现在在 X FITNESS 需要帮助',
+    waFollowTitle: '想通过 WhatsApp 跟进？',
+    waFollowSub: '发消息时附上你的参考编号，我们会接手处理。',
+    waFollowBtn: 'WHATSAPP 我们',
+    waFollowPrefill: '你好 X FITNESS，我想跟进我的举报 {ref}',
     addPhoto: '上传对方／现场的照片',
     photoCap: '点击添加照片',
     photoChosen: '照片已添加',
@@ -511,9 +560,23 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     heroReassure:
       'Jika sesuatu berlaku di X FITNESS yang membuat anda rasa tidak selamat atau tidak selesa, sila beritahu kami. Setiap laporan kami ambil serius.',
     trust: '100% SULIT \u00b7 DILIHAT OLEH PENGURUSAN KAMI SAHAJA',
-    firstKick: '// PERTAMA, BERITAHU KAMI APA YANG BERLAKU',
-    personKick: 'Ciri-ciri orang yang terlibat',
-    contactKick: '// MAKLUMAT ANDA (PILIHAN SEPENUHNYA)',
+    sec1: 'APA YANG BERLAKU',
+    sec2: 'ORANG YANG TERLIBAT',
+    sec3: 'BEBERAPA PERKARA LAGI',
+    sec4: 'MAKLUMAT ANDA',
+    secAllOptional: 'SEMUA PILIHAN',
+    secFullyOptional: '100% PILIHAN',
+    waTalkTitle: 'Lebih suka bercakap terus?',
+    waTalkSub: 'WhatsApp pengurusan kami secara terus.',
+    waChat: 'SEMBANG',
+    waRatherTitle: 'Lebih selesa berbual?',
+    waRatherSub: 'Anda boleh WhatsApp pengurusan tanpa mengisi borang ini.',
+    waUrgentBtn: 'WHATSAPP KAMI SEKARANG',
+    waUrgentPrefill: 'SEGERA - Saya perlukan bantuan di X FITNESS sekarang',
+    waFollowTitle: 'Mahu susulan melalui WhatsApp?',
+    waFollowSub: 'Hantar mesej dengan nombor rujukan anda — kami akan uruskan dari situ.',
+    waFollowBtn: 'WHATSAPP KAMI',
+    waFollowPrefill: 'Hai X FITNESS, saya ingin membuat susulan laporan saya {ref}',
     addPhoto: 'Tambah foto orang / tempat kejadian',
     photoCap: 'Ketik untuk tambah foto',
     photoChosen: 'Foto ditambah',
