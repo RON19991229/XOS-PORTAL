@@ -451,13 +451,6 @@ html, body {
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--rl-line);
 }
-.rl-xmark {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: #FFD60A; color: #111;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: 20px;
-  box-shadow: 0 2px 6px rgba(180,140,0,.25);
-}
 
 /* ---- entrance stagger ---- */
 .rl-rise { opacity: 0; transform: translateY(16px); animation: rlRise .6s cubic-bezier(.22,.9,.3,1) forwards; }

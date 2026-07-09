@@ -7,17 +7,34 @@
 // ===========================================================================
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 // ---------------------------------------------------------------------------
-// Light brand mark. The PNG logo has a WHITE wordmark (invisible on the warm
-// white background), so the report pages draw their own: yellow X tile +
-// ink wordmark.
+// Light brand mark — Ron's real logos (v2.12.1):
+//   report-logo-tile.png  = full XF logo on black, shown in a rounded tile
+//   report-wordmark.png   = black "X FITNESS" wordmark on transparent bg
+// (The main logo.png has a WHITE wordmark — invisible on the warm white bg.)
 // ---------------------------------------------------------------------------
 export function ReportBrand() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="rl-xmark">X</div>
-      <span className="font-display text-[13px] tracking-wide">X FITNESS</span>
+      <Image
+        src="/report-logo-tile.png"
+        alt="X FITNESS"
+        width={34}
+        height={34}
+        priority
+        className="rounded-[9px] object-cover"
+        style={{ boxShadow: '0 2px 6px rgba(0,0,0,.25)' }}
+      />
+      <Image
+        src="/report-wordmark.png"
+        alt=""
+        width={482}
+        height={54}
+        priority
+        style={{ height: '13px', width: 'auto' }}
+      />
     </div>
   );
 }
