@@ -59,13 +59,17 @@ alter table incident_reports enable row level security;
 
 -- Explicit table grants (Supabase revokes/relies on these; be explicit —
 -- same discipline as v2.7 security hardening).
-grant insert                 on incident_reports to anon;
+-- INSERT to BOTH public roles: the report form must accept a submission
+-- from anyone, whether or not the browser has a logged-in session.
+grant insert                 on incident_reports to anon, authenticated;
 grant select, update, delete on incident_reports to authenticated;
 
--- anon: submit only. No SELECT policy exists for anon => cannot read anything.
+-- Public submit: applies to the `public` role group (anon AND authenticated)
+-- so a logged-in staff/admin opening /report on a shared device can still
+-- submit. INSERT-only — reads stay locked down below.
 drop policy if exists "public_submit_complaint" on incident_reports;
 create policy "public_submit_complaint"
-on incident_reports for insert to anon
+on incident_reports for insert to public
 with check (true);
 
 -- authenticated (staff OR admin): read all reports.

@@ -1,8 +1,8 @@
 {
-  "name": "X FITNESS — Walk-in",
+  "name": "X FITNESS",
   "short_name": "X FITNESS",
-  "description": "Walk-in registration and check-in for X FITNESS",
-  "start_url": "/checkin",
+  "description": "X FITNESS",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",

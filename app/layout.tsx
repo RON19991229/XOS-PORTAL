@@ -12,8 +12,8 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/700.css';
 
 export const metadata: Metadata = {
-  title: 'X FITNESS — Walk-in',
-  description: 'Walk-in registration and check-in',
+  title: 'X FITNESS',
+  description: 'X FITNESS',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

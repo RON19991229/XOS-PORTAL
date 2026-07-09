@@ -19,17 +19,18 @@
 -- 1. Make sure RLS is on (no-op if already on).
 alter table public.incident_reports enable row level security;
 
--- 2. Make sure the anon role holds the table-level INSERT grant.
-grant insert on public.incident_reports to anon;
+-- 2. Make sure both public roles hold the table-level INSERT grant.
+grant insert on public.incident_reports to anon, authenticated;
 -- (authenticated staff/admin read + admin manage — re-affirm too.)
 grant select, update, delete on public.incident_reports to authenticated;
 
--- 3. (Re)create the public-submit INSERT policy for anonymous users.
+-- 3. (Re)create the public-submit INSERT policy for EVERYONE (anon or
+--    logged-in), so a browser with a staff/admin session can still submit.
 drop policy if exists "public_submit_complaint" on public.incident_reports;
 create policy "public_submit_complaint"
 on public.incident_reports
 for insert
-to anon
+to public
 with check (true);
 
 -- 4. (Re)affirm the authenticated read policy so the dashboard works.
