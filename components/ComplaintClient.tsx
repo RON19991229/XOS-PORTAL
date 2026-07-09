@@ -40,8 +40,8 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState('');
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true);
     setLoadError('');
     const { data, error } = await supabase
       .from('incident_reports')
@@ -101,6 +101,16 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
 
   useEffect(() => {
     fetchData();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchData(true);
+    };
+    const onFocus = () => fetchData(true);
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

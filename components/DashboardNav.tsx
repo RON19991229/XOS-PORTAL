@@ -17,18 +17,34 @@ export default function DashboardNav({ role, userName }: DashboardNavProps) {
   const supabase = createClient();
 
   // Count of unhandled complaints — drives the red badge on COMPLAINT.
+  // Refreshes automatically: on mount, every 30s, and whenever the tab/window
+  // regains focus — so a new report shows up without a manual page refresh.
   const [newCount, setNewCount] = useState(0);
   useEffect(() => {
     let active = true;
-    supabase
-      .from('incident_reports')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'new')
-      .then(({ count }) => {
-        if (active && typeof count === 'number') setNewCount(count);
-      });
+    const fetchCount = () => {
+      supabase
+        .from('incident_reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'new')
+        .then(({ count }) => {
+          if (active && typeof count === 'number') setNewCount(count);
+        });
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchCount();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchCount);
+
     return () => {
       active = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchCount);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
