@@ -78,11 +78,22 @@ export interface IncidentReport {
   reporter_contact: string | null;
   is_anonymous: boolean;
   photo_path: string | null;
+  ref_code: string | null;
   // Array of { qid, label, type, value, other? } — typed loosely here to
   // avoid a hard import cycle; callers cast to StoredAnswer[] from report-config.
   answers: unknown;
   reviewed_by: string | null;
   reviewed_at: string | null;
+}
+
+// Internal case-log note on a complaint (migration v2.11). Admin-write, all-read.
+export interface IncidentNote {
+  id: string;
+  report_id: string;
+  note: string;
+  added_by: string | null;
+  added_by_name: string | null;
+  created_at: string;
 }
 
 export interface AppUser {

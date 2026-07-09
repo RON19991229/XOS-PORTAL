@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase-client';
-import { IncidentReport, IncidentStatus } from '@/lib/types';
+import { IncidentReport, IncidentStatus, IncidentNote } from '@/lib/types';
 import { StoredAnswer, QID } from '@/lib/report-config';
 import { formatDateTime } from '@/lib/utils';
 
@@ -33,6 +33,7 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
 
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [notesByReport, setNotesByReport] = useState<Record<string, IncidentNote[]>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -56,6 +57,23 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
 
     const list = (data ?? []) as IncidentReport[];
     setReports(list);
+
+    // Fetch the internal case-log notes for all reports in one query.
+    const ids = list.map((r) => r.id);
+    if (ids.length > 0) {
+      const { data: notes } = await supabase
+        .from('incident_notes')
+        .select('*')
+        .in('report_id', ids)
+        .order('created_at', { ascending: true });
+      const nmap: Record<string, IncidentNote[]> = {};
+      ((notes ?? []) as IncidentNote[]).forEach((n) => {
+        (nmap[n.report_id] ??= []).push(n);
+      });
+      setNotesByReport(nmap);
+    } else {
+      setNotesByReport({});
+    }
 
     const paths = list.map((r) => r.photo_path).filter(Boolean) as string[];
     if (paths.length > 0) {
@@ -141,6 +159,34 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
     setBusyId(null);
   };
 
+  const addNote = async (reportId: string, text: string): Promise<boolean> => {
+    if (!isAdmin) return false;
+    const note = text.trim();
+    if (!note) return false;
+    setActionError('');
+    const { data, error } = await supabase
+      .from('incident_notes')
+      .insert({ report_id: reportId, note, added_by: userId, added_by_name: userName })
+      .select('*')
+      .single();
+    if (error || !data) {
+      setActionError('Could not add note. Please try again.');
+      return false;
+    }
+    await supabase.from('audit_log').insert({
+      user_id: userId,
+      user_name: userName,
+      action: 'complaint_note_add',
+      customer_id: null,
+      details: { report_id: reportId },
+    });
+    setNotesByReport((prev) => ({
+      ...prev,
+      [reportId]: [...(prev[reportId] ?? []), data as IncidentNote],
+    }));
+    return true;
+  };
+
   const counts = useMemo(() => {
     const c = { all: reports.length, new: 0, reviewing: 0, resolved: 0 };
     reports.forEach((r) => {
@@ -209,10 +255,12 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
               key={r.id}
               report={r}
               photoUrl={r.photo_path ? signedUrls[r.photo_path] : undefined}
+              notes={notesByReport[r.id] ?? []}
               isAdmin={isAdmin}
               busy={busyId === r.id}
               onStatus={(s) => setStatus(r, s)}
               onDelete={() => remove(r)}
+              onAddNote={addNote}
             />
           ))}
         </div>
@@ -227,15 +275,32 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
 interface CardProps {
   report: IncidentReport;
   photoUrl?: string;
+  notes: IncidentNote[];
   isAdmin: boolean;
   busy: boolean;
   onStatus: (s: IncidentStatus) => void;
   onDelete: () => void;
+  onAddNote: (reportId: string, text: string) => Promise<boolean>;
 }
 
-function ComplaintCard({ report: r, photoUrl, isAdmin, busy, onStatus, onDelete }: CardProps) {
+function ComplaintCard({
+  report: r,
+  photoUrl,
+  notes,
+  isAdmin,
+  busy,
+  onStatus,
+  onDelete,
+  onAddNote,
+}: CardProps) {
   const answers = asAnswers(r.answers);
   const meta = STATUS_META[r.status];
+
+  const [noteInput, setNoteInput] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+
+  const urgencyAns = answers.find((a) => a.qid === QID.urgency);
+  const isUrgent = urgencyAns?.value === 'Happening now';
 
   const locationAns = answers.find((a) => a.qid === QID.location);
   const locationParts: string[] = [];
@@ -260,8 +325,19 @@ function ComplaintCard({ report: r, photoUrl, isAdmin, busy, onStatus, onDelete 
       ? `${r.reporter_name} (no contact)`
       : 'submitted anonymously';
 
+  const submitNote = async () => {
+    setSavingNote(true);
+    const ok = await onAddNote(r.id, noteInput);
+    if (ok) setNoteInput('');
+    setSavingNote(false);
+  };
+
   return (
-    <div className={`bg-white border border-neutral-200 border-l-[5px] ${meta.leftBorder} rounded-lg p-4 flex gap-4`}>
+    <div
+      className={`bg-white border border-neutral-200 border-l-[5px] ${meta.leftBorder} rounded-lg p-4 flex gap-4 ${
+        isUrgent ? 'ring-2 ring-danger/25' : ''
+      }`}
+    >
       {/* photo */}
       <div className="w-[92px] min-w-[92px] h-[92px] bg-neutral-900 rounded-lg overflow-hidden flex items-center justify-center">
         {r.photo_path && photoUrl ? (
@@ -280,10 +356,23 @@ function ComplaintCard({ report: r, photoUrl, isAdmin, busy, onStatus, onDelete 
           <span className="font-mono text-[11px] text-neutral-500">
             {formatDateTime(r.created_at)} · {contactLine}
           </span>
-          <span className={`font-display text-[9px] tracking-wider px-2 py-1 rounded ${meta.cls}`}>
-            {meta.label}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {r.ref_code && (
+              <span className="font-mono font-bold text-[11px] bg-ink text-accent px-2 py-1 rounded tracking-wider">
+                {r.ref_code}
+              </span>
+            )}
+            <span className={`font-display text-[9px] tracking-wider px-2 py-1 rounded ${meta.cls}`}>
+              {meta.label}
+            </span>
+          </div>
         </div>
+
+        {isUrgent && (
+          <div className="inline-flex items-center gap-1.5 bg-danger/10 text-danger border border-danger/40 font-display text-[9px] tracking-wider px-2.5 py-1 rounded mb-2">
+            ⚠ HAPPENING NOW · MAY NEED IMMEDIATE ATTENTION
+          </div>
+        )}
 
         {locationParts.length > 0 && (
           <div className="font-mono text-[11px] text-danger tracking-tight mb-2">
@@ -297,12 +386,25 @@ function ComplaintCard({ report: r, photoUrl, isAdmin, busy, onStatus, onDelete 
 
         {tagAnswers.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {tagAnswers.map((a) => (
-              <span key={a.qid} className="font-mono text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded">
-                {a.label}: {Array.isArray(a.value) ? a.value.join(', ') : a.value}
-                {a.other ? ` (${a.other})` : ''}
-              </span>
-            ))}
+            {tagAnswers.map((a) => {
+              const hot = a.qid === QID.urgency && a.value === 'Happening now';
+              const role = a.qid === 'person_role';
+              return (
+                <span
+                  key={a.qid}
+                  className={`font-mono text-[10px] px-2 py-1 rounded ${
+                    hot
+                      ? 'bg-[#ffece0] text-[#b3560a]'
+                      : role
+                        ? 'bg-[#eef2ff] text-[#3b4ea0]'
+                        : 'bg-neutral-100 text-neutral-600'
+                  }`}
+                >
+                  {a.label}: {Array.isArray(a.value) ? a.value.join(', ') : a.value}
+                  {a.other ? ` (${a.other})` : ''}
+                </span>
+              );
+            })}
             {r.photo_path && (
               <span className="font-mono text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded">📷 photo</span>
             )}
@@ -317,6 +419,54 @@ function ComplaintCard({ report: r, photoUrl, isAdmin, busy, onStatus, onDelete 
             </div>
           </div>
         ))}
+
+        {/* internal case log */}
+        <div className="bg-[#fafaf7] border border-dashed border-[#e0ddc9] rounded-lg p-3 mt-3">
+          <div className="font-display text-[10px] tracking-widest text-[#8a7f4a] mb-2.5 flex items-center gap-1.5">
+            🗒 INTERNAL CASE LOG {!isAdmin && <span className="text-neutral-400 font-mono tracking-normal">· read-only</span>}
+          </div>
+          {notes.length > 0 ? (
+            <div className="space-y-2.5 mb-2">
+              {notes.map((n) => (
+                <div key={n.id} className="flex gap-2.5">
+                  <span className="w-5 h-5 flex-shrink-0 rounded-full bg-ink text-accent font-display text-[9px] flex items-center justify-center">
+                    {(n.added_by_name ?? '?').charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-mono text-[9px] text-neutral-400">
+                      {n.added_by_name ?? 'Staff'} · {formatDateTime(n.created_at)}
+                    </div>
+                    <div className="text-[12.5px] text-neutral-700 leading-snug whitespace-pre-wrap">{n.note}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="font-mono text-[10px] text-neutral-400 mb-1">No notes yet.</div>
+          )}
+
+          {isAdmin && (
+            <div className="flex gap-2 mt-2">
+              <input
+                type="text"
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !savingNote) submitNote();
+                }}
+                placeholder="Add an internal note (investigation, action taken, outcome)…"
+                className="flex-1 bg-white border-[1.5px] border-neutral-200 rounded-lg px-3 py-2 text-[12.5px] outline-none focus:border-accent"
+              />
+              <button
+                onClick={submitNote}
+                disabled={savingNote || !noteInput.trim()}
+                className="font-display text-[10px] tracking-wider bg-ink text-accent px-3 rounded-lg disabled:opacity-40"
+              >
+                ADD
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* actions (admin only) */}
         {isAdmin && (

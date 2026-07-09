@@ -68,6 +68,7 @@ export const QID = {
   reporterContact: 'reporter_contact',
   remainAnonymous: 'remain_anonymous',
   location: 'location',
+  urgency: 'urgency',
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,34 @@ export const QID = {
 // ---------------------------------------------------------------------------
 export const reportFields: ReportField[] = [
   // ---- GROUP: incident -----------------------------------------------------
+  {
+    qid: QID.urgency,
+    group: 'incident',
+    type: 'radio',
+    label: {
+      en: 'Is this still happening — are you safe right now?',
+      zh: '事情还在发生吗 —— 你现在安全吗？',
+      ms: 'Adakah ini masih berlaku — adakah anda selamat sekarang?',
+    },
+    options: [
+      {
+        value: 'Happening now',
+        label: {
+          en: 'Happening now / I feel unsafe right now',
+          zh: '正在发生／我现在感到不安',
+          ms: 'Sedang berlaku / saya rasa tidak selamat sekarang',
+        },
+      },
+      {
+        value: 'Earlier today',
+        label: { en: 'Earlier today', zh: '今天稍早', ms: 'Awal hari ini' },
+      },
+      {
+        value: 'In the past',
+        label: { en: 'In the past', zh: '以前发生的', ms: 'Pada masa lalu' },
+      },
+    ],
+  },
   {
     qid: QID.whatHappened,
     group: 'incident',
@@ -124,6 +153,22 @@ export const reportFields: ReportField[] = [
 
   // ---- GROUP: person -------------------------------------------------------
   {
+    qid: 'person_role',
+    group: 'person',
+    type: 'radio',
+    label: {
+      en: 'Who is this person?',
+      zh: '这个人是什么身份？',
+      ms: 'Siapakah orang ini?',
+    },
+    options: [
+      { value: 'Another member', label: { en: 'Another member', zh: '其他会员', ms: 'Ahli lain' } },
+      { value: 'Staff',          label: { en: 'Staff',          zh: '员工',     ms: 'Kakitangan' } },
+      { value: 'Personal trainer', label: { en: 'Personal trainer', zh: '私人教练', ms: 'Jurulatih peribadi' } },
+      { value: 'Not sure',       label: { en: 'Not sure',       zh: '不清楚',   ms: 'Tidak pasti' } },
+    ],
+  },
+  {
     qid: 'person_gender',
     group: 'person',
     type: 'radio',
@@ -172,6 +217,27 @@ export const reportFields: ReportField[] = [
     ],
   },
   {
+    qid: 'person_usual_time',
+    group: 'person',
+    type: 'multiselect',
+    label: {
+      en: 'When does this person usually come?',
+      zh: '这个人通常什么时候来？',
+      ms: 'Bilakah orang ini biasanya datang?',
+    },
+    hint: {
+      en: 'This helps us identify them from CCTV. Choose any that apply.',
+      zh: '这有助于我们从闭路电视辨认对方。可多选。',
+      ms: 'Ini membantu kami mengenal pasti mereka dari CCTV. Pilih yang berkenaan.',
+    },
+    options: [
+      { value: 'Morning',   label: { en: 'Morning',   zh: '早上',   ms: 'Pagi' } },
+      { value: 'Afternoon', label: { en: 'Afternoon', zh: '下午',   ms: 'Tengah hari' } },
+      { value: 'Evening',   label: { en: 'Evening',   zh: '晚上',   ms: 'Malam' } },
+      { value: 'Weekends',  label: { en: 'Weekends',  zh: '周末',   ms: 'Hujung minggu' } },
+    ],
+  },
+  {
     qid: 'person_details',
     group: 'person',
     type: 'textarea',
@@ -184,6 +250,21 @@ export const reportFields: ReportField[] = [
   },
 
   // ---- GROUP: followup -----------------------------------------------------
+  {
+    qid: 'witnesses',
+    group: 'followup',
+    type: 'radio',
+    label: {
+      en: 'Did anyone else see it happen?',
+      zh: '当时有其他人看到吗？',
+      ms: 'Adakah orang lain nampak kejadian itu?',
+    },
+    options: [
+      { value: 'Yes',      label: { en: 'Yes',      zh: '有',     ms: 'Ya' } },
+      { value: 'No',       label: { en: 'No',       zh: '没有',   ms: 'Tidak' } },
+      { value: 'Not sure', label: { en: 'Not sure', zh: '不确定', ms: 'Tidak pasti' } },
+    ],
+  },
   {
     qid: 'happened_before',
     group: 'followup',
@@ -296,6 +377,14 @@ export interface ReportCopy {
   required: string; // shown when required field empty
   errorGeneric: string;
   cooldown: string;
+  // urgent safety callout (shown when urgency = "Happening now")
+  urgentNow: string;
+  // data-use / PDPA notice on the form
+  pdpa: string;
+  // success screen reference number
+  refLabel: string;
+  refScreenshot: string;
+  refFollowUp: string;
   // success
   okTitle: string;
   okMsg: string;
@@ -339,6 +428,12 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     required: 'Please describe what happened before submitting.',
     errorGeneric: 'Sorry, something went wrong. Please try again in a moment.',
     cooldown: 'You just submitted a report. Please wait a moment before sending another.',
+    urgentNow:
+      'If you are in immediate danger or this is happening right now, please go to our reception counter or approach any staff member immediately — you don\u2019t have to finish this form first.',
+    pdpa: 'The details you provide are used only to investigate this report and are kept confidential by X FITNESS management, in line with the Malaysian PDPA.',
+    refLabel: 'YOUR REFERENCE NUMBER',
+    refScreenshot: 'Please screenshot this to follow up later',
+    refFollowUp: 'If you\u2019d like to follow up at reception, just show this number.',
     okTitle: "Thank you. We've received your report.",
     okMsg:
       'Your report has reached X FITNESS management directly and confidentially. We take this seriously and will look into it carefully. Please know that we cannot take action against anyone based on a report alone — to be fair to everyone, we need time to review CCTV and gather evidence. If you left your contact details, we will update you once we have an outcome.',
@@ -386,6 +481,12 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     required: '提交前请先描述发生了什么事。',
     errorGeneric: '抱歉，出了点问题。请稍后再试一次。',
     cooldown: '你刚刚提交过举报，请稍等片刻再提交下一份。',
+    urgentNow:
+      '如果你现在有立即危险、或事情正在发生，请马上前往前台柜台或联系任何职员 —— 不必先填完这份表单。',
+    pdpa: '你提供的资料仅用于调查此举报，并由 X FITNESS 管理层保密处理，符合马来西亚个人资料保护法（PDPA）。',
+    refLabel: '你的参考编号',
+    refScreenshot: '请截图保存，以便日后跟进',
+    refFollowUp: '如需到前台跟进，出示此编号即可。',
     okTitle: '谢谢你，我们已经收到你的举报。',
     okMsg:
       '你的举报已直接、保密地送到 X FITNESS 管理层。我们高度重视，会认真调查。请理解，我们不能仅凭一份举报就对任何人采取行动 —— 为了对每个人公平，我们需要时间调阅闭路电视、收集证据。如果你留下了联络方式，我们会在有结果后通知你。',
@@ -433,6 +534,12 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     required: 'Sila terangkan apa yang berlaku sebelum menghantar.',
     errorGeneric: 'Maaf, ada masalah. Sila cuba lagi sebentar nanti.',
     cooldown: 'Anda baru sahaja menghantar laporan. Sila tunggu sebentar sebelum menghantar yang lain.',
+    urgentNow:
+      'Jika anda dalam bahaya serta-merta atau ini sedang berlaku sekarang, sila terus ke kaunter penerimaan atau dekati mana-mana kakitangan dengan segera \u2014 anda tidak perlu menyiapkan borang ini dahulu.',
+    pdpa: 'Maklumat yang anda berikan digunakan hanya untuk menyiasat laporan ini dan dirahsiakan oleh pengurusan X FITNESS, selaras dengan PDPA Malaysia.',
+    refLabel: 'NOMBOR RUJUKAN ANDA',
+    refScreenshot: 'Sila tangkap skrin untuk susulan kemudian',
+    refFollowUp: 'Jika anda mahu membuat susulan di kaunter, tunjukkan sahaja nombor ini.',
     okTitle: 'Terima kasih. Kami telah menerima laporan anda.',
     okMsg:
       'Laporan anda telah sampai terus dan secara sulit kepada pengurusan X FITNESS. Kami memandang serius perkara ini dan akan menyiasat dengan teliti. Sila fahami bahawa kami tidak boleh bertindak terhadap sesiapa hanya berdasarkan satu laporan — untuk berlaku adil kepada semua, kami perlukan masa menyemak CCTV dan mengumpul bukti. Jika anda tinggalkan maklumat hubungan, kami akan maklumkan apabila ada keputusan.',

@@ -21,6 +21,17 @@ const JPEG_QUALITY = 0.82;
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const COOLDOWN_MS = 90 * 1000; // client-side: block rapid re-submits from one device
 
+// Short, human-friendly reference like "XF-2A9F". Uses an unambiguous
+// alphabet (no 0/O/1/I/L) so it's easy to read out at the front desk.
+function makeRefCode(): string {
+  const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  let s = '';
+  for (let i = 0; i < 4; i++) {
+    s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `XF-${s}`;
+}
+
 // Client-side image compression (same approach as the Attention List).
 function compressImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -75,7 +86,7 @@ export default function ReportFormPage() {
   const [honeypot, setHoneypot] = useState(''); // bots fill this; humans never see it
 
   const [error, setError] = useState('');
-  const [errorDetail, setErrorDetail] = useState(''); // technical detail (rollout diagnostics)
+  const [refCode, setRefCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -128,7 +139,6 @@ export default function ReportFormPage() {
   // -------------------------------------------------------------------------
   const handleSubmit = async () => {
     setError('');
-    setErrorDetail('');
 
     if (honeypot.trim() !== '') return; // silently drop bots
 
@@ -182,6 +192,7 @@ export default function ReportFormPage() {
       const reporterContact = (values[QID.reporterContact] ?? '').trim() || null;
       const remainAnon = values[QID.remainAnonymous]; // 'Yes' | 'No' | undefined
       const isAnonymous = remainAnon === 'No' ? false : !reporterContact;
+      const ref = makeRefCode();
 
       // Optional photo: upload first (anon INSERT into private bucket), then
       // reference it on the row. Orphan photo on failure is acceptable.
@@ -211,21 +222,20 @@ export default function ReportFormPage() {
         reporter_contact: reporterContact,
         is_anonymous: isAnonymous,
         photo_path: photoPath,
+        ref_code: ref,
         answers,
       });
 
       if (insErr) {
-        // Rollout diagnostics — surface the real reason so issues are easy to
-        // pinpoint. Safe to remove the `errorDetail` line once things are stable.
         // eslint-disable-next-line no-console
         console.error('[complaint submit] insert failed:', insErr);
         setSubmitting(false);
         setError(c.errorGeneric);
-        setErrorDetail(`${insErr.code ?? ''} ${insErr.message ?? ''}`.trim());
         return;
       }
 
       safeLocal.setItem('xf-report-cooldown', String(Date.now()));
+      setRefCode(ref);
       setDone(true);
       window.scrollTo({ top: 0, behavior: 'auto' });
     } catch {
@@ -260,9 +270,23 @@ export default function ReportFormPage() {
 
           <h1 className="font-display text-2xl leading-tight mb-4">{c.okTitle}</h1>
 
-          <div className="text-left text-[13.5px] leading-relaxed text-neutral-300 bg-ink-soft border border-ink-line rounded-xl p-4 mb-6">
+          {/* reference number — big, screenshot-friendly */}
+          <div className="bg-[linear-gradient(180deg,rgba(255,214,10,0.12),rgba(255,214,10,0.03))] border-2 border-accent rounded-2xl p-4 mb-4">
+            <div className="font-mono text-[10px] tracking-[0.2em] text-neutral-400 mb-2">
+              {c.refLabel}
+            </div>
+            <div className="font-display text-[34px] tracking-wider text-accent leading-none">
+              {refCode}
+            </div>
+            <div className="flex items-center justify-center gap-1.5 text-[11.5px] text-[#e8b84a] mt-2.5">
+              📸 {c.refScreenshot}
+            </div>
+          </div>
+
+          <div className="text-left text-[13.5px] leading-relaxed text-neutral-300 bg-ink-soft border border-ink-line rounded-xl p-4 mb-2">
             {c.okMsg}
           </div>
+          <p className="text-[12px] text-neutral-400 mb-6 leading-relaxed">{c.refFollowUp}</p>
 
           {/* what happens next */}
           <div className="text-left mb-6">
@@ -386,6 +410,12 @@ export default function ReportFormPage() {
               );
             })}
           </div>
+          {f.qid === QID.urgency && values[f.qid] === 'Happening now' && (
+            <div className="mt-3 flex gap-2.5 items-start bg-danger/10 border-2 border-danger/50 rounded-lg p-3.5">
+              <span className="text-lg leading-none mt-0.5">⚠️</span>
+              <p className="text-[12.5px] leading-relaxed text-[#ffb4a8]">{c.urgentNow}</p>
+            </div>
+          )}
         </div>
       );
     }
@@ -531,15 +561,8 @@ export default function ReportFormPage() {
         />
 
         {error && (
-          <div className="mb-5">
-            <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider rounded-lg animate-shake">
-              {error}
-            </div>
-            {errorDetail && (
-              <div className="mt-1.5 font-mono text-[10px] text-danger/80 break-words px-1">
-                {errorDetail}
-              </div>
-            )}
+          <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider mb-5 rounded-lg animate-shake">
+            {error}
           </div>
         )}
 
@@ -638,6 +661,7 @@ export default function ReportFormPage() {
           )}
         </button>
         <p className="text-center text-[11px] text-neutral-500 mt-3 leading-relaxed">{c.submitSub}</p>
+        <p className="text-center text-[10px] text-neutral-600 mt-4 leading-relaxed px-2">{c.pdpa}</p>
 
         <div className="h-16" aria-hidden="true" />
       </section>

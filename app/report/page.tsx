@@ -46,10 +46,10 @@ export default function ReportLandingPage() {
           <br />
           Feels uncomfortable?
         </p>
-        <p className="font-display text-[25px] leading-none text-accent mt-2">We are here to help.</p>
+        <p className="font-display text-[25px] leading-none text-accent mt-2">WE&apos;RE HERE TO HELP.</p>
         <p className="text-[13px] leading-relaxed text-neutral-400 mt-4 max-w-[310px] mx-auto">
-          If something at X FITNESS made you feel unsafe or uncomfortable, please tell us. Every
-          report is taken seriously.
+          If someone/something at the gym made you feel unsafe or uncomfortable, please tell us.
+          Every report is taken seriously.
         </p>
         <div className="flex items-center justify-center gap-2 mt-5 font-mono text-[10px] tracking-wider text-success-green">
           <span className="w-1.5 h-1.5 rounded-full bg-success-green shadow-[0_0_8px_#16c75b]" />
