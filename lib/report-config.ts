@@ -144,14 +144,32 @@ export const reportFields: ReportField[] = [
   {
     qid: 'person_shirt',
     group: 'person',
-    type: 'text',
+    type: 'select',
+    allowOther: true,
     label: { en: 'Shirt colour', zh: '上衣颜色', ms: 'Warna baju' },
+    options: [
+      { value: 'Black',  label: { en: 'Black',  zh: '黑色', ms: 'Hitam' } },
+      { value: 'White',  label: { en: 'White',  zh: '白色', ms: 'Putih' } },
+      { value: 'Grey',   label: { en: 'Grey',   zh: '灰色', ms: 'Kelabu' } },
+      { value: 'Red',    label: { en: 'Red',    zh: '红色', ms: 'Merah' } },
+      { value: 'Blue',   label: { en: 'Blue',   zh: '蓝色', ms: 'Biru' } },
+      { value: 'Green',  label: { en: 'Green',  zh: '绿色', ms: 'Hijau' } },
+      { value: 'Yellow', label: { en: 'Yellow', zh: '黄色', ms: 'Kuning' } },
+      { value: 'Other',  label: { en: 'Other',  zh: '其他', ms: 'Lain-lain' } },
+    ],
   },
   {
     qid: 'person_race',
     group: 'person',
-    type: 'text',
+    type: 'select',
+    allowOther: true,
     label: { en: 'Race / ethnicity (if known)', zh: '种族／族裔（如知道）', ms: 'Bangsa / etnik (jika tahu)' },
+    options: [
+      { value: 'Chinese', label: { en: 'Chinese', zh: '华裔', ms: 'Cina' } },
+      { value: 'Indian',  label: { en: 'Indian',  zh: '印裔', ms: 'India' } },
+      { value: 'Malay',   label: { en: 'Malay',   zh: '巫裔', ms: 'Melayu' } },
+      { value: 'Other',   label: { en: 'Other',   zh: '其他', ms: 'Lain-lain' } },
+    ],
   },
   {
     qid: 'person_details',
@@ -263,6 +281,7 @@ export interface ReportCopy {
   addPhoto: string;
   photoCap: string;
   photoChosen: string;
+  removePhoto: string;
   photoTooLarge: string;
   // multiselect other
   otherLabel: string;
@@ -303,6 +322,7 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     addPhoto: 'Add a photo of the person / scene',
     photoCap: 'Tap to add a photo',
     photoChosen: 'Photo added',
+    removePhoto: 'Remove',
     photoTooLarge: 'That image is too large. Please choose one under 12 MB.',
     otherLabel: 'Other',
     otherPlaceholder: 'Other — please specify',
@@ -349,6 +369,7 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     addPhoto: '上传对方／现场的照片',
     photoCap: '点击添加照片',
     photoChosen: '照片已添加',
+    removePhoto: '移除',
     photoTooLarge: '图片太大了，请选择小于 12 MB 的图片。',
     otherLabel: '其他',
     otherPlaceholder: '其他 —— 请填写',
@@ -395,6 +416,7 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     addPhoto: 'Tambah foto orang / tempat kejadian',
     photoCap: 'Ketik untuk tambah foto',
     photoChosen: 'Foto ditambah',
+    removePhoto: 'Buang',
     photoTooLarge: 'Imej itu terlalu besar. Sila pilih yang bawah 12 MB.',
     otherLabel: 'Lain-lain',
     otherPlaceholder: 'Lain-lain — sila nyatakan',

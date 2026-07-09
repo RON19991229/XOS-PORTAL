@@ -75,6 +75,7 @@ export default function ReportFormPage() {
   const [honeypot, setHoneypot] = useState(''); // bots fill this; humans never see it
 
   const [error, setError] = useState('');
+  const [errorDetail, setErrorDetail] = useState(''); // technical detail (rollout diagnostics)
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -103,6 +104,10 @@ export default function ReportFormPage() {
     });
 
   const pickPhoto = () => fileRef.current?.click();
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoName('');
+  };
   const onPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     e.target.value = '';
@@ -123,6 +128,7 @@ export default function ReportFormPage() {
   // -------------------------------------------------------------------------
   const handleSubmit = async () => {
     setError('');
+    setErrorDetail('');
 
     if (honeypot.trim() !== '') return; // silently drop bots
 
@@ -161,7 +167,14 @@ export default function ReportFormPage() {
         } else {
           const v = (values[f.qid] ?? '').trim();
           if (!v) continue;
-          answers.push({ qid: f.qid, label: f.label.en, type: f.type, value: v });
+          const other = f.allowOther && v === 'Other' ? (otherText[f.qid] ?? '').trim() : '';
+          answers.push({
+            qid: f.qid,
+            label: f.label.en,
+            type: f.type,
+            value: v,
+            ...(other ? { other } : {}),
+          });
         }
       }
 
@@ -202,8 +215,13 @@ export default function ReportFormPage() {
       });
 
       if (insErr) {
+        // Rollout diagnostics — surface the real reason so issues are easy to
+        // pinpoint. Safe to remove the `errorDetail` line once things are stable.
+        // eslint-disable-next-line no-console
+        console.error('[complaint submit] insert failed:', insErr);
         setSubmitting(false);
         setError(c.errorGeneric);
+        setErrorDetail(`${insErr.code ?? ''} ${insErr.message ?? ''}`.trim());
         return;
       }
 
@@ -373,6 +391,7 @@ export default function ReportFormPage() {
     }
 
     if (f.type === 'select') {
+      const showOther = f.allowOther && values[f.qid] === 'Other';
       return (
         <div className="mb-5" key={f.qid}>
           {labelEl}
@@ -389,6 +408,15 @@ export default function ReportFormPage() {
               </option>
             ))}
           </select>
+          {showOther && (
+            <input
+              type="text"
+              value={otherText[f.qid] ?? ''}
+              onChange={(e) => setOtherText((p) => ({ ...p, [f.qid]: e.target.value }))}
+              placeholder={c.otherPlaceholder}
+              className="input-field mt-2"
+            />
+          )}
         </div>
       );
     }
@@ -503,8 +531,15 @@ export default function ReportFormPage() {
         />
 
         {error && (
-          <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider mb-5 rounded-lg animate-shake">
-            {error}
+          <div className="mb-5">
+            <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider rounded-lg animate-shake">
+              {error}
+            </div>
+            {errorDetail && (
+              <div className="mt-1.5 font-mono text-[10px] text-danger/80 break-words px-1">
+                {errorDetail}
+              </div>
+            )}
           </div>
         )}
 
@@ -532,20 +567,30 @@ export default function ReportFormPage() {
                 · {c.optional}
               </span>
             </label>
-            <button
-              type="button"
-              onClick={pickPhoto}
-              className={`w-full border-[1.5px] border-dashed rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors ${
-                hasPhoto
-                  ? 'border-success-green bg-success-green/5 text-success-green'
-                  : 'border-ink-line bg-ink-soft text-neutral-400 hover:border-accent hover:text-accent'
-              }`}
-            >
-              <span className="font-display text-2xl leading-none">{hasPhoto ? '✓' : '+'}</span>
-              <span className="font-body text-[11.5px] font-medium">
-                {hasPhoto ? `${c.photoChosen} · ${photoName}` : c.photoCap}
-              </span>
-            </button>
+            {hasPhoto ? (
+              <div className="border-[1.5px] border-success-green bg-success-green/5 rounded-xl p-3 flex items-center gap-3">
+                <span className="font-display text-xl leading-none text-success-green">✓</span>
+                <span className="flex-1 min-w-0 font-body text-[12px] text-success-green truncate">
+                  {c.photoChosen} · {photoName}
+                </span>
+                <button
+                  type="button"
+                  onClick={removePhoto}
+                  className="flex-shrink-0 font-mono text-[10px] tracking-wider px-2.5 py-1.5 border border-danger/50 text-danger rounded-md hover:bg-danger/10 transition-colors"
+                >
+                  ✕ {c.removePhoto}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={pickPhoto}
+                className="w-full border-[1.5px] border-dashed border-ink-line bg-ink-soft text-neutral-400 hover:border-accent hover:text-accent rounded-xl py-6 flex flex-col items-center gap-1.5 transition-colors"
+              >
+                <span className="font-display text-2xl leading-none">+</span>
+                <span className="font-body text-[11.5px] font-medium">{c.photoCap}</span>
+              </button>
+            )}
           </div>
         </div>
 

@@ -300,6 +300,7 @@ function ComplaintCard({ report: r, photoUrl, isAdmin, busy, onStatus, onDelete 
             {tagAnswers.map((a) => (
               <span key={a.qid} className="font-mono text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded">
                 {a.label}: {Array.isArray(a.value) ? a.value.join(', ') : a.value}
+                {a.other ? ` (${a.other})` : ''}
               </span>
             ))}
             {r.photo_path && (
