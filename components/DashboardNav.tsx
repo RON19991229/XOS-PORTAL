@@ -26,6 +26,7 @@ export default function DashboardNav({ role, userName }: DashboardNavProps) {
         { href: '/admin/history', label: 'HISTORY' },
         { href: '/admin/customers', label: 'CUSTOMERS' },
         { href: '/admin/attention', label: 'ATTENTION' },
+        { href: '/admin/complaint', label: 'COMPLAINT' },
         { href: '/admin/reports', label: 'REPORTS' },
         { href: '/admin/import', label: 'IMPORT' },
         { href: '/admin/audit', label: 'AUDIT' },
@@ -35,6 +36,7 @@ export default function DashboardNav({ role, userName }: DashboardNavProps) {
         { href: '/staff/history', label: 'HISTORY' },
         { href: '/staff/customers', label: 'CUSTOMERS' },
         { href: '/staff/attention', label: 'ATTENTION' },
+        { href: '/staff/complaint', label: 'COMPLAINT' },
       ];
 
   const isActive = (href: string) => {

@@ -62,6 +62,29 @@ export interface CustomerNote {
   created_at: string;
 }
 
+// Complaint / harassment report (migration v2.10). Submitted anonymously by
+// the public via /report; managed on the COMPLAINT dashboard. `answers` is a
+// self-describing array (see StoredAnswer in lib/report-config.ts) so the
+// question set can change without a DB migration.
+export type IncidentStatus = 'new' | 'reviewing' | 'resolved';
+
+export interface IncidentReport {
+  id: string;
+  created_at: string;
+  status: IncidentStatus;
+  lang: string | null;
+  description: string;
+  reporter_name: string | null;
+  reporter_contact: string | null;
+  is_anonymous: boolean;
+  photo_path: string | null;
+  // Array of { qid, label, type, value, other? } — typed loosely here to
+  // avoid a hard import cycle; callers cast to StoredAnswer[] from report-config.
+  answers: unknown;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+}
+
 export interface AppUser {
   id: string;
   email: string;
