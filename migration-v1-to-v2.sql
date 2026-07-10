@@ -1,142 +1,147 @@
--- =========================================================
--- X FITNESS Walk-in System — Migration v1 → v2
--- 
--- This script ADDS new columns to your existing tables without
--- losing data. Run this if you've already deployed v1.
---
--- If you're starting fresh, run supabase-schema.sql instead.
--- =========================================================
+'use client';
 
--- 1. Add nationality column (default 'malaysian' for existing rows)
-alter table customers
-  add column if not exists nationality text
-  check (nationality in ('malaysian', 'foreigner'));
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase-client';
+import BrandMark from './BrandMark';
 
-update customers set nationality = 'malaysian' where nationality is null;
-alter table customers alter column nationality set not null;
+interface DashboardNavProps {
+  role: 'staff' | 'admin';
+  userName: string;
+}
 
--- 2. Add date of birth
-alter table customers add column if not exists dob date;
+export default function DashboardNav({ role, userName }: DashboardNavProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const supabase = createClient();
 
--- 3. Replace emergency_contact_name with emergency_relationship
-alter table customers
-  add column if not exists emergency_relationship text
-  check (
-    emergency_relationship is null or
-    emergency_relationship in ('Friend', 'Partner', 'Father', 'Mother', 'Relative', 'Guardian', 'Sibling', 'Spouse', 'Other')
+  // Count of unhandled complaints — drives the red badge on COMPLAINT.
+  // Refreshes automatically: on mount, every 30s, and whenever the tab/window
+  // regains focus — so a new report shows up without a manual page refresh.
+  const [newCount, setNewCount] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const fetchCount = () => {
+      supabase
+        .from('incident_reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'new')
+        .then(({ count }) => {
+          if (active && typeof count === 'number') setNewCount(count);
+        });
+    };
+
+    fetchCount();
+    const interval = setInterval(fetchCount, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchCount();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchCount);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchCount);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
+
+  const links = role === 'admin'
+    ? [
+        { href: '/admin/complaint', label: 'COMPLAINT' },
+        { href: '/admin', label: 'TODAY' },
+        { href: '/admin/history', label: 'HISTORY' },
+        { href: '/admin/customers', label: 'CUSTOMERS' },
+        { href: '/admin/attention', label: 'ATTENTION' },
+        { href: '/admin/reports', label: 'REPORTS' },
+        { href: '/admin/import', label: 'IMPORT' },
+        { href: '/admin/audit', label: 'AUDIT' },
+      ]
+    : [
+        { href: '/staff/complaint', label: 'COMPLAINT' },
+        { href: '/staff', label: 'TODAY' },
+        { href: '/staff/history', label: 'HISTORY' },
+        { href: '/staff/customers', label: 'CUSTOMERS' },
+        { href: '/staff/attention', label: 'ATTENTION' },
+      ];
+
+  const isActive = (href: string) => {
+    if (href === '/admin' || href === '/staff') {
+      return pathname === href;
+    }
+    return pathname.startsWith(href);
+  };
+
+  return (
+    <header className="bg-ink text-bone border-b-2 border-accent sticky top-0 z-40">
+      <div className="flex items-center justify-between px-4 md:px-6 py-3">
+        <div className="flex items-center gap-4">
+          <BrandMark size="sm" />
+          <span className="font-display text-[10px] tracking-widest bg-accent text-ink px-2 py-1 hidden sm:inline-block">
+            {role.toUpperCase()}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`relative hidden md:inline-block font-display text-xs tracking-widest px-3 py-2 transition-colors ${
+                isActive(link.href)
+                  ? 'bg-accent text-ink'
+                  : 'text-neutral-300 hover:text-accent'
+              }`}
+            >
+              {link.label}
+              {link.label === 'COMPLAINT' && newCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-danger text-white font-display text-[9px] leading-none ring-2 ring-ink">
+                  {newCount}
+                </span>
+              )}
+            </Link>
+          ))}
+
+          <span className="hidden lg:inline-block font-mono text-xs ml-3 px-3 py-1 border border-ink-line">
+            {userName}
+          </span>
+
+          <button
+            onClick={handleLogout}
+            className="font-display text-xs tracking-widest px-3 py-2 text-neutral-400 hover:text-danger transition-colors"
+          >
+            EXIT
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile nav */}
+      <nav className="md:hidden flex border-t border-ink-line overflow-x-auto">
+        {links.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={`relative font-display text-xs tracking-widest px-4 py-2.5 whitespace-nowrap ${
+              isActive(link.href) ? 'bg-accent text-ink' : 'text-neutral-400'
+            }`}
+          >
+            {link.label}
+            {link.label === 'COMPLAINT' && newCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 flex items-center justify-center rounded-full bg-danger text-white font-display text-[8px] leading-none">
+                {newCount}
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+    </header>
   );
-
--- Migrate old emergency_contact_name → emergency_relationship if possible
--- (Old data will be 'Other' since we don't know the relationship)
-update customers
-set emergency_relationship = 'Other'
-where emergency_contact_name is not null and emergency_relationship is null;
-
--- Rename emergency_contact_phone to emergency_phone
-do $$
-begin
-  if exists (
-    select 1 from information_schema.columns
-    where table_name = 'customers' and column_name = 'emergency_contact_phone'
-  ) and not exists (
-    select 1 from information_schema.columns
-    where table_name = 'customers' and column_name = 'emergency_phone'
-  ) then
-    alter table customers rename column emergency_contact_phone to emergency_phone;
-  end if;
-end $$;
-
--- 4. Guardian fields (for 12-15 year olds)
-alter table customers add column if not exists guardian_ic text;
-alter table customers add column if not exists guardian_phone text;
-
--- 5. Phone unique constraint
--- First, check for duplicates
-do $$
-declare
-  dup_count integer;
-begin
-  select count(*) into dup_count from (
-    select phone from customers group by phone having count(*) > 1
-  ) sub;
-  if dup_count > 0 then
-    raise warning 'Duplicate phones found! % phone numbers have duplicates. Please clean up before adding unique constraint.', dup_count;
-  else
-    -- Safe to add unique constraint
-    if not exists (
-      select 1 from pg_indexes
-      where tablename = 'customers' and indexname = 'customers_phone_unique_idx'
-    ) then
-      create unique index customers_phone_unique_idx on customers(phone);
-    end if;
-  end if;
-end $$;
-
--- Index emergency phone for ban-checking
-create index if not exists customers_emergency_phone_idx on customers(emergency_phone);
-
--- 6. Update visits status check to include 'denied_age'
-alter table visits drop constraint if exists visits_status_check;
-alter table visits add constraint visits_status_check
-  check (status in ('approved', 'denied_banned', 'denied_age'));
-
--- 7. Helper functions for ban-check
-create or replace function is_phone_banned(check_phone text)
-returns boolean as $$
-begin
-  return exists (
-    select 1 from customers
-    where (phone = check_phone or emergency_phone = check_phone)
-      and status = 'banned'
-  );
-end;
-$$ language plpgsql security definer;
-
-create or replace function is_emergency_phone_suspicious(check_phone text)
-returns boolean as $$
-begin
-  if check_phone is null or check_phone = '' then
-    return false;
-  end if;
-  return exists (
-    select 1 from customers
-    where phone = check_phone and status = 'banned'
-  );
-end;
-$$ language plpgsql security definer;
-
--- 8. Update view
-drop view if exists todays_visits;
-create or replace view todays_visits as
-select
-  v.id,
-  v.visited_at,
-  v.status as visit_status,
-  c.id as customer_id,
-  c.ic,
-  c.name,
-  c.phone,
-  c.nationality,
-  c.status as customer_status,
-  c.warning_count,
-  c.ban_reason
-from visits v
-left join customers c on v.customer_id = c.id
-where v.visited_at >= date_trunc('day', now())
-order by v.visited_at desc;
-
--- 9. Make sure realtime is enabled (in case it wasn't)
-do $$
-begin
-  begin
-    alter publication supabase_realtime add table customers;
-  exception when duplicate_object then null;
-  end;
-  begin
-    alter publication supabase_realtime add table visits;
-  exception when duplicate_object then null;
-  end;
-end $$;
-
--- Done!
-select 'Migration to v2 complete' as status;
+}

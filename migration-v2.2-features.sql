@@ -1,157 +1,131 @@
--- =========================================================
--- v2.2 MIGRATION — Membership tag, History view, Import support
--- =========================================================
--- This adds:
---   1. customers.membership column (NULL by default = no tag)
---   2. visits_history view (joined visits + customer info for History page)
---   3. get_history_visits() RPC for grouped-by-day queries
---   4. customers_unique_ic_idx (ensures bulk-import duplicate detection)
---
--- Run AFTER v2.1 migrations. Idempotent.
--- =========================================================
+/**
+ * safe-storage — crash-proof wrappers around sessionStorage / localStorage.
+ *
+ * WHY THIS EXISTS (the iPhone "server error" bug, fixed v2.7.3):
+ * --------------------------------------------------------------
+ * Our customers reach /checkin by scanning a QR code. A large share of them
+ * open that link in:
+ *   - Private / Incognito browsing
+ *   - In-app browsers (WeChat, WhatsApp, Instagram, etc.)
+ *   - Safari/Chrome on iOS with "Prevent Cross-Site Tracking" on
+ *
+ * On iOS, EVERY browser (Chrome, Edge, Firefox included) is forced to use
+ * Apple's WebKit engine. In the situations above, WebKit will THROW a
+ * SecurityError / QuotaExceededError the moment you touch
+ * sessionStorage.getItem/setItem — it doesn't just return null.
+ *
+ * The old code called sessionStorage / localStorage ~25 times with no
+ * try/catch anywhere, so a single throw crashed the whole React tree and the
+ * customer saw a full-page "Application error" (what they described as a
+ * "server error"). Desktop Chrome never hit this because it uses V8/Blink and
+ * happily allows storage.
+ *
+ * THE FIX:
+ *   - Every read/write/remove/clear is wrapped in try/catch and degrades to a
+ *     no-op (reads return null) instead of throwing.
+ *   - When the real Storage is unavailable, we transparently fall back to an
+ *     in-memory Map. This keeps the multi-step checkin flow working WITHIN a
+ *     single page session (language → nationality → IC → register → reminders
+ *     → approved), because all those values are written and read during the
+ *     same JS runtime. They just won't survive a full page reload — which is
+ *     an acceptable trade for "the app never crashes".
+ *
+ * Use safeSession / safeLocal everywhere instead of the raw globals.
+ */
 
--- 1. Membership column (NULL = no tag, 'member' = marked by admin)
-alter table customers
-  add column if not exists membership text
-  check (membership is null or membership in ('member'));
+// In-memory fallbacks. One per storage type. These live for the lifetime of
+// the JS runtime (i.e. until a hard reload / new tab), which is exactly the
+// span of one customer's checkin journey.
+const memSession = new Map<string, string>();
+const memLocal = new Map<string, string>();
 
-create index if not exists customers_membership_idx
-  on customers(membership)
-  where membership is not null;
+type Kind = 'session' | 'local';
 
--- 2. View for the History page — visits with customer details
-create or replace view visits_history as
-select
-  v.id,
-  v.visited_at,
-  v.status as visit_status,
-  v.customer_id,
-  v.ic,
-  c.name,
-  c.phone,
-  c.nationality,
-  c.status as customer_status,
-  c.warning_count,
-  c.membership
-from visits v
-left join customers c on c.id = v.customer_id
-order by v.visited_at desc;
+function backing(kind: Kind): Storage | null {
+  if (typeof window === 'undefined') return null; // SSR
+  try {
+    return kind === 'session' ? window.sessionStorage : window.localStorage;
+  } catch {
+    // Accessing the property itself can throw in some locked-down WebViews.
+    return null;
+  }
+}
 
--- 2b. Rebuild todays_visits view to include membership column
-drop view if exists todays_visits;
-create or replace view todays_visits as
-select
-  v.id,
-  v.visited_at,
-  v.status as visit_status,
-  c.id as customer_id,
-  c.ic,
-  c.name,
-  c.phone,
-  c.nationality,
-  c.status as customer_status,
-  c.warning_count,
-  c.ban_reason,
-  c.membership
-from visits v
-left join customers c on c.id = v.customer_id
-where v.visited_at >= date_trunc('day', now() at time zone 'Asia/Kuala_Lumpur')
-                     at time zone 'Asia/Kuala_Lumpur'
-order by v.visited_at desc;
+function mem(kind: Kind): Map<string, string> {
+  return kind === 'session' ? memSession : memLocal;
+}
 
--- 3. RPC: get visits grouped by day for the past N days, with daily summaries
-create or replace function get_history_visits(days_back integer default 14)
-returns jsonb as $$
-declare
-  result jsonb;
-  start_date timestamptz;
-begin
-  -- Start from N days ago at midnight Malaysia time
-  start_date := date_trunc('day', now() at time zone 'Asia/Kuala_Lumpur')
-                at time zone 'Asia/Kuala_Lumpur'
-                - (days_back || ' days')::interval;
+function makeStorage(kind: Kind) {
+  return {
+    getItem(key: string): string | null {
+      const store = backing(kind);
+      if (store) {
+        try {
+          const v = store.getItem(key);
+          // If real storage has it, prefer that; otherwise fall through to mem
+          // (covers the case where an earlier setItem silently went to mem).
+          if (v !== null) return v;
+        } catch {
+          /* fall through to memory */
+        }
+      }
+      const m = mem(kind);
+      return m.has(key) ? m.get(key)! : null;
+    },
 
-  with v as (
-    select
-      vh.id,
-      vh.visited_at,
-      to_char(vh.visited_at at time zone 'Asia/Kuala_Lumpur', 'YYYY-MM-DD') as day_key,
-      vh.visit_status,
-      vh.customer_id,
-      vh.ic,
-      vh.name,
-      vh.phone,
-      vh.nationality,
-      vh.customer_status,
-      vh.warning_count,
-      vh.membership
-    from visits_history vh
-    where vh.visited_at >= start_date
-  ),
-  daily_summary as (
-    select
-      day_key,
-      count(*) as total,
-      count(*) filter (where visit_status = 'approved') as approved,
-      count(*) filter (where visit_status <> 'approved') as denied
-    from v
-    group by day_key
-  ),
-  visits_per_day as (
-    select
-      day_key,
-      jsonb_agg(
-        jsonb_build_object(
-          'id', id,
-          'visited_at', visited_at,
-          'visit_status', visit_status,
-          'customer_id', customer_id,
-          'ic', ic,
-          'name', name,
-          'phone', phone,
-          'nationality', nationality,
-          'customer_status', customer_status,
-          'warning_count', warning_count,
-          'membership', membership
-        ) order by visited_at desc
-      ) as visits
-    from v
-    group by day_key
-  )
-  select coalesce(jsonb_agg(
-    jsonb_build_object(
-      'day_key', ds.day_key,
-      'total', ds.total,
-      'approved', ds.approved,
-      'denied', ds.denied,
-      'visits', vd.visits
-    ) order by ds.day_key desc
-  ), '[]'::jsonb) into result
-  from daily_summary ds
-  join visits_per_day vd on vd.day_key = ds.day_key;
+    setItem(key: string, value: string): void {
+      // Always mirror into memory so reads succeed even if the real write fails.
+      mem(kind).set(key, value);
+      const store = backing(kind);
+      if (store) {
+        try {
+          store.setItem(key, value);
+        } catch {
+          /* memory already holds it — safe to ignore */
+        }
+      }
+    },
 
-  return result;
-end;
-$$ language plpgsql security definer stable;
+    removeItem(key: string): void {
+      mem(kind).delete(key);
+      const store = backing(kind);
+      if (store) {
+        try {
+          store.removeItem(key);
+        } catch {
+          /* ignore */
+        }
+      }
+    },
 
-grant execute on function get_history_visits(integer) to authenticated;
+    clear(): void {
+      mem(kind).clear();
+      const store = backing(kind);
+      if (store) {
+        try {
+          store.clear();
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+  };
+}
 
--- 4. Make sure the cooldown trigger function uses the index
--- (already added in performance migration — visits_ic_visited_at_idx)
+export const safeSession = makeStorage('session');
+export const safeLocal = makeStorage('local');
 
--- =========================================================
--- Verification
--- =========================================================
-do $$
-begin
-  if exists (select 1 from information_schema.columns
-             where table_name = 'customers' and column_name = 'membership') then
-    raise notice '✓ customers.membership column added';
-  end if;
-  if exists (select 1 from information_schema.views where table_name = 'visits_history') then
-    raise notice '✓ visits_history view created';
-  end if;
-  if exists (select 1 from pg_proc where proname = 'get_history_visits') then
-    raise notice '✓ get_history_visits() RPC created';
-  end if;
-end $$;
+/**
+ * Crash-proof JSON.parse. Returns `fallback` (default null) instead of
+ * throwing on malformed input — important because storage values that came
+ * back partially written, or got mangled by an in-app browser, would
+ * otherwise crash the page on JSON.parse.
+ */
+export function safeJsonParse<T>(raw: string | null, fallback: T | null = null): T | null {
+  if (raw === null || raw === undefined) return fallback;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
