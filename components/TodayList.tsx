@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime } from '@/lib/utils';
@@ -30,10 +30,11 @@ interface TodayListProps {
 }
 
 export default function TodayList({ baseHref, role }: TodayListProps) {
-  const supabase = createClient();
+  // createBrowserClient is a singleton, but memoizing guarantees a stable
+  // identity for the useCallback dependency arrays below.
+  const supabase = useMemo(() => createClient(), []);
   const [visits, setVisits] = useState<VisitRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState('');
 
   // Toast events currently shown in the top-right corner. Each event
   // auto-removes after 6 seconds (matches CheckinToast's leave timer).
@@ -82,24 +83,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
     });
   };
 
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const date = d.toLocaleDateString('en-MY', {
-        weekday: 'short',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        timeZone: 'Asia/Kuala_Lumpur',
-      });
-      setNow(`${date} · ${formatTime(d)}`);
-    };
-    tick();
-    const i = setInterval(tick, 1000);
-    return () => clearInterval(i);
-  }, []);
-
-  const fetchVisits = async () => {
+  const fetchVisits = useCallback(async () => {
     // Only select the columns the UI actually uses (smaller payload)
     const { data } = await supabase
       .from('todays_visits')
@@ -163,7 +147,9 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
 
     setVisits(rows);
     setLoading(false);
-  };
+    // Reads only refs + setters, so this callback is stable for the
+    // lifetime of the component (supabase is memoized above).
+  }, [supabase]);
 
   useEffect(() => {
     fetchVisits();
@@ -201,19 +187,24 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchVisits]);
 
-  const handleDeleteVisit = async (e: React.MouseEvent, visitId: string, visitTime: string, visitName: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!confirm(`Delete visit by ${visitName} at ${formatTime(visitTime)}?`)) return;
-    const { error } = await supabase.from('visits').delete().eq('id', visitId);
-    if (error) {
-      alert('Delete failed: ' + error.message);
-      return;
-    }
-    await fetchVisits();
-  };
+  // Stable identity so memoized VisitRowItem doesn't re-render when
+  // unrelated state (toasts, privacy, highlights) changes.
+  const handleDeleteVisit = useCallback(
+    async (e: React.MouseEvent, visitId: string, visitTime: string, visitName: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!confirm(`Delete visit by ${visitName} at ${formatTime(visitTime)}?`)) return;
+      const { error } = await supabase.from('visits').delete().eq('id', visitId);
+      if (error) {
+        alert('Delete failed: ' + error.message);
+        return;
+      }
+      await fetchVisits();
+    },
+    [supabase, fetchVisits],
+  );
 
   const stats = {
     total: visits.length,
@@ -232,7 +223,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
             <h1 className="font-display text-3xl md:text-4xl tracking-tight">TODAY</h1>
             <p className="font-mono text-xs text-neutral-600 mt-1">
               <span className="inline-block w-1.5 h-1.5 bg-success rounded-full mr-1.5 animate-pulse-slow align-middle" />
-              {now}
+              <LiveClock />
             </p>
           </div>
           <div className="flex gap-3 items-center">
@@ -258,7 +249,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
       </div>
 
       {/* Column headers (desktop) */}
-      <div className={`hidden md:grid bg-ink text-accent px-6 py-2 font-mono text-[10px] tracking-[0.15em] sticky top-[60px] z-10`}
+      <div className="hidden md:grid bg-ink text-accent px-6 py-2 font-mono text-[10px] tracking-[0.15em] sticky top-[60px] z-10"
         style={{ gridTemplateColumns: isAdmin ? '90px 1fr 200px 180px 100px 50px' : '90px 1fr 200px 180px 100px' }}>
         <div>TIME</div>
         <div>NAME</div>
@@ -276,16 +267,19 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
           <p className="font-mono text-xs text-neutral-500">Waiting for first walk-in of the day</p>
         </div>
       ) : (
-        <div>
+        /* Privacy mode: ONE blur layer on the whole feed instead of a
+           separate 8px blur per cell (was 400+ GPU layers on a busy day).
+           The toast stack below is outside this wrapper, so it stays
+           readable while privacy is on — same behaviour as before. */
+        <div className={privacy ? 'privacy-blur' : ''}>
           {visits.map((v) => (
-            <VisitRow
+            <VisitRowItem
               key={v.id}
               visit={v}
               baseHref={baseHref}
               isAdmin={isAdmin}
               onDelete={handleDeleteVisit}
               isHighlighted={highlightIds.has(v.id)}
-              privacy={privacy}
             />
           ))}
         </div>
@@ -307,15 +301,46 @@ function Stat({ label, value, color }: { label: string; value: number; color?: '
   );
 }
 
-function VisitRow({
-  visit, baseHref, isAdmin, onDelete, isHighlighted, privacy,
+/**
+ * Self-contained live clock (v2.15.0). Previously the per-second tick
+ * lived in TodayList's own state, which re-rendered the ENTIRE feed
+ * (all rows) every single second, all day long on the counter PC.
+ * Isolating it here means only this tiny text node updates each second.
+ */
+function LiveClock() {
+  const [now, setNow] = useState('');
+  useEffect(() => {
+    const tick = () => {
+      const d = new Date();
+      const date = d.toLocaleDateString('en-MY', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'Asia/Kuala_Lumpur',
+      });
+      setNow(`${date} · ${formatTime(d)}`);
+    };
+    tick();
+    const i = setInterval(tick, 1000);
+    return () => clearInterval(i);
+  }, []);
+  return <>{now}</>;
+}
+
+/**
+ * One row of the live feed. Memoized: rows only re-render when their own
+ * visit data, highlight state, or the (stable) delete handler changes —
+ * not when toasts appear, privacy toggles, or the clock ticks.
+ */
+const VisitRowItem = memo(function VisitRowItem({
+  visit, baseHref, isAdmin, onDelete, isHighlighted,
 }: {
   visit: VisitRow;
   baseHref: string;
   isAdmin: boolean;
   onDelete: (e: React.MouseEvent, id: string, time: string, name: string) => void;
   isHighlighted: boolean;
-  privacy: boolean;
 }) {
   const time = formatTime(visit.visited_at);
   const isBanned = visit.visit_status === 'denied_banned' || visit.customer_status === 'banned';
@@ -343,9 +368,6 @@ function VisitRow({
 
   const gridCols = isAdmin ? '90px 1fr 200px 180px 100px 50px' : '90px 1fr 200px 180px 100px';
 
-  // Privacy blur class applied to sensitive cells only (not trash/arrow icons).
-  const pc = privacy ? 'privacy-blur' : '';
-
   // Orphaned visits (e.g. underage attempts with no customer record) get
   // no clickable link, but otherwise render with the same layout as
   // regular rows so mobile stacking still works.
@@ -366,7 +388,7 @@ function VisitRow({
       {/* Mobile: stacked layout */}
       <div className="md:hidden w-full">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <div className={`flex items-center gap-2 ${pc}`}>
+          <div className="flex items-center gap-2">
             <span className="font-mono text-sm font-bold">{time}</span>
             <span className={`font-display text-[10px] tracking-widest px-2 py-0.5 ${statusClass}`}>
               {statusLabel}
@@ -387,21 +409,21 @@ function VisitRow({
         </div>
         {hasLink ? (
           <Link href={customerHref!} className="block">
-            <div className={`font-bold text-sm truncate flex items-center gap-1.5 ${pc}`}>
+            <div className="font-bold text-sm truncate flex items-center gap-1.5">
               {visit.membership === 'member' && (
                 <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
               )}
               <GenderBadge gender={visit.gender} />
               <span className="truncate">{nameDisplay}</span>
             </div>
-            <div className={`font-mono text-[11px] text-neutral-600 truncate ${pc}`}>
+            <div className="font-mono text-[11px] text-neutral-600 truncate">
               {visit.ic} · {visit.phone || '—'}
             </div>
           </Link>
         ) : (
           <>
-            <div className={`font-bold text-sm truncate ${pc}`}>{nameDisplay}</div>
-            <div className={`font-mono text-[11px] text-neutral-600 truncate ${pc}`}>
+            <div className="font-bold text-sm truncate">{nameDisplay}</div>
+            <div className="font-mono text-[11px] text-neutral-600 truncate">
               {visit.ic} · —
             </div>
           </>
@@ -411,35 +433,35 @@ function VisitRow({
       {/* Desktop: table layout */}
       {hasLink ? (
         <>
-          <Link href={customerHref!} className={`hidden md:block font-mono text-sm font-bold ${pc}`}>{time}</Link>
-          <Link href={customerHref!} className={`hidden md:flex items-center gap-1.5 font-bold text-sm truncate ${pc}`}>
+          <Link href={customerHref!} className="hidden md:block font-mono text-sm font-bold">{time}</Link>
+          <Link href={customerHref!} className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
             {visit.membership === 'member' && (
               <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
             )}
             <GenderBadge gender={visit.gender} />
             <span className="truncate">{nameDisplay}</span>
           </Link>
-          <Link href={customerHref!} className={`hidden md:block font-mono text-xs text-neutral-600 truncate ${pc}`}>
+          <Link href={customerHref!} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
             {visit.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
             {visit.ic}
           </Link>
-          <Link href={customerHref!} className={`hidden md:block font-mono text-xs text-neutral-600 truncate ${pc}`}>
+          <Link href={customerHref!} className="hidden md:block font-mono text-xs text-neutral-600 truncate">
             {visit.phone || '—'}
           </Link>
           <Link href={customerHref!} className="hidden md:block text-center">
-            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass} ${pc}`}>
+            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
               {statusLabel}
             </span>
           </Link>
         </>
       ) : (
         <>
-          <div className={`hidden md:block font-mono text-sm font-bold ${pc}`}>{time}</div>
-          <div className={`hidden md:block font-bold text-sm truncate ${pc}`}>{nameDisplay}</div>
-          <div className={`hidden md:block font-mono text-xs text-neutral-600 truncate ${pc}`}>{visit.ic}</div>
-          <div className={`hidden md:block font-mono text-xs text-neutral-600 ${pc}`}>—</div>
+          <div className="hidden md:block font-mono text-sm font-bold">{time}</div>
+          <div className="hidden md:block font-bold text-sm truncate">{nameDisplay}</div>
+          <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{visit.ic}</div>
+          <div className="hidden md:block font-mono text-xs text-neutral-600">—</div>
           <div className="hidden md:block text-center">
-            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass} ${pc}`}>
+            <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
               {statusLabel}
             </span>
           </div>
@@ -458,4 +480,4 @@ function VisitRow({
       )}
     </div>
   );
-}
+});

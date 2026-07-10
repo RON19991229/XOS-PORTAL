@@ -1,164 +1,217 @@
-/**
- * X FITNESS — Terms & Conditions (official)
- *
- * Last updated: 2026-05-08 (v2.7.0)
- * Source: User-provided official document.
- *
- * Used by:
- *   - components/TermsContent.tsx — shown inline on /checkin/register
- *   - components/TermsModal.tsx   — popup on /checkin/reminders
- *
- * IMPORTANT: This is the legal-grade text. Do NOT casually edit
- * wording. If updates are needed, they should come from management
- * and be reviewed for legal/PDPA compliance.
- */
+-- =========================================================
+-- v2.8 MIGRATION — History page: dob field + SECURITY INVOKER hardening
+-- =========================================================
+-- This migration does THREE things, all needed for the new History
+-- page filters (Date range / Gender / Age / Visit Time / Visit Frequency):
+--
+--   1. Adds `dob` to the visits_history view + get_history_visits() RPC
+--      so the frontend can compute AGE buckets per visit.
+--
+--   2. Rebuilds visits_history AND todays_visits views as
+--      SECURITY INVOKER, fixing the two CRITICAL Supabase linter
+--      warnings ("Security Definer View"). After this, the views run
+--      with the QUERYING user's permissions and respect RLS — which is
+--      exactly what the v2.7 security model wants.
+--
+--   3. Keeps get_history_visits() as SECURITY DEFINER (unchanged) — it
+--      is an RPC that intentionally returns a minimal, aggregated JSON
+--      payload to authenticated staff/admin. Only `dob` is added.
+--
+-- SAFETY NOTES:
+--   • Idempotent: safe to run multiple times.
+--   • authenticated role already has SELECT on customers + visits via
+--     RLS policy `using (true)`, so SECURITY INVOKER views return the
+--     SAME data as before for logged-in admin/staff. Zero functional
+--     change to what the History page shows.
+--   • anon role is NOT granted access to these views (unchanged).
+--   • Adding a column to the view's SELECT list does not break the
+--     existing frontend — it ignores fields it doesn't read.
+--
+-- Run in Supabase SQL Editor AFTER all earlier migrations.
+-- =========================================================
 
-export interface TermsSection {
-  title: string;
-  items: string[];
-}
+-- ---------------------------------------------------------
+-- 1. todays_visits — rebuild as SECURITY INVOKER
+--    (column list IDENTICAL to v2.3; only the security mode changes)
+-- ---------------------------------------------------------
+drop view if exists todays_visits cascade;
+create view todays_visits
+with (security_invoker = true) as
+select
+  v.id,
+  v.visited_at,
+  v.status as visit_status,
+  c.id as customer_id,
+  c.ic,
+  c.name,
+  c.phone,
+  c.nationality,
+  c.status as customer_status,
+  c.warning_count,
+  c.ban_reason,
+  c.membership,
+  c.gender
+from visits v
+left join customers c on c.id = v.customer_id
+where v.visited_at >= (
+  date_trunc('day', now() at time zone 'Asia/Kuala_Lumpur') at time zone 'Asia/Kuala_Lumpur'
+)
+order by v.visited_at desc;
 
-export const termsIntro = `This site and all services offered herein are owned and operated by X FITNESS CENTRE (Business Registration No.: 202503023755, Old Registration No.: IP0604759-X) ("the Company").
+-- TodayList.tsx queries this view directly via .from('todays_visits').
+-- With SECURITY INVOKER the querying role needs SELECT on the view itself.
+-- Grant to authenticated (admin/staff) only; anon stays blocked.
+grant select on todays_visits to authenticated;
 
-While the official registered name is X FITNESS CENTRE, the brand is commonly referred to as X FITNESS across all signage, marketing materials, and social media platforms.
+-- ---------------------------------------------------------
+-- 2. visits_history — rebuild as SECURITY INVOKER + add dob
+-- ---------------------------------------------------------
+drop view if exists visits_history cascade;
+create view visits_history
+with (security_invoker = true) as
+select
+  v.id,
+  v.visited_at,
+  v.status as visit_status,
+  v.customer_id,
+  v.ic,
+  c.name,
+  c.phone,
+  c.nationality,
+  c.status as customer_status,
+  c.warning_count,
+  c.membership,
+  c.gender,
+  c.dob                       -- NEW: needed for Age filter
+from visits v
+left join customers c on c.id = v.customer_id
+order by v.visited_at desc;
 
-By checking and agreeing to these Terms & Conditions, you acknowledge that you have read, understood, and agreed to be bound by the terms set forth below.`;
+-- Grant SELECT to authenticated (admin/staff). The get_history_visits RPC is
+-- SECURITY DEFINER so it doesn't strictly need this, but other code or future
+-- direct reads of the view do. anon stays blocked.
+grant select on visits_history to authenticated;
 
-export const termsSections: TermsSection[] = [
-  {
-    title: 'Walk-In Access',
-    items: [
-      'Walk-in entry is valid for one-time access only.',
-      'Fees paid are non-refundable and non-transferable.',
-      'All walk-in visitors are required to complete the designated check-in procedure before entering the premises.',
-      'Failure or refusal to check in may result in immediate removal from the premises without refund.',
-      'Sharing access, bypassing registration procedures, or unauthorized entry is strictly prohibited and may result in suspension or permanent banning.',
-    ],
-  },
-  {
-    title: 'Health & Safety',
-    items: [
-      'You confirm that you are physically fit to exercise and do not suffer from any medical condition that may endanger yourself or others.',
-      'All equipment and facilities are used at your own risk.',
-      'The Company shall not be held responsible for any injuries, accidents, illnesses, or health-related issues arising during your visit.',
-      'Exercising under the influence of alcohol, drugs, or medication that may impair physical ability or judgment is strictly prohibited.',
-    ],
-  },
-  {
-    title: 'Gym Conduct',
-    items: [
-      'Proper gym attire and sports shoes must be worn at all times. Sandals or slippers are not permitted.',
-      'Members and visitors must return all equipment and tools to their designated places after use.',
-      'All weights, including dumbbells and bumper plates, must be re-racked after use.',
-      'Slamming dumbbells on the floor unnecessarily or misusing gym equipment is strictly prohibited.',
-      'Removing shirts in public areas is not allowed, except within the designated posing area.',
-      'Respectful behaviour towards staff, members, and visitors is required at all times.',
-      'Any disrespectful, threatening, dangerous, disruptive, or inappropriate behaviour may result in warnings, suspension, removal, or permanent banning without refund.',
-    ],
-  },
-  {
-    title: 'Prohibited Substances & Injection Activities',
-    items: [
-      'The use, possession, preparation, distribution, or administration of steroids, illegal drugs, or unauthorized performance-enhancing substances within the premises is strictly prohibited.',
-      'Injecting or attempting to inject any substance within the gym premises, including in restrooms or changing areas, is strictly prohibited.',
-      'Individuals found engaging in such activities may receive warnings, suspension, or immediate permanent banning depending on the severity or repeated nature of the offence.',
-      'The Company reserves the right to report illegal activities to law enforcement authorities where necessary.',
-    ],
-  },
-  {
-    title: 'Equipment & Property',
-    items: [
-      'Any intentional or negligent damage to gym property, equipment, or facilities may result in compensation charges and possible legal action.',
-    ],
-  },
-  {
-    title: 'Personal Belongings',
-    items: [
-      'Members and visitors are responsible for securing their personal belongings.',
-      'The Company shall not be responsible for any loss, theft, or damage to personal property.',
-    ],
-  },
-  {
-    title: 'Photography & Recording',
-    items: [
-      'Recording or photographing other members or visitors without their consent is strictly prohibited.',
-      'Unauthorized commercial filming, photography, solicitation, or promotional activities within the premises are not permitted unless approved by management.',
-    ],
-  },
-  {
-    title: 'Age Requirement',
-    items: [
-      'Individuals below 12 years old are strictly prohibited from entering the gym area.',
-      'Individuals aged 12 to 15 years old must be accompanied and supervised by a parent or legal guardian at all times while using the facilities.',
-      'Individuals aged 16 years old and above may enter and use the facilities independently.',
-    ],
-  },
-  {
-    title: 'CCTV & Security Monitoring',
-    items: [
-      'CCTV surveillance is in operation within the premises for safety, security, operational, and investigation purposes.',
-      'In the event of complaints, disputes, harassment, stalking, theft, vandalism, misconduct, accidents, or security incidents, CCTV recordings may be reviewed by authorized management personnel for investigation purposes.',
-      'Where necessary, relevant CCTV footage and information may be provided to law enforcement authorities, legal representatives, insurance providers, or courts as supporting evidence.',
-    ],
-  },
-  {
-    title: 'PDPA Notice',
-    items: [
-      'By submitting this form, you consent to the collection, storage, processing, and use of your personal data in accordance with the Personal Data Protection Act 2010 (PDPA) for registration, operational, security, and safety purposes.',
-      'Your personal information will be kept confidential and will only be accessible by authorized management-level personnel on a need-to-know basis.',
-      'The Company will take reasonable and practical steps to protect your personal data from misuse, unauthorized access, modification, disclosure, or loss.',
-    ],
-  },
-  {
-    title: 'Personal Information Accuracy',
-    items: [
-      'You agree to provide accurate, complete, and truthful personal information, including your full name, IC/Passport number, and contact details when completing this form.',
-      'The information provided may be used for identity verification, emergency response, insurance documentation, operational purposes, or compliance with legal and regulatory requirements.',
-      'In the event of an accident, injury, medical emergency, property damage, criminal investigation, or legal dispute, the Company reserves the right to disclose relevant personal information to hospitals, emergency responders, insurance providers, legal representatives, or law enforcement authorities where necessary.',
-      'Providing false, misleading, or incomplete information is strictly prohibited and may result in refusal of entry, suspension of access, and/or legal action.',
-    ],
-  },
-  {
-    title: 'Rule Enforcement & Ban Policy',
-    items: [
-      'The Company reserves the right to issue verbal warnings, written warnings, temporary suspensions, or permanent bans depending on the severity and frequency of rule violations.',
-      'Repeated violations of gym rules may result in permanent removal from the premises and refusal of future entry.',
-      'Serious misconduct, including but not limited to harassment, stalking, threats, intimidation, physical violence, theft, vandalism, illegal activities, or behaviour that endangers the safety of others, may result in immediate permanent banning without prior warning or refund.',
-    ],
-  },
-  {
-    title: 'Hygiene & Cleanliness',
-    items: [
-      'Members and visitors are expected to maintain proper personal hygiene while using the facilities.',
-      'Please wipe down equipment after use where applicable.',
-      'The Company reserves the right to refuse entry to individuals whose hygiene, attire, or behaviour negatively affects the comfort, safety, or experience of others.',
-    ],
-  },
-  {
-    title: 'Capacity & Access Control',
-    items: [
-      'The Company reserves the right to limit entry, restrict walk-in access, implement waiting periods, or refuse entry during peak hours, special events, maintenance periods, or overcrowded conditions for safety and operational reasons.',
-    ],
-  },
-  {
-    title: 'Lost & Found',
-    items: [
-      'Any lost and found items retained by the Company for more than 7 days without claim may be disposed of at the Company\u2019s discretion.',
-      'The Company shall not be held liable for any unclaimed, lost, or stolen items.',
-    ],
-  },
-  {
-    title: 'Data Access Rights',
-    items: [
-      'You may request access to or correction of your personal data held by the Company by contacting the Company through its official communication channels.',
-      'The Company reserves the right to retain personal data for operational, legal, safety, security, and record-keeping purposes in accordance with applicable laws and regulations.',
-    ],
-  },
-  {
-    title: 'Final Rights',
-    items: [
-      'The Company reserves the right to amend, modify, or update these Terms & Conditions at any time without prior notice.',
-      'The Company further reserves the right to refuse entry, suspend access, or remove any individual whose conduct is deemed inappropriate, unsafe, disruptive, or inconsistent with the rules and interests of the premises.',
-    ],
-  },
-];
+-- ---------------------------------------------------------
+-- 3. get_history_visits() RPC — add dob to the per-visit JSON
+--    (everything else byte-for-byte identical to v2.3)
+-- ---------------------------------------------------------
+create or replace function get_history_visits(days_back integer default 14)
+returns jsonb as $$
+declare
+  result jsonb;
+  start_date timestamptz;
+begin
+  start_date := date_trunc('day', now() at time zone 'Asia/Kuala_Lumpur')
+                at time zone 'Asia/Kuala_Lumpur'
+                - (days_back || ' days')::interval;
+
+  with v as (
+    select
+      vh.id,
+      vh.visited_at,
+      to_char(vh.visited_at at time zone 'Asia/Kuala_Lumpur', 'YYYY-MM-DD') as day_key,
+      vh.visit_status,
+      vh.customer_id,
+      vh.ic,
+      vh.name,
+      vh.phone,
+      vh.nationality,
+      vh.customer_status,
+      vh.warning_count,
+      vh.membership,
+      vh.gender,
+      vh.dob
+    from visits_history vh
+    where vh.visited_at >= start_date
+  ),
+  daily_summary as (
+    select
+      day_key,
+      count(*) as total,
+      count(*) filter (where visit_status = 'approved') as approved,
+      count(*) filter (where visit_status <> 'approved') as denied
+    from v
+    group by day_key
+  ),
+  visits_per_day as (
+    select
+      day_key,
+      jsonb_agg(
+        jsonb_build_object(
+          'id', id,
+          'visited_at', visited_at,
+          'visit_status', visit_status,
+          'customer_id', customer_id,
+          'ic', ic,
+          'name', name,
+          'phone', phone,
+          'nationality', nationality,
+          'customer_status', customer_status,
+          'warning_count', warning_count,
+          'membership', membership,
+          'gender', gender,
+          'dob', dob
+        ) order by visited_at desc
+      ) as visits
+    from v
+    group by day_key
+  )
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'day_key', ds.day_key,
+      'total', ds.total,
+      'approved', ds.approved,
+      'denied', ds.denied,
+      'visits', vd.visits
+    ) order by ds.day_key desc
+  ), '[]'::jsonb) into result
+  from daily_summary ds
+  join visits_per_day vd on vd.day_key = ds.day_key;
+
+  return result;
+end;
+$$ language plpgsql security definer stable;
+
+grant execute on function get_history_visits(integer) to authenticated;
+
+-- ---------------------------------------------------------
+-- Verification
+-- ---------------------------------------------------------
+do $$
+declare
+  v_invoker_todays boolean;
+  v_invoker_history boolean;
+  v_has_dob boolean;
+begin
+  -- Confirm security_invoker is set on both views
+  select coalesce((
+    select option_value::boolean
+    from pg_options_to_table((select reloptions from pg_class where relname = 'todays_visits'))
+    where option_name = 'security_invoker'
+  ), false) into v_invoker_todays;
+
+  select coalesce((
+    select option_value::boolean
+    from pg_options_to_table((select reloptions from pg_class where relname = 'visits_history'))
+    where option_name = 'security_invoker'
+  ), false) into v_invoker_history;
+
+  -- Confirm dob is now a column of visits_history
+  select exists(
+    select 1 from information_schema.columns
+    where table_name = 'visits_history' and column_name = 'dob'
+  ) into v_has_dob;
+
+  raise notice '----------------------------------------';
+  raise notice 'v2.8 migration verification:';
+  raise notice '  todays_visits  SECURITY INVOKER : %', v_invoker_todays;
+  raise notice '  visits_history SECURITY INVOKER : %', v_invoker_history;
+  raise notice '  visits_history has dob column   : %', v_has_dob;
+  raise notice '----------------------------------------';
+
+  if not (v_invoker_todays and v_invoker_history and v_has_dob) then
+    raise exception 'v2.8 verification FAILED — check above';
+  end if;
+  raise notice '✓ v2.8 migration OK';
+end $$;

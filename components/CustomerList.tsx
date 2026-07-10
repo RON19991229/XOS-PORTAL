@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { Customer } from '@/lib/types';
@@ -26,8 +26,15 @@ const FREQUENT_THRESHOLD = 10;             // 10+ visits = "frequent"
 const INACTIVE_DAYS = 30;                  // no visit in 30 days = "inactive"
 const NEW_DAYS = 7;                        // registered in last 7 days = "new"
 
+// v2.15.0: render the list in chunks. Mounting all 1,600+ rows at once
+// (each with a mobile AND a desktop layout) creates tens of thousands of
+// DOM nodes and makes the initial paint + every filter change janky.
+// Filtering/sorting still runs over the FULL dataset — only the number of
+// rows mounted in the DOM is capped, with a LOAD MORE button to extend.
+const RENDER_CHUNK = 200;
+
 export default function CustomerList({ baseHref, role }: CustomerListProps) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -35,6 +42,12 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('recent');
   const [loading, setLoading] = useState(true);
+  const [renderLimit, setRenderLimit] = useState(RENDER_CHUNK);
+
+  // Deferred search: the input itself stays instantly responsive while the
+  // expensive filter+sort over 1,600+ rows runs at lower priority. React
+  // may skip intermediate keystrokes entirely instead of blocking typing.
+  const deferredSearch = useDeferredValue(search);
 
   const isAdmin = role === 'admin';
 
@@ -47,7 +60,8 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
   // Fix: page through the table in 1000-row chunks with a stable sort
   // (created_at desc, then id as a tie-breaker so rows can't be skipped or
   // duplicated across page boundaries), accumulating until a short page
-  // signals the end. Status filter stays DB-side as before.
+  // signals the end. As of v2.15.0 this runs exactly ONCE on mount —
+  // status filtering moved client-side (see statusFiltered below).
   const PAGE_SIZE = 1000;
   const MAX_PAGES = 50; // hard safety cap (50k rows) to prevent any runaway loop
 
@@ -63,18 +77,16 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
       const from = page * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      let query = supabase
+      // v2.15.0: no status filter in the query anymore — we always load the
+      // full set once and filter client-side. Previously every STATUS chip
+      // click triggered a full round of paginated DB requests; now chip
+      // switches are instant with zero network traffic.
+      const { data, error } = await supabase
         .from('customers')
         .select('id, name, ic, phone, nationality, status, warning_count, membership, gender, visit_count, last_visit_at, created_at')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(from, to);
-
-      if (statusFilter === 'active') query = query.eq('status', 'active');
-      if (statusFilter === 'banned') query = query.eq('status', 'banned');
-      if (statusFilter === 'warned') query = query.gt('warning_count', 0);
-
-      const { data, error } = await query;
 
       if (error) {
         // Stop paginating on error. Keep whatever we already fetched so the
@@ -105,40 +117,55 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
   useEffect(() => {
     fetchCustomers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, []);
 
-  // Compute counts for chip labels — based on the currently-loaded set
-  // (after status filter), so the user gets a sense of how many rows
-  // each filter would yield.
+  // Any filter/sort/search change starts back at the first render chunk.
+  useEffect(() => {
+    setRenderLimit(RENDER_CHUNK);
+  }, [statusFilter, typeFilter, activityFilter, sortKey, deferredSearch]);
+
+  // Client-side STATUS filter (was DB-side pre-v2.15.0). Same semantics:
+  // active = status 'active', banned = status 'banned',
+  // warned = warning_count > 0 (regardless of status).
+  const statusFiltered = useMemo(() => {
+    if (statusFilter === 'active') return customers.filter((c) => c.status === 'active');
+    if (statusFilter === 'banned') return customers.filter((c) => c.status === 'banned');
+    if (statusFilter === 'warned') return customers.filter((c) => c.warning_count > 0);
+    return customers;
+  }, [customers, statusFilter]);
+
+  // Compute counts for chip labels — based on the status-filtered set
+  // (matches pre-v2.15.0 behaviour, when the DB applied the status filter
+  // before these counts were computed).
   const counts = useMemo(() => {
     const now = Date.now();
     const inactiveCutoff = now - INACTIVE_DAYS * 86400_000;
     const newCutoff = now - NEW_DAYS * 86400_000;
     return {
-      member: customers.filter((c) => c.membership === 'member').length,
-      walkin: customers.filter((c) => c.membership !== 'member').length,
-      local: customers.filter((c) => c.nationality === 'malaysian').length,
-      foreign: customers.filter((c) => c.nationality === 'foreigner').length,
-      frequent: customers.filter((c) => (c.visit_count ?? 0) >= FREQUENT_THRESHOLD).length,
-      inactive: customers.filter((c) => {
+      member: statusFiltered.filter((c) => c.membership === 'member').length,
+      walkin: statusFiltered.filter((c) => c.membership !== 'member').length,
+      local: statusFiltered.filter((c) => c.nationality === 'malaysian').length,
+      foreign: statusFiltered.filter((c) => c.nationality === 'foreigner').length,
+      frequent: statusFiltered.filter((c) => (c.visit_count ?? 0) >= FREQUENT_THRESHOLD).length,
+      inactive: statusFiltered.filter((c) => {
         const lva = c.last_visit_at ? new Date(c.last_visit_at).getTime() : 0;
         return lva > 0 && lva < inactiveCutoff;
       }).length,
-      new: customers.filter((c) => {
+      new: statusFiltered.filter((c) => {
         const ca = c.created_at ? new Date(c.created_at).getTime() : 0;
         return ca > newCutoff;
       }).length,
     };
-  }, [customers]);
+  }, [statusFiltered]);
 
   // Apply remaining filters + search + sort, all client-side.
   const visible = useMemo(() => {
     const now = Date.now();
     const inactiveCutoff = now - INACTIVE_DAYS * 86400_000;
     const newCutoff = now - NEW_DAYS * 86400_000;
-    const s = search.trim().toLowerCase();
+    const s = deferredSearch.trim().toLowerCase();
 
-    let out = customers.filter((c) => {
+    let out = statusFiltered.filter((c) => {
       // Type filter
       if (typeFilter === 'member' && c.membership !== 'member') return false;
       if (typeFilter === 'walkin' && c.membership === 'member') return false;
@@ -197,7 +224,7 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
     });
 
     return out;
-  }, [customers, typeFilter, activityFilter, search, sortKey]);
+  }, [statusFiltered, typeFilter, activityFilter, deferredSearch, sortKey]);
 
   const statusFilters: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'ALL' },
@@ -322,9 +349,17 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
         </div>
       ) : (
         <>
-          {visible.map((c) => (
+          {visible.slice(0, renderLimit).map((c) => (
             <CustomerRow key={c.id} c={c} baseHref={baseHref} gridCols={gridCols} />
           ))}
+          {visible.length > renderLimit && (
+            <button
+              onClick={() => setRenderLimit((l) => l + RENDER_CHUNK)}
+              className="block w-full text-center font-display text-xs tracking-widest py-4 bg-white border-b border-neutral-200 hover:bg-yellow-50 transition-colors"
+            >
+              ▼ LOAD MORE · {visible.length - renderLimit} REMAINING
+            </button>
+          )}
           <div className="text-center font-mono text-xs text-neutral-500 py-4">
             {visible.length} of {customers.length} shown
           </div>
@@ -372,7 +407,9 @@ function Count({ n }: { n: number }) {
   return <span className="text-accent font-normal ml-1">{n}</span>;
 }
 
-function CustomerRow({
+// Memoized: customer objects keep their identity across filter/sort
+// recomputes, so unchanged rows skip re-rendering entirely.
+const CustomerRow = memo(function CustomerRow({
   c, baseHref, gridCols,
 }: {
   c: Customer;
@@ -439,7 +476,7 @@ function CustomerRow({
       </div>
     </Link>
   );
-}
+});
 
 function StatusBadge({ customer }: { customer: Customer }) {
   if (customer.status === 'banned') {

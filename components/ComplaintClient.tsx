@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { IncidentReport, IncidentStatus, IncidentNote } from '@/lib/types';
 import { StoredAnswer, QID } from '@/lib/report-config';
@@ -33,6 +33,9 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
 
   const [reports, setReports] = useState<IncidentReport[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  // Mirror of signedUrls for synchronous reads inside fetchData (avoids
+  // re-signing paths that are already cached). Kept in sync on every set.
+  const signedUrlsRef = useRef<Record<string, string>>({});
   const [notesByReport, setNotesByReport] = useState<Record<string, IncidentNote[]>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -75,10 +78,17 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
       setNotesByReport({});
     }
 
+    // v2.15.0: only sign paths we haven't signed yet in this session.
+    // Previously EVERY refresh (including every tab focus) re-signed every
+    // photo — the URL token changed, so the browser treated each image as
+    // brand new and re-downloaded all evidence photos, causing a visible
+    // flash. The 6h TTL comfortably outlives any admin session, so cached
+    // URLs stay valid; new reports still get signed immediately.
     const paths = list.map((r) => r.photo_path).filter(Boolean) as string[];
-    if (paths.length > 0) {
+    const needed = paths.filter((p) => !signedUrlsRef.current[p]);
+    if (needed.length > 0) {
       const entries = await Promise.all(
-        paths.map(async (p) => {
+        needed.map(async (p) => {
           try {
             const { data: s } = await supabase.storage.from(BUCKET).createSignedUrl(p, SIGNED_URL_TTL);
             return [p, s?.signedUrl ?? ''] as const;
@@ -87,13 +97,17 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
           }
         }),
       );
-      const map: Record<string, string> = {};
+      const fresh: Record<string, string> = {};
       entries.forEach(([p, u]) => {
-        if (u) map[p] = u;
+        if (u) fresh[p] = u;
       });
-      setSignedUrls(map);
-    } else {
-      setSignedUrls({});
+      if (Object.keys(fresh).length > 0) {
+        setSignedUrls((prev) => {
+          const next = { ...prev, ...fresh };
+          signedUrlsRef.current = next;
+          return next;
+        });
+      }
     }
 
     setLoading(false);
@@ -293,6 +307,52 @@ interface CardProps {
   onAddNote: (reportId: string, text: string) => Promise<boolean>;
 }
 
+// ---------------------------------------------------------------------------
+// v2.15.0: KV and SecHead moved OUT of ComplaintCard. Defining components
+// inside another component's body creates a brand-new component type on
+// every render, which forces React to unmount + remount every cell — e.g.
+// each keystroke in the case-log note input used to tear down and rebuild
+// the whole identikit grid. At module scope their identity is stable and
+// React can diff them normally. Markup is unchanged.
+// ---------------------------------------------------------------------------
+
+// Small label-over-value cell for the definition grids.
+function KV({
+  k,
+  v,
+  hot,
+  wide,
+  soft,
+}: {
+  k: string;
+  v: string;
+  hot?: boolean;
+  wide?: boolean;
+  soft?: boolean;
+}) {
+  return (
+    <div className={wide ? 'col-span-full' : ''}>
+      <div className="font-mono text-[8.5px] tracking-[0.14em] text-neutral-400 uppercase mb-0.5">{k}</div>
+      <div
+        className={`text-[13.5px] leading-snug ${soft ? 'font-semibold text-neutral-700 whitespace-pre-wrap' : 'font-bold'} ${
+          hot ? 'text-danger' : 'text-neutral-900'
+        }`}
+      >
+        {v}
+      </div>
+    </div>
+  );
+}
+
+function SecHead({ dot, title }: { dot: string; title: string }) {
+  return (
+    <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.16em] text-neutral-500 mb-3">
+      <span className="w-[7px] h-[7px] rounded-[2px]" style={{ background: dot }} />
+      {title}
+    </div>
+  );
+}
+
 function ComplaintCard({
   report: r,
   photoUrl,
@@ -402,39 +462,6 @@ function ComplaintCard({
     if (ok) setNoteInput('');
     setSavingNote(false);
   };
-
-  // Small label-over-value cell for the definition grids.
-  const KV = ({
-    k,
-    v,
-    hot,
-    wide,
-    soft,
-  }: {
-    k: string;
-    v: string;
-    hot?: boolean;
-    wide?: boolean;
-    soft?: boolean;
-  }) => (
-    <div className={wide ? 'col-span-full' : ''}>
-      <div className="font-mono text-[8.5px] tracking-[0.14em] text-neutral-400 uppercase mb-0.5">{k}</div>
-      <div
-        className={`text-[13.5px] leading-snug ${soft ? 'font-semibold text-neutral-700 whitespace-pre-wrap' : 'font-bold'} ${
-          hot ? 'text-danger' : 'text-neutral-900'
-        }`}
-      >
-        {v}
-      </div>
-    </div>
-  );
-
-  const SecHead = ({ dot, title }: { dot: string; title: string }) => (
-    <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.16em] text-neutral-500 mb-3">
-      <span className="w-[7px] h-[7px] rounded-[2px]" style={{ background: dot }} />
-      {title}
-    </div>
-  );
 
   return (
     <div

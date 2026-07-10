@@ -486,31 +486,45 @@ export function parseTimestamp(input: string | Date | null | undefined): Date | 
   return isNaN(raw.getTime()) ? null : raw;
 }
 
+// ---------------------------------------------------------------------------
+// Cached Intl formatters (v2.15.0 performance).
+//
+// `toLocaleTimeString(locale, options)` constructs a brand-new
+// Intl.DateTimeFormat on EVERY call — roughly 100x the cost of calling
+// .format() on an existing instance. These helpers run per-row in large
+// lists (Today feed, History, CSV export), so we build each formatter once
+// at module load and reuse it. Output is byte-identical to the previous
+// toLocale* calls (same locale, same options, per the ECMA-402 spec).
+// ---------------------------------------------------------------------------
+const TIME_FMT = new Intl.DateTimeFormat('en-MY', {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+  timeZone: 'Asia/Kuala_Lumpur',
+});
+
+const DATETIME_FMT = new Intl.DateTimeFormat('en-MY', {
+  weekday: 'short',
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+  timeZone: 'Asia/Kuala_Lumpur',
+});
+
 /**
  * Format timestamp to HH:MM:SS in Asia/Kuala_Lumpur timezone.
  */
 export function formatTime(iso: string | Date): string {
   const d = typeof iso === 'string' ? (parseTimestamp(iso) ?? new Date(iso)) : iso;
-  return d.toLocaleTimeString('en-MY', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'Asia/Kuala_Lumpur',
-  });
+  return TIME_FMT.format(d);
 }
 
 export function formatDateTime(iso: string | Date): string {
   const d = typeof iso === 'string' ? (parseTimestamp(iso) ?? new Date(iso)) : iso;
-  return d.toLocaleString('en-MY', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: 'Asia/Kuala_Lumpur',
-  });
+  return DATETIME_FMT.format(d);
 }

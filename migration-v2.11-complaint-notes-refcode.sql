@@ -1,105 +1,81 @@
-export type CustomerStatus = 'active' | 'banned';
-export type Nationality = 'malaysian' | 'foreigner';
-export type Membership = 'member' | null;
-export type Gender = 'male' | 'female' | null;
+-- =========================================================
+-- X FITNESS — migration v2.11
+-- Adds to the Complaint feature:
+--   1. incident_reports.ref_code  — short reference number
+--      (e.g. "XF-2A9F") shown to the member on submit and in
+--      the dashboard, for front-desk follow-up.
+--   2. incident_notes             — internal case log per report
+--      (investigation notes, actions taken, outcome).
+--      RLS: staff + admin can READ; only admin can WRITE.
+--
+-- Idempotent. Storage untouched. Tested on PostgreSQL 16.
+-- No existing data is modified.
+-- =========================================================
 
-export interface Customer {
-  id: string;
-  nationality: Nationality;
-  ic: string;
-  name: string;
-  phone: string;
-  dob: string | null;
-  emergency_relationship: string | null;
-  emergency_phone: string | null;
-  guardian_ic: string | null;
-  guardian_phone: string | null;
-  status: CustomerStatus;
-  membership: Membership;
-  gender: Gender;
-  warning_count: number;
-  ban_reason: string | null;
-  banned_at: string | null;
-  banned_by: string | null;
-  notes: string | null;
-  // Attention List photo (migration v2.9). Object path inside the private
-  // 'attention-photos' storage bucket, e.g. "<uuid>.jpg". Null = no photo.
-  // Optional so old cached customer objects still parse cleanly.
-  photo_path?: string | null;
-  created_at: string;
-  updated_at: string;
-  // Activity stats — maintained by DB trigger (migration v2.5).
-  // Optional: old code that constructs Customer literally won't break,
-  // and sessionStorage-cached customers from before the migration will
-  // still parse cleanly. Both reflect approved visits only.
-  visit_count?: number;
-  last_visit_at?: string | null;
-}
+-- ---------------------------------------------------------
+-- 1. Reference number column
+-- ---------------------------------------------------------
+alter table public.incident_reports
+  add column if not exists ref_code text;
 
-export interface Visit {
-  id: string;
-  customer_id: string | null;
-  ic: string;
-  status: 'approved' | 'denied_banned' | 'denied_age';
-  visited_at: string;
-}
+comment on column public.incident_reports.ref_code is
+  'Short human-friendly reference (e.g. XF-2A9F). Generated client-side on submit; shown to reporter + used for front-desk follow-up.';
 
-export interface Warning {
-  id: string;
-  customer_id: string;
-  reason: string;
-  added_by: string;
-  added_by_name: string | null;
-  created_at: string;
-}
+create index if not exists incident_reports_ref_code_idx
+  on public.incident_reports (ref_code);
 
-export interface CustomerNote {
-  id: string;
-  customer_id: string;
-  note: string;
-  added_by: string;
-  added_by_name: string | null;
-  created_at: string;
-}
+-- anon already has INSERT on incident_reports (v2.10.x) with check(true),
+-- so the anonymous form can set ref_code — no extra grant/policy needed.
 
-// Complaint / harassment report (migration v2.10). Submitted anonymously by
-// the public via /report; managed on the COMPLAINT dashboard. `answers` is a
-// self-describing array (see StoredAnswer in lib/report-config.ts) so the
-// question set can change without a DB migration.
-export type IncidentStatus = 'new' | 'reviewing' | 'resolved';
+-- ---------------------------------------------------------
+-- 2. Internal case-log notes
+-- ---------------------------------------------------------
+create table if not exists public.incident_notes (
+  id            uuid primary key default gen_random_uuid(),
+  report_id     uuid not null references public.incident_reports(id) on delete cascade,
+  note          text not null,
+  added_by      uuid,
+  added_by_name text,
+  created_at    timestamptz not null default now()
+);
 
-export interface IncidentReport {
-  id: string;
-  created_at: string;
-  status: IncidentStatus;
-  lang: string | null;
-  description: string;
-  reporter_name: string | null;
-  reporter_contact: string | null;
-  is_anonymous: boolean;
-  photo_path: string | null;
-  ref_code: string | null;
-  // Array of { qid, label, type, value, other? } — typed loosely here to
-  // avoid a hard import cycle; callers cast to StoredAnswer[] from report-config.
-  answers: unknown;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-}
+comment on table public.incident_notes is
+  'Internal investigation log for complaints. Management-only writes; staff + admin read.';
 
-// Internal case-log note on a complaint (migration v2.11). Admin-write, all-read.
-export interface IncidentNote {
-  id: string;
-  report_id: string;
-  note: string;
-  added_by: string | null;
-  added_by_name: string | null;
-  created_at: string;
-}
+create index if not exists incident_notes_report_id_idx
+  on public.incident_notes (report_id, created_at);
 
-export interface AppUser {
-  id: string;
-  email: string;
-  display_name: string | null;
-  role: 'staff' | 'admin';
-  created_at: string;
-}
+alter table public.incident_notes enable row level security;
+
+-- Grants: read for authenticated; write gated by admin policy below.
+grant select, insert, delete on public.incident_notes to authenticated;
+
+-- READ: any authenticated app_user (staff + admin) may read the case log.
+drop policy if exists "auth_read_incident_notes" on public.incident_notes;
+create policy "auth_read_incident_notes"
+on public.incident_notes for select to authenticated
+using (
+  exists (select 1 from public.app_users where app_users.id = auth.uid())
+);
+
+-- WRITE: only admin (management) may add notes.
+drop policy if exists "admin_insert_incident_notes" on public.incident_notes;
+create policy "admin_insert_incident_notes"
+on public.incident_notes for insert to authenticated
+with check (
+  exists (select 1 from public.app_users
+          where app_users.id = auth.uid() and app_users.role = 'admin')
+);
+
+-- DELETE: only admin (in case a note was added by mistake).
+drop policy if exists "admin_delete_incident_notes" on public.incident_notes;
+create policy "admin_delete_incident_notes"
+on public.incident_notes for delete to authenticated
+using (
+  exists (select 1 from public.app_users
+          where app_users.id = auth.uid() and app_users.role = 'admin')
+);
+
+-- ---------------------------------------------------------
+-- Done.
+-- ---------------------------------------------------------

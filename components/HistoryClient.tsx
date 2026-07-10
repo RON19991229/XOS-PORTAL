@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { memo, useDeferredValue, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime, parseTimestamp, calcAge, parseICDob } from '@/lib/utils';
@@ -89,11 +89,15 @@ function klDayKeyOf(iso: string): string {
 }
 
 // KL-local hour (0-23) of a visit timestamp, for the Visit Time filter.
+// v2.15.0: uses a single cached Intl.DateTimeFormat — toLocaleString()
+// constructs a new formatter on every call (~100x slower), and this runs
+// once per visit, so a 30-day range used to build thousands of formatters.
+const KL_HOUR_FMT = new Intl.DateTimeFormat('en-GB', {
+  hour: '2-digit', hour12: false, timeZone: 'Asia/Kuala_Lumpur',
+});
 function klHourOf(iso: string): number {
   const d = parseTimestamp(iso) ?? new Date(iso);
-  const hh = d.toLocaleString('en-GB', {
-    hour: '2-digit', hour12: false, timeZone: 'Asia/Kuala_Lumpur',
-  });
+  const hh = KL_HOUR_FMT.format(d);
   // "24" can appear for midnight in some environments; normalise to 0.
   const n = parseInt(hh, 10);
   return n === 24 ? 0 : n;
@@ -226,6 +230,10 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
     if (val < fromKey) setFromKey(val);
   };
 
+  // Deferred search — keeps the input responsive while filtering thousands
+  // of visits runs at lower priority.
+  const deferredSearch = useDeferredValue(search);
+
   // Per-customer visit counts WITHIN the selected range (for Frequency filter).
   const visitCountByCustomer = useMemo(() => {
     const m = new Map<string, number>();
@@ -238,9 +246,24 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
     return m;
   }, [history]);
 
+  // v2.15.0: time-of-day + age buckets are derived ONCE per fetch, keyed by
+  // visit id. Previously ageBucket() (IC parsing + date math) and klHourOf()
+  // (timezone conversion) re-ran for EVERY visit on EVERY filter change and
+  // again inside every chip-count memo — thousands of redundant calls per
+  // keystroke on a 30-day range. Now each visit is computed exactly once.
+  const visitMeta = useMemo(() => {
+    const m = new Map<string, { time: TimeFilter; age: AgeFilter | 'unknown' }>();
+    for (const day of history) {
+      for (const v of day.visits) {
+        m.set(v.id, { time: timeBucket(klHourOf(v.visited_at)), age: ageBucket(v) });
+      }
+    }
+    return m;
+  }, [history]);
+
   // Apply ALL filters per visit.
   const filteredHistory = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = deferredSearch.trim().toLowerCase();
 
     return history
       .map((d) => ({
@@ -256,10 +279,10 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
           }
           // Gender
           if (genderF !== 'all' && v.gender !== genderF) return false;
-          // Age
-          if (ageF !== 'all' && ageBucket(v) !== ageF) return false;
-          // Time of day
-          if (timeF !== 'all' && timeBucket(klHourOf(v.visited_at)) !== timeF) return false;
+          // Age (precomputed)
+          if (ageF !== 'all' && visitMeta.get(v.id)?.age !== ageF) return false;
+          // Time of day (precomputed)
+          if (timeF !== 'all' && visitMeta.get(v.id)?.time !== timeF) return false;
           // Frequency within range
           if (freqF !== 'all') {
             const key = v.customer_id || `ic:${v.ic}`;
@@ -279,7 +302,7 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
           denied: d.visits.length - approved,
         };
       });
-  }, [history, search, genderF, ageF, timeF, freqF, visitCountByCustomer]);
+  }, [history, deferredSearch, genderF, ageF, timeF, freqF, visitCountByCustomer, visitMeta]);
 
   const totalCount = filteredHistory.reduce((sum, d) => sum + d.visits.length, 0);
 
@@ -309,20 +332,20 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
   const ageCounts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const v of allVisitsInRange) {
-      const b = ageBucket(v);
+      const b = visitMeta.get(v.id)?.age ?? 'unknown';
       if (b !== 'unknown') c[b] = (c[b] || 0) + 1;
     }
     return c;
-  }, [allVisitsInRange]);
+  }, [allVisitsInRange, visitMeta]);
 
   const timeCounts = useMemo(() => {
     const c: Record<string, number> = {};
     for (const v of allVisitsInRange) {
-      const b = timeBucket(klHourOf(v.visited_at));
-      c[b] = (c[b] || 0) + 1;
+      const b = visitMeta.get(v.id)?.time;
+      if (b) c[b] = (c[b] || 0) + 1;
     }
     return c;
-  }, [allVisitsInRange]);
+  }, [allVisitsInRange, visitMeta]);
 
   const freqCounts = useMemo(() => {
     // Count of VISITS whose owner falls into each frequency bucket.
@@ -641,7 +664,9 @@ function DayGroup({
   );
 }
 
-function HistoryRow({ visit: v, baseHref }: { visit: HistoryVisit; baseHref: string }) {
+// Memoized: visit objects keep identity across filter recomputes, so
+// unchanged rows skip re-rendering.
+const HistoryRow = memo(function HistoryRow({ visit: v, baseHref }: { visit: HistoryVisit; baseHref: string }) {
   const time = formatTime(v.visited_at);
   const isBanned = v.visit_status === 'denied_banned' || v.customer_status === 'banned';
   const isDeniedAge = v.visit_status === 'denied_age';
@@ -716,4 +741,4 @@ function HistoryRow({ visit: v, baseHref }: { visit: HistoryVisit; baseHref: str
       </div>
     </RowEl>
   );
-}
+});

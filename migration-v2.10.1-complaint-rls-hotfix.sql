@@ -1,293 +1,76 @@
-export type Lang = 'en' | 'zh' | 'ms';
+-- =========================================================
+-- X FITNESS — migration v2.10.1  (HOTFIX)
+-- Fixes: public /report form fails to submit with
+--        "42501: new row violates row-level security policy
+--         for table incident_reports"
+--
+-- Cause: the anonymous INSERT policy from v2.10 did not end up
+--        applied in the database (the table exists, but the
+--        `public_submit_complaint` policy / grant was missing).
+--
+-- This hotfix ONLY re-affirms the table's RLS + the anon INSERT
+-- path. It deliberately touches NOTHING in storage, so it cannot
+-- fail on storage-object ownership and is 100% safe to run.
+--
+-- Idempotent. Tested on PostgreSQL 16. No data is touched.
+-- Run this ONCE in the Supabase SQL Editor.
+-- =========================================================
 
-export const translations = {
-  en: {
-    // Nationality
-    chooseNationality: 'SELECT NATIONALITY',
-    malaysian: 'MALAYSIAN',
-    foreigner: 'FOREIGNER',
-    icSubtitle: 'IC NUMBER · 12 DIGITS',
-    passportSubtitle: 'PASSPORT NUMBER',
+-- 1. Make sure RLS is on (no-op if already on).
+alter table public.incident_reports enable row level security;
 
-    welcome: 'WELCOME',
-    walkInCheckIn: 'WALK-IN CHECK-IN',
-    welcomeToXFitness: 'WELCOME TO',
-    welcomeBackHello: 'HELLO,',
-    taglinePrimary: 'Register once. Quick check-in next time.',
-    taglineSecondary: '只需一次注册，下次快速 check-in',
-    lastVisit: 'Last visit',
-    totalVisits: 'Total visits',
-    enterIc: 'ENTER IC',
-    enterPassport: 'ENTER PASSPORT',
-    icPlaceholder: '12 digit IC, no dash',
-    passportPlaceholder: 'Passport number',
-    continue: 'CONTINUE',
-    back: 'BACK',
-    changeNationality: 'CHANGE NATIONALITY',
+-- 2. Make sure both public roles hold the table-level INSERT grant.
+grant insert on public.incident_reports to anon, authenticated;
+-- (authenticated staff/admin read + admin manage — re-affirm too.)
+grant select, update, delete on public.incident_reports to authenticated;
 
-    // Reminders
-    beforeYouTrain: 'BEFORE YOU TRAIN',
-    gymRulesReminder: 'GYM RULES REMINDER',
-    importantRules: 'IMPORTANT RULES',
-    rule1: 'RULE #1 — RE-RACK',
-    rule2: 'RULE #2 — NO SLIPPERS',
-    doAndDont: "DO & DON'T",
-    acknowledge: 'CLICK TO CHECK IN',
+-- 3. (Re)create the public-submit INSERT policy for EVERYONE (anon or
+--    logged-in), so a browser with a staff/admin session can still submit.
+drop policy if exists "public_submit_complaint" on public.incident_reports;
+create policy "public_submit_complaint"
+on public.incident_reports
+for insert
+to public
+with check (true);
 
-    // Registration
-    register: 'REGISTER',
-    firstTime: 'FIRST-TIME REGISTRATION',
-    fullName: 'FULL NAME',
-    namePlaceholder: 'Will be uppercased',
-    phone: 'PHONE NUMBER',
-    countryCode: 'COUNTRY',
-    relationship: 'EMERGENCY CONTACT — RELATIONSHIP',
-    emergencyPhone: 'EMERGENCY CONTACT — PHONE',
-    emergencyRequired: 'Emergency contact (relationship + phone) is required for your safety',
-    relationshipChoose: 'Choose...',
-    rel_friend: 'Friend',
-    rel_partner: 'Partner',
-    rel_father: 'Father',
-    rel_mother: 'Mother',
-    rel_relative: 'Relative',
-    rel_guardian: 'Guardian',
-    rel_sibling: 'Sibling',
-    rel_spouse: 'Spouse',
-    rel_other: 'Other',
+-- 4. (Re)affirm the authenticated read policy so the dashboard works.
+drop policy if exists "auth_read_complaints" on public.incident_reports;
+create policy "auth_read_complaints"
+on public.incident_reports
+for select
+to authenticated
+using (
+  exists (select 1 from public.app_users where app_users.id = auth.uid())
+);
 
-    // Guardian (12-15 yo)
-    guardianRequired: 'GUARDIAN REQUIRED',
-    guardianAge: 'You are 12-15 years old. A guardian must be present.',
-    guardianIc: 'GUARDIAN IC',
-    guardianPhone: 'GUARDIAN PHONE',
-    guardianPlaceholder: '12 digit IC',
+-- 5. (Re)affirm admin update + delete.
+drop policy if exists "admin_update_complaints" on public.incident_reports;
+create policy "admin_update_complaints"
+on public.incident_reports
+for update
+to authenticated
+using (
+  exists (select 1 from public.app_users
+          where app_users.id = auth.uid() and app_users.role = 'admin')
+)
+with check (
+  exists (select 1 from public.app_users
+          where app_users.id = auth.uid() and app_users.role = 'admin')
+);
 
-    agreeTerms: 'I have read and agree to the Terms & Conditions',
-    submit: 'REGISTER & CHECK IN',
+drop policy if exists "admin_delete_complaints" on public.incident_reports;
+create policy "admin_delete_complaints"
+on public.incident_reports
+for delete
+to authenticated
+using (
+  exists (select 1 from public.app_users
+          where app_users.id = auth.uid() and app_users.role = 'admin')
+);
 
-    // Confirm (returning)
-    welcomeBack: 'WELCOME BACK',
-    confirmCheckin: 'CONFIRM CHECK-IN',
-    notYou: 'Not you? Go back',
-    viewTerms: 'VIEW TERMS & CONDITIONS',
-    viewTermsSub: 'Tap to review the gym rules you agreed to',
-
-    // Approved
-    approved: 'WALK-IN ACCESS APPROVED',
-    approvedSub: 'Please proceed to counter for payment',
-    statusActive: '// STATUS: ACTIVE',
-
-    // Banned
-    banned: 'BANNED',
-    bannedSub: 'You are not permitted to enter',
-    bannedContact: 'Please leave the premises',
-    statusDenied: '// STATUS: DENIED',
-
-    // Under-12
-    underAge: 'AGE RESTRICTION',
-    under12Title: 'ENTRY DENIED',
-    under12Msg: 'Minimum age is 12 with guardian, or 16 alone. Please leave.',
-
-    // Errors
-    invalidIc: 'Please enter a valid 12-digit IC',
-    invalidPassport: 'Please enter a valid passport',
-    invalidPhone: 'Please enter a valid phone number',
-    fillAllFields: 'Please fill in all required fields',
-    digitsOnly: 'Numbers only',
-    mustAgree: 'You must agree to the Terms & Conditions',
-    error: 'Something went wrong. Please try again',
-    duplicateIc: 'This IC is already registered',
-    duplicatePhone: 'This phone is already registered with a different IC',
-    phoneNotMatch: 'Phone number does not match our records',
-
-    language: 'LANG',
-  },
-  zh: {
-    chooseNationality: '请选择国籍',
-    malaysian: '马来西亚人',
-    foreigner: '外国人',
-    icSubtitle: '身份证号码 · 12位数字',
-    passportSubtitle: '护照号码',
-
-    welcome: '欢迎',
-    walkInCheckIn: 'WALK-IN 入场',
-    welcomeToXFitness: '欢迎来到',
-    welcomeBackHello: '你好，',
-    taglinePrimary: '只需一次注册，下次快速 check-in',
-    taglineSecondary: 'Register once. Quick check-in next time.',
-    lastVisit: '上次入场',
-    totalVisits: '总入场次数',
-    enterIc: '输入身份证',
-    enterPassport: '输入护照号码',
-    icPlaceholder: '12位数字，不需要 -',
-    passportPlaceholder: '护照号码',
-    continue: '继续',
-    back: '返回',
-    changeNationality: '更改国籍',
-
-    beforeYouTrain: '训练前请阅读',
-    gymRulesReminder: '健身房规则提醒',
-    importantRules: '重要规则',
-    rule1: '规则 #1 — 归位器材',
-    rule2: '规则 #2 — 禁止穿拖鞋',
-    doAndDont: '应做与禁止',
-    acknowledge: '点击入场',
-
-    register: '注册',
-    firstTime: '首次注册',
-    fullName: '姓名',
-    namePlaceholder: '将自动转为大写',
-    phone: '电话号码',
-    countryCode: '国家',
-    relationship: '紧急联络人 — 关系',
-    emergencyPhone: '紧急联络人 — 电话',
-    emergencyRequired: '为了您的安全，紧急联络人（关系+电话）必须填写',
-    relationshipChoose: '请选择...',
-    rel_friend: '朋友',
-    rel_partner: '伴侣',
-    rel_father: '父亲',
-    rel_mother: '母亲',
-    rel_relative: '亲戚',
-    rel_guardian: '监护人',
-    rel_sibling: '兄弟姐妹',
-    rel_spouse: '配偶',
-    rel_other: '其他',
-
-    guardianRequired: '需要监护人',
-    guardianAge: '您未满 16 岁，需要监护人陪同。',
-    guardianIc: '监护人身份证',
-    guardianPhone: '监护人电话',
-    guardianPlaceholder: '12位数字',
-
-    agreeTerms: '我已阅读并同意条款与细则',
-    submit: '注册并入场',
-
-    welcomeBack: '欢迎回来',
-    confirmCheckin: '确认入场',
-    notYou: '不是你？返回',
-    viewTerms: '查看条款与细则',
-    viewTermsSub: '点击查看您同意过的健身房规则',
-
-    approved: '入场已通过',
-    approvedSub: '请到柜台付款',
-    statusActive: '// 状态：通过',
-
-    banned: '已封禁',
-    bannedSub: '禁止入场',
-    bannedContact: '请离开本场所',
-    statusDenied: '// 状态：拒绝',
-
-    underAge: '年龄限制',
-    under12Title: '禁止入场',
-    under12Msg: '12岁以下不允许入场。请离开。',
-
-    invalidIc: '请输入有效的12位身份证号码',
-    invalidPassport: '请输入有效的护照号码',
-    invalidPhone: '请输入有效的电话号码',
-    fillAllFields: '请填写所有必填栏位',
-    digitsOnly: '只能输入数字',
-    mustAgree: '您必须同意条款与细则',
-    error: '发生错误，请重试',
-    duplicateIc: '该身份证已注册',
-    duplicatePhone: '该电话号码已被另一个身份证注册',
-    phoneNotMatch: '电话号码与我们的记录不符',
-
-    language: '语言',
-  },
-  ms: {
-    chooseNationality: 'PILIH KEWARGANEGARAAN',
-    malaysian: 'WARGANEGARA',
-    foreigner: 'WARGA ASING',
-    icSubtitle: 'NOMBOR IC · 12 DIGIT',
-    passportSubtitle: 'NOMBOR PASPORT',
-
-    welcome: 'SELAMAT DATANG',
-    walkInCheckIn: 'DAFTAR MASUK WALK-IN',
-    welcomeToXFitness: 'SELAMAT DATANG KE',
-    welcomeBackHello: 'HELO,',
-    taglinePrimary: 'Daftar sekali. Daftar masuk pantas seterusnya.',
-    taglineSecondary: 'Register once. Quick check-in next time.',
-    lastVisit: 'Lawatan terakhir',
-    totalVisits: 'Jumlah lawatan',
-    enterIc: 'MASUKKAN IC',
-    enterPassport: 'MASUKKAN PASPORT',
-    icPlaceholder: '12 digit IC, tanpa -',
-    passportPlaceholder: 'Nombor pasport',
-    continue: 'TERUSKAN',
-    back: 'KEMBALI',
-    changeNationality: 'TUKAR KEWARGANEGARAAN',
-
-    beforeYouTrain: 'SEBELUM ANDA BERSENAM',
-    gymRulesReminder: 'PERATURAN GIM',
-    importantRules: 'PERATURAN PENTING',
-    rule1: 'PERATURAN #1 — RE-RACK',
-    rule2: 'PERATURAN #2 — DILARANG SELIPAR',
-    doAndDont: 'BOLEH & DILARANG',
-    acknowledge: 'KLIK UNTUK DAFTAR MASUK',
-
-    register: 'DAFTAR',
-    firstTime: 'PENDAFTARAN KALI PERTAMA',
-    fullName: 'NAMA PENUH',
-    namePlaceholder: 'Akan ditukar ke huruf besar',
-    phone: 'NOMBOR TELEFON',
-    countryCode: 'NEGARA',
-    relationship: 'HUBUNGAN KECEMASAN',
-    emergencyPhone: 'TELEFON KECEMASAN',
-    emergencyRequired: 'Hubungan kecemasan (hubungan + telefon) wajib diisi untuk keselamatan anda',
-    relationshipChoose: 'Pilih...',
-    rel_friend: 'Kawan',
-    rel_partner: 'Pasangan',
-    rel_father: 'Bapa',
-    rel_mother: 'Ibu',
-    rel_relative: 'Saudara',
-    rel_guardian: 'Penjaga',
-    rel_sibling: 'Adik-beradik',
-    rel_spouse: 'Suami/Isteri',
-    rel_other: 'Lain-lain',
-
-    guardianRequired: 'PENJAGA DIPERLUKAN',
-    guardianAge: 'Anda berumur 12-15 tahun. Penjaga mesti hadir.',
-    guardianIc: 'IC PENJAGA',
-    guardianPhone: 'TELEFON PENJAGA',
-    guardianPlaceholder: '12 digit IC',
-
-    agreeTerms: 'Saya telah membaca dan bersetuju dengan Terma & Syarat',
-    submit: 'DAFTAR & MASUK',
-
-    welcomeBack: 'SELAMAT KEMBALI',
-    confirmCheckin: 'SAHKAN DAFTAR MASUK',
-    notYou: 'Bukan anda? Kembali',
-    viewTerms: 'LIHAT TERMA & SYARAT',
-    viewTermsSub: 'Ketik untuk semak peraturan gim yang anda telah setuju',
-
-    approved: 'AKSES WALK-IN DILULUSKAN',
-    approvedSub: 'Sila ke kaunter untuk pembayaran',
-    statusActive: '// STATUS: AKTIF',
-
-    banned: 'DIHARAMKAN',
-    bannedSub: 'Anda tidak dibenarkan masuk',
-    bannedContact: 'Sila tinggalkan premis',
-    statusDenied: '// STATUS: DITOLAK',
-
-    underAge: 'HAD UMUR',
-    under12Title: 'DILARANG MASUK',
-    under12Msg: 'Umur minimum 12 tahun dengan penjaga, atau 16 sendiri. Sila tinggalkan.',
-
-    invalidIc: 'Sila masukkan IC 12 digit yang sah',
-    invalidPassport: 'Sila masukkan nombor pasport yang sah',
-    invalidPhone: 'Sila masukkan nombor telefon yang sah',
-    fillAllFields: 'Sila isi semua medan yang diperlukan',
-    digitsOnly: 'Nombor sahaja',
-    mustAgree: 'Anda mesti bersetuju dengan Terma & Syarat',
-    error: 'Sesuatu tidak kena. Sila cuba lagi',
-    duplicateIc: 'IC ini telah didaftarkan',
-    duplicatePhone: 'Telefon ini telah didaftarkan dengan IC lain',
-    phoneNotMatch: 'Nombor telefon tidak sepadan dengan rekod kami',
-
-    language: 'BAHASA',
-  },
-};
-
-export function t(lang: Lang, key: keyof typeof translations.en): string {
-  return translations[lang][key] || translations.en[key];
-}
+-- 6. Verify — should list all four policies.
+--    (Optional: copy the SELECT below into the editor to confirm.)
+-- select policyname, cmd, roles::text
+-- from pg_policies
+-- where schemaname='public' and tablename='incident_reports'
+-- order by policyname;

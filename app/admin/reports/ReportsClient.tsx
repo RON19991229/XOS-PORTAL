@@ -85,10 +85,39 @@ export default function ReportsClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // v2.15.0: PostgREST caps every response at 1,000 rows project-wide, so
+  // both exports below silently truncated once the data outgrew that
+  // (customers passed 1,000 long ago — the CSV was missing 600+ records).
+  // Fix: same paginated-loop pattern as CustomerList (stable sort + id
+  // tie-breaker so rows can't be skipped or duplicated across pages).
+  const EXPORT_PAGE = 1000;
+  const EXPORT_MAX_PAGES = 50; // 50k-row safety cap
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fetchAllPages = async (buildQuery: (from: number, to: number) => any): Promise<any[]> => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const all: any[] = [];
+    for (let page = 0; page < EXPORT_MAX_PAGES; page++) {
+      const from = page * EXPORT_PAGE;
+      const { data, error } = await buildQuery(from, from + EXPORT_PAGE - 1);
+      if (error || !data) break;
+      all.push(...data);
+      if (data.length < EXPORT_PAGE) break;
+    }
+    return all;
+  };
+
   const exportCustomers = async () => {
     setExporting(true);
-    const { data } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
-    if (data) {
+    const data = await fetchAllPages((from, to) =>
+      supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+    );
+    if (data.length > 0) {
       const headers = ['Name', 'Nationality', 'IC/Passport', 'Phone', 'DOB', 'Emergency Relationship', 'Emergency Phone', 'Guardian IC', 'Guardian Phone', 'Status', 'Warnings', 'Ban Reason', 'Created At'];
       const rows = data.map((c) => [
         c.name,
@@ -112,13 +141,19 @@ export default function ReportsClient() {
 
   const exportVisits = async () => {
     setExporting(true);
-    const { data } = await supabase
-      .from('visits')
-      .select('*, customers(name, ic, phone)')
-      .order('visited_at', { ascending: false })
-      .limit(5000);
+    // (the previous .limit(5000) never worked — PostgREST clamped it to
+    // 1,000 anyway; the paginated loop now genuinely fetches everything
+    // up to the 50k safety cap)
+    const data = await fetchAllPages((from, to) =>
+      supabase
+        .from('visits')
+        .select('*, customers(name, ic, phone)')
+        .order('visited_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+    );
 
-    if (data) {
+    if (data.length > 0) {
       const headers = ['Time', 'Name', 'IC/Passport', 'Phone', 'Status'];
       const rows = data.map((v) => [
         formatDateTime(v.visited_at),
