@@ -726,3 +726,168 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
   .rl-okmark path { stroke-dashoffset: 0 !important; }
   .rl-reveal { opacity: 1 !important; transform: none !important; }
 }
+
+/* ============================================================ */
+/* v2.13 — CHECK-IN PREMIUM REDESIGN (dark)                     */
+/* All classes prefixed xd- (X-dark). Scoped to /checkin/*      */
+/* customer pages only; dashboard side untouched.               */
+/* ============================================================ */
+
+/* ---- atmosphere: single restrained gradient, no textures ---- */
+.xd-atmo {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 55% at 50% -12%, rgba(255, 214, 10, .065), transparent 60%),
+    linear-gradient(180deg, #0d0d0d 0%, #0a0a0a 34%);
+}
+
+/* ---- entrance stagger ---- */
+.xd-rise { opacity: 0; animation: xdRise .6s cubic-bezier(.2, .9, .25, 1) both; }
+.xd-d1 { animation-delay: .05s; }
+.xd-d2 { animation-delay: .15s; }
+.xd-d3 { animation-delay: .25s; }
+.xd-d4 { animation-delay: .35s; }
+.xd-d5 { animation-delay: .45s; }
+.xd-d6 { animation-delay: .55s; }
+.xd-d7 { animation-delay: .65s; }
+@keyframes xdRise {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- full-word yellow sweep highlight ---- */
+.xd-sweep { position: relative; display: inline-block; padding: 2px 8px; color: #0a0a0a; z-index: 1; }
+.xd-sweep::before {
+  content: ''; position: absolute; inset: 0; background: #FFD60A; z-index: -1;
+  transform: scaleX(0); transform-origin: left;
+  animation: xdSweep .6s .65s cubic-bezier(.3, .9, .2, 1) both;
+}
+@keyframes xdSweep { to { transform: scaleX(1); } }
+
+/* accent underline that grows in */
+.xd-ubar {
+  height: 4px; width: 64px; background: #FFD60A; margin-top: 14px;
+  transform: scaleX(0); transform-origin: left;
+  animation: xdSweep .5s .55s cubic-bezier(.3, .9, .2, 1) both;
+}
+
+/* ---- step rail ---- */
+.xd-rail {
+  display: flex; align-items: center; gap: 8px; padding: 16px 20px 0;
+  position: relative; z-index: 2;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: .18em;
+}
+.xd-rl { display: flex; align-items: center; gap: 6px; color: #555; }
+.xd-rl b {
+  font-weight: 400; width: 18px; height: 18px; border: 1px solid #333;
+  display: flex; align-items: center; justify-content: center; font-size: 8px;
+}
+.xd-rl.on { color: #FFD60A; }
+.xd-rl.on b { border-color: #FFD60A; background: rgba(255, 214, 10, .1); }
+.xd-rl.done { color: #4d4d4d; }
+.xd-rl.done b { border-color: #4d4d4d; background: #141414; }
+.xd-rline { flex: 1; height: 1px; background: #2a2a2a; position: relative; overflow: hidden; }
+.xd-rline.fill::after {
+  content: ''; position: absolute; inset: 0; background: #FFD60A;
+  transform-origin: left;
+  animation: xdFill .8s .5s cubic-bezier(.2, .9, .2, 1) both;
+}
+@keyframes xdFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ---- brand (report-style logo tile + inverted wordmark) ---- */
+.xd-brand { display: flex; align-items: center; gap: 10px; }
+.xd-brand-tile {
+  width: 34px; height: 34px; border-radius: 9px; object-fit: cover;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.xd-brand-mark { height: 13px; width: auto; filter: invert(1); opacity: .95; }
+
+/* ---- nationality cards ---- */
+.xd-natcard {
+  display: block; width: 100%; text-align: left;
+  background: linear-gradient(160deg, #181818 0%, #111 100%);
+  border: 1px solid #2a2a2a; padding: 22px; cursor: pointer; position: relative;
+  color: #f5f5f5;
+  transition: border-color .25s, transform .15s, box-shadow .3s;
+}
+.xd-natcard:hover, .xd-natcard:active {
+  border-color: rgba(255, 214, 10, .85);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, .5), 0 0 24px rgba(255, 214, 10, .07);
+}
+.xd-natcard:active { transform: translateY(2px); }
+.xd-nat-arrow { font-family: var(--font-display); font-size: 20px; color: #3d3d3d; transition: .25s; }
+.xd-natcard:hover .xd-nat-arrow, .xd-natcard:active .xd-nat-arrow { color: #FFD60A; transform: translateX(6px); }
+
+/* ---- big ID input focus glow + digit segments ---- */
+.input-field-lg:focus {
+  box-shadow: 0 0 0 1px #FFD60A, 0 8px 40px rgba(255, 214, 10, .08);
+}
+.xd-segs { display: flex; gap: 5px; margin-top: 11px; }
+.xd-seg { flex: 1; height: 3px; background: #1f1f1f; transition: background .25s; }
+.xd-seg.f { background: #FFD60A; }
+
+/* primary button hover polish (yellow) */
+.btn-primary:not(:disabled):hover {
+  box-shadow: 0 12px 36px rgba(255, 214, 10, .22);
+  filter: brightness(1.04);
+}
+
+/* ---- welcome-back hello card ---- */
+.xd-hello {
+  background: linear-gradient(160deg, #181818, #101010);
+  border: 1px solid #2a2a2a; border-left: 3px solid #FFD60A;
+  padding: 17px 18px;
+}
+
+/* ---- scroll reveal ---- */
+.xd-reveal {
+  opacity: 0; transform: translateY(24px);
+  transition: opacity .6s cubic-bezier(.2, .9, .25, 1), transform .6s cubic-bezier(.2, .9, .25, 1);
+}
+.xd-reveal.in { opacity: 1; transform: none; }
+
+/* ---- approved: checkmark draw + ring + countdown ---- */
+.xd-ckwrap { position: relative; width: 132px; height: 132px; }
+.xd-ckbox {
+  position: absolute; inset: 0; background: #0a0a0a; transform: rotate(-3deg);
+  display: flex; align-items: center; justify-content: center;
+  animation: xdSlam .5s cubic-bezier(.34, 1.56, .64, 1) both;
+}
+@keyframes xdSlam {
+  0% { transform: scale(.4) rotate(-14deg); opacity: 0; }
+  60% { transform: scale(1.06) rotate(-1deg); }
+  100% { transform: scale(1) rotate(-3deg); opacity: 1; }
+}
+.xd-ckring {
+  position: absolute; inset: -14px; border: 3px solid rgba(10, 10, 10, .45);
+  animation: xdRing 1s .35s cubic-bezier(.2, .9, .2, 1) both;
+}
+@keyframes xdRing {
+  0% { transform: scale(.7) rotate(-3deg); opacity: 0; }
+  55% { opacity: .85; }
+  100% { transform: scale(1.12) rotate(-3deg); opacity: 0; }
+}
+.xd-ck { width: 70px; height: 70px; }
+.xd-ck path {
+  stroke: #16c75b; stroke-width: 11; fill: none; stroke-linecap: square;
+  stroke-dasharray: 110; stroke-dashoffset: 110;
+  animation: xdDraw .55s .3s cubic-bezier(.3, .9, .3, 1) both;
+}
+@keyframes xdDraw { to { stroke-dashoffset: 0; } }
+.xd-countbar {
+  position: absolute; bottom: 0; left: 0; height: 5px; background: #0a0a0a;
+  width: 100%; animation: xdCount 12s linear both;
+}
+@keyframes xdCount { from { width: 100%; } to { width: 0; } }
+
+/* ---- reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .xd-rise, .xd-sweep::before, .xd-ubar, .xd-rline.fill::after,
+  .xd-reveal, .xd-ckbox, .xd-ckring, .xd-ck path, .xd-countbar {
+    animation: none !important; transition: none !important;
+  }
+  .xd-rise, .xd-reveal { opacity: 1 !important; transform: none !important; }
+  .xd-sweep::before, .xd-ubar { transform: scaleX(1) !important; }
+  .xd-ck path { stroke-dashoffset: 0 !important; }
+  .xd-ckbox { opacity: 1 !important; transform: rotate(-3deg) !important; }
+}

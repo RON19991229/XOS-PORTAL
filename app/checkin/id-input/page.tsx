@@ -15,6 +15,7 @@ import {
 } from '@/lib/utils';
 import { safeSession, safeLocal } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
+import { Atmo, StepRail } from '@/components/CheckinFX';
 import ScrollHint from '@/components/ScrollHint';
 
 export default function IdInputPage() {
@@ -189,25 +190,30 @@ export default function IdInputPage() {
   const flag = nationality === 'malaysian' ? '🇲🇾 MY' : '🌍 INTL';
 
   return (
-    <main className="min-h-screen flex flex-col bg-ink">
+    <main className="min-h-screen flex flex-col bg-ink relative">
+      <Atmo />
+
       <CheckinHeader
         lang={lang}
         onLangChange={(l) => { setLang(l); safeLocal.setItem('xf-lang', l); }}
+        className="xd-rise xd-d1"
       />
 
-      <section className="flex-1 flex flex-col justify-center px-5 py-10 max-w-md mx-auto w-full">
+      <StepRail step={1} fillNext className="xd-rise xd-d2" />
+
+      <section className="flex-1 flex flex-col justify-center px-5 py-10 max-w-md mx-auto w-full relative z-[2]">
         <div className="mb-8">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3 xd-rise xd-d2">
             // {flag}
           </p>
-          <h1 className="font-display text-5xl md:text-6xl leading-[0.85] mb-4">
+          <h1 className="font-display text-5xl md:text-6xl leading-[0.85] xd-rise xd-d3">
             {title}
           </h1>
-          <div className="h-1 w-16 bg-accent" />
+          <div className="xd-ubar" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="xd-rise xd-d4">
             <input
               type="text"
               inputMode={nationality === 'malaysian' ? 'numeric' : 'text'}
@@ -221,9 +227,18 @@ export default function IdInputPage() {
               maxLength={nationality === 'malaysian' ? 12 : 20}
             />
             {nationality === 'malaysian' && (
-              <p className="text-right text-xs font-mono text-neutral-500 mt-1">
-                {id.length}/12
-              </p>
+              <>
+                {/* 12-digit progress segments — one tick lights per digit */}
+                <div className="xd-segs" aria-hidden="true">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className={`xd-seg ${i < id.length ? 'f' : ''}`} />
+                  ))}
+                </div>
+                <div className="flex justify-between text-xs font-mono text-neutral-500 mt-2">
+                  <span className="text-[10px] tracking-[0.18em]">12 DIGITS</span>
+                  <span>{id.length}/12</span>
+                </div>
+              </>
             )}
           </div>
 
@@ -236,7 +251,7 @@ export default function IdInputPage() {
           <button
             type="submit"
             disabled={loading || !id.trim()}
-            className="btn-primary"
+            className="btn-primary xd-rise xd-d5"
           >
             {loading ? (
               <span className="flex gap-1.5 justify-center">
@@ -252,7 +267,7 @@ export default function IdInputPage() {
           <button
             type="button"
             onClick={() => router.push('/checkin')}
-            className="btn-secondary"
+            className="btn-secondary xd-rise xd-d6"
           >
             ← {t(lang, 'changeNationality')}
           </button>

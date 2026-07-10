@@ -42,29 +42,25 @@ export default function ApprovedPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-success-green text-ink flex flex-col">
+    <main className="min-h-screen bg-success-green text-ink flex flex-col relative overflow-hidden">
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 text-center">
-        {/* Black tilted ✓ box — keeps X FITNESS brand language */}
-        <div
-          className="animate-slam mb-7"
-          style={{ animationDelay: '0s', animationFillMode: 'both' }}
-        >
-          <div className="w-32 h-32 md:w-40 md:h-40 bg-ink text-success-green flex items-center justify-center text-7xl md:text-8xl font-display -rotate-3">
-            ✓
+        {/* v2.13: black tilted box now slams in with an SVG checkmark that
+            draws itself (stroke-dasharray), plus a fading echo ring. Same
+            brand language (tilted ink box), upgraded motion. */}
+        <div className="xd-ckwrap mb-7">
+          <div className="xd-ckring" aria-hidden="true" />
+          <div className="xd-ckbox">
+            <svg className="xd-ck" viewBox="0 0 80 80" aria-hidden="true">
+              <path d="M16 42 L34 60 L66 22" />
+            </svg>
           </div>
         </div>
 
-        <p
-          className="font-mono text-xs tracking-[0.3em] text-ink mb-3 animate-slam"
-          style={{ animationDelay: '0.1s', animationFillMode: 'both', opacity: 0 }}
-        >
+        <p className="font-mono text-xs tracking-[0.3em] text-ink mb-3 xd-rise xd-d3">
           {t(lang, 'statusActive')}
         </p>
 
-        <h1
-          className="font-display text-4xl md:text-5xl leading-[0.9] tracking-tighter mb-6 animate-slam max-w-md text-ink"
-          style={{ animationDelay: '0.2s', animationFillMode: 'both', opacity: 0 }}
-        >
+        <h1 className="font-display text-4xl md:text-5xl leading-[0.9] tracking-tighter mb-6 max-w-md text-ink xd-rise xd-d4">
           WALK-IN
           <br />
           ACCESS
@@ -72,24 +68,22 @@ export default function ApprovedPage() {
           APPROVED
         </h1>
 
-        <div
-          className="bg-ink text-bone px-6 py-3 mb-8 inline-block animate-slam"
-          style={{ animationDelay: '0.3s', animationFillMode: 'both', opacity: 0 }}
-        >
+        <div className="bg-ink text-bone px-6 py-3 mb-8 inline-block xd-rise xd-d5">
           <p className="font-display text-xl md:text-2xl tracking-wider">
             {name.toUpperCase()}
           </p>
         </div>
 
-        <p
-          className="font-display text-sm md:text-base tracking-wider max-w-md text-ink animate-slam mb-2"
-          style={{ animationDelay: '0.4s', animationFillMode: 'both', opacity: 0 }}
-        >
+        <p className="font-display text-sm md:text-base tracking-wider max-w-md text-ink xd-rise xd-d6 mb-2">
           {t(lang, 'approvedSub')}
         </p>
 
-        <p className="font-mono text-xs text-ink/60 mt-4">{now}</p>
+        <p className="font-mono text-xs text-ink/60 mt-4 xd-rise xd-d7">{now}</p>
       </div>
+
+      {/* countdown bar — mirrors the 12s auto-return to /checkin so
+          customers can see how long the screen stays up */}
+      <div className="xd-countbar" aria-hidden="true" />
     </main>
   );
 }

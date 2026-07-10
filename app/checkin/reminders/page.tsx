@@ -9,8 +9,16 @@ import { Customer } from '@/lib/types';
 import { parseTimestamp } from '@/lib/utils';
 import { safeSession, safeJsonParse } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
+import { Atmo, StepRail, XdReveal } from '@/components/CheckinFX';
 import TermsModal from '@/components/TermsModal';
 import ScrollHint from '@/components/ScrollHint';
+
+/** "RULE #1 — RE-RACK" → "RE-RACK" (all 3 langs use the same — separator;
+ *  falls back to the full string if the separator is missing). */
+function ruleTitle(full: string): string {
+  const parts = full.split('—');
+  return parts.length > 1 ? parts[parts.length - 1].trim() : full;
+}
 
 interface VisitStats {
   totalVisits: number;
@@ -117,15 +125,19 @@ export default function RemindersPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col bg-ink">
-      <CheckinHeader />
+    <main className="min-h-screen flex flex-col bg-ink relative">
+      <Atmo />
 
-      <section className="flex-1 px-5 py-6 max-w-md mx-auto w-full">
+      <CheckinHeader className="xd-rise xd-d1" />
+
+      <StepRail step={2} className="xd-rise xd-d1" />
+
+      <section className="flex-1 px-5 py-6 max-w-md mx-auto w-full relative z-[2]">
         {/* HELLO, RON — compact stack (replaces the v2.5 yellow-bordered
             card). HELLO line stays bold/big to keep the personalized feel,
             but ditching the box saves ~110px and lets the user see the
             CTA much sooner. visit-stats sits inline as a single mono line. */}
-        <div className="mb-5">
+        <div className="xd-hello mb-6 xd-rise xd-d2">
           <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-1">
             // {t(lang, 'welcomeBack')}
           </p>
@@ -142,61 +154,70 @@ export default function RemindersPage() {
           )}
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 xd-rise xd-d3">
           <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-2">
             // {t(lang, 'gymRulesReminder')}
           </p>
           <h1 className="font-display text-3xl md:text-4xl leading-[0.9] mb-2">
             {t(lang, 'beforeYouTrain')}
           </h1>
-          <div className="h-1 w-16 bg-accent" />
+          <div className="xd-ubar" />
         </div>
 
         {/* IMPORTANT RULES — section label grouping the two core rules
             (RE-RACK + NO SLIPPERS). Added v2.8.1. */}
-        <div className="inline-block bg-accent/10 border border-accent text-accent font-mono text-[10px] tracking-[0.25em] px-2.5 py-1 mb-3">
+        <div className="inline-block bg-accent/10 border border-accent text-accent font-mono text-[10px] tracking-[0.25em] px-2.5 py-1 mb-1 xd-rise xd-d4">
           ▎ {t(lang, 'importantRules')}
         </div>
 
-        {/* Rule 1: RE-RACK */}
-        <div className="border-2 border-ink-line mb-4 overflow-hidden">
-          <div className="bg-accent text-ink px-4 py-2 font-display text-xs tracking-widest flex items-center gap-2">
-            ⚠ {t(lang, 'rule1')}
+        {/* Rule 1: RE-RACK — v2.13: big solid-yellow number heads each rule;
+            the number replaces the old in-card yellow bar (which duplicated
+            the rule title). Cards reveal on scroll. Images untouched. */}
+        <XdReveal>
+          <div className="flex items-baseline gap-3 mt-4 mb-2.5">
+            <span className="font-display text-[28px] leading-none text-accent">01</span>
+            <span className="font-display text-[15px] tracking-wide">{ruleTitle(t(lang, 'rule1'))}</span>
           </div>
-          <div className="bg-black">
-            <Image
-              src="/rerack.png"
-              alt="RE-RACK"
-              width={740}
-              height={740}
-              className="w-full h-auto"
-              priority
-            />
+          <div className="border border-ink-line mb-4 overflow-hidden">
+            <div className="bg-black">
+              <Image
+                src="/rerack.png"
+                alt="RE-RACK"
+                width={740}
+                height={740}
+                className="w-full h-auto"
+                priority
+              />
+            </div>
           </div>
-        </div>
+        </XdReveal>
 
         {/* Rule 2: NO SLIPPERS */}
-        <div className="border-2 border-ink-line mb-5 overflow-hidden">
-          <div className="bg-accent text-ink px-4 py-2 font-display text-xs tracking-widest flex items-center gap-2">
-            ⚠ {t(lang, 'rule2')}
+        <XdReveal>
+          <div className="flex items-baseline gap-3 mt-1 mb-2.5">
+            <span className="font-display text-[28px] leading-none text-accent">02</span>
+            <span className="font-display text-[15px] tracking-wide">{ruleTitle(t(lang, 'rule2'))}</span>
           </div>
-          <div className="bg-black">
-            <Image
-              src="/no-slippers.png"
-              alt="NO SLIPPERS"
-              width={690}
-              height={250}
-              className="w-full h-auto"
-              priority
-            />
+          <div className="border border-ink-line mb-5 overflow-hidden">
+            <div className="bg-black">
+              <Image
+                src="/no-slippers.png"
+                alt="NO SLIPPERS"
+                width={690}
+                height={250}
+                className="w-full h-auto"
+                priority
+              />
+            </div>
           </div>
-        </div>
+        </XdReveal>
 
         {/* DO & DON'T — full visual etiquette guide (1080×1080 graphics).
             Added v2.8.1. The images are self-contained (green DO / red
             DON'T headers baked in), so no yellow rule-bar is added; they
             sit in the same bordered frame as the rules above for visual
             consistency. Not marked `priority` (below the fold). */}
+        <XdReveal>
         <div className="mt-3 mb-3">
           <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-1.5">
             // {t(lang, 'doAndDont')}
@@ -207,9 +228,11 @@ export default function RemindersPage() {
             <span className="text-danger">DON&apos;T</span>
           </h2>
         </div>
+        </XdReveal>
 
         {/* DO */}
-        <div className="border-2 border-ink-line mb-4 overflow-hidden">
+        <XdReveal>
+        <div className="border border-ink-line mb-4 overflow-hidden">
           <div className="bg-black">
             <Image
               src="/do.png"
@@ -220,9 +243,11 @@ export default function RemindersPage() {
             />
           </div>
         </div>
+        </XdReveal>
 
         {/* DON'T */}
-        <div className="border-2 border-ink-line mb-5 overflow-hidden">
+        <XdReveal>
+        <div className="border border-ink-line mb-5 overflow-hidden">
           <div className="bg-black">
             <Image
               src="/dont.png"
@@ -233,11 +258,13 @@ export default function RemindersPage() {
             />
           </div>
         </div>
+        </XdReveal>
 
         {/* CTA — comes BEFORE T&C now (Option C). The CTA is the highest
             priority thing on this page; users have already agreed to T&C
             at registration. data-scroll-target tells ScrollHint where to
             scroll to on mount (so the button is visible above the fold). */}
+        <XdReveal>
         <div className="checkin-cta-wrap" data-scroll-target>
           {!loading && (
             <span className="checkin-cta-finger" aria-hidden="true">👇</span>
@@ -260,6 +287,7 @@ export default function RemindersPage() {
             )}
           </button>
         </div>
+        </XdReveal>
 
         {errorMsg && (
           <div className="bg-danger text-bone px-4 py-3 mt-4 font-display text-sm tracking-wider animate-shake">
