@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import NextImage from 'next/image';
 import { createClient } from '@/lib/supabase-client';
 import { Lang } from '@/lib/i18n';
 import {
@@ -99,6 +100,7 @@ export default function ReportFormPage() {
   const [honeypot, setHoneypot] = useState(''); // bots fill this; humans never see it
 
   const [error, setError] = useState('');
+  const [missing, setMissing] = useState<Set<string>>(new Set());
   const [refCode, setRefCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -120,12 +122,28 @@ export default function ReportFormPage() {
     safeSession.setItem('xf-report-lang', l);
   };
 
-  const setVal = (qid: string, v: string) => setValues((p) => ({ ...p, [qid]: v }));
-  const toggleMulti = (qid: string, v: string) =>
+  const clearMiss = (qid: string) =>
+    setMissing((p) => {
+      if (!p.has(qid)) return p;
+      const n = new Set(p);
+      n.delete(qid);
+      return n;
+    });
+  const setVal = (qid: string, v: string) => {
+    setValues((p) => ({ ...p, [qid]: v }));
+    if (v) clearMiss(qid);
+  };
+  const toggleMulti = (qid: string, v: string) => {
     setMulti((p) => {
       const cur = p[qid] ?? [];
       return { ...p, [qid]: cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v] };
     });
+    clearMiss(qid);
+  };
+  const setOther = (qid: string, v: string) => {
+    setOtherText((p) => ({ ...p, [qid]: v }));
+    if (v.trim()) clearMiss(qid);
+  };
 
   const pickPhoto = () => fileRef.current?.click();
   const removePhoto = () => {
@@ -175,12 +193,35 @@ export default function ReportFormPage() {
 
     if (honeypot.trim() !== '') return; // silently drop bots
 
-    const desc = (values[QID.whatHappened] ?? '').trim();
-    if (!desc) {
+    // v2.14: validate every required question (and conditional follow-ups).
+    const miss: string[] = [];
+    for (const f of reportFields) {
+      const v = (values[f.qid] ?? '').trim();
+      const ot = (otherText[f.qid] ?? '').trim();
+      if (f.required) {
+        if (f.type === 'multiselect') {
+          if ((multi[f.qid] ?? []).length === 0 && !ot) miss.push(f.qid);
+        } else if (!v) {
+          miss.push(f.qid);
+        } else if (f.allowOther && f.requireOtherText && v === 'Other' && !ot) {
+          miss.push(f.qid); // "Other" chosen but not specified
+        }
+      }
+      // conditional follow-up (e.g. witnesses = Yes → who saw it)
+      if (f.followUp?.required && v === f.followUp.value && !ot && !miss.includes(f.qid)) {
+        miss.push(f.qid);
+      }
+    }
+    if (miss.length > 0) {
+      setMissing(new Set(miss));
       setError(c.required);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const el = document.getElementById(`fq-${miss[0]}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      else window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
+    const desc = (values[QID.whatHappened] ?? '').trim();
 
     // Device cooldown
     const last = parseInt(safeLocal.getItem('xf-report-cooldown') ?? '0', 10);
@@ -210,7 +251,10 @@ export default function ReportFormPage() {
         } else {
           const v = (values[f.qid] ?? '').trim();
           if (!v) continue;
-          const other = f.allowOther && v === 'Other' ? (otherText[f.qid] ?? '').trim() : '';
+          const other =
+            (f.allowOther && v === 'Other') || (f.followUp && v === f.followUp.value)
+              ? (otherText[f.qid] ?? '').trim()
+              : '';
           answers.push({
             qid: f.qid,
             label: f.label.en,
@@ -379,7 +423,7 @@ export default function ReportFormPage() {
             dangerouslySetInnerHTML={{ __html: c.okFoot }}
           />
 
-          <button onClick={() => router.push('/')} className="rl-backbtn">
+          <button onClick={() => router.push('/report')} className="rl-backbtn">
             ← {c.back}
           </button>
 
@@ -396,22 +440,23 @@ export default function ReportFormPage() {
     const label = f.label[lang];
     const hint = f.hint?.[lang];
     const ph = f.placeholder?.[lang];
-    const isOptionalContact = f.group === 'contact';
+    const isMiss = missing.has(f.qid);
+    const wrapCls = `mb-[18px] rounded-xl ${isMiss ? 'rl-miss' : ''}`;
 
     const labelEl = (
       <label className="rl-label">
         {label}{' '}
         {f.required ? (
           <span style={{ color: 'var(--rl-danger)' }}>*</span>
-        ) : isOptionalContact ? (
+        ) : (
           <span className="rl-label-opt">· {c.optional}</span>
-        ) : null}
+        )}
       </label>
     );
 
     if (f.type === 'textarea') {
       return (
-        <div className="mb-[18px]" key={f.qid}>
+        <div className={wrapCls} id={`fq-${f.qid}`} key={f.qid}>
           {labelEl}
           {hint && <p className="rl-hint">{hint}</p>}
           <textarea
@@ -425,7 +470,7 @@ export default function ReportFormPage() {
 
     if (f.type === 'text' || f.type === 'tel' || f.type === 'date' || f.type === 'time') {
       return (
-        <div className="mb-[18px]" key={f.qid}>
+        <div className={wrapCls} id={`fq-${f.qid}`} key={f.qid}>
           {labelEl}
           {hint && <p className="rl-hint">{hint}</p>}
           <input
@@ -441,8 +486,9 @@ export default function ReportFormPage() {
     }
 
     if (f.type === 'radio') {
+      const showFollowUp = !!f.followUp && values[f.qid] === f.followUp.value;
       return (
-        <div className="mb-[18px]" key={f.qid}>
+        <div className={wrapCls} id={`fq-${f.qid}`} key={f.qid}>
           {labelEl}
           {hint && <p className="rl-hint">{hint}</p>}
           <div className="rl-chips">
@@ -460,6 +506,16 @@ export default function ReportFormPage() {
               );
             })}
           </div>
+          {showFollowUp && f.followUp && (
+            <input
+              type="text"
+              value={otherText[f.qid] ?? ''}
+              onChange={(e) => setOther(f.qid, e.target.value)}
+              placeholder={f.followUp.placeholder[lang]}
+              className="rl-input mt-2"
+              autoFocus
+            />
+          )}
           {f.qid === QID.urgency && (
             <div className={`rl-urgent ${values[f.qid] === 'Happening now' ? 'show' : ''}`}>
               <div className="rl-urgent-inner">
@@ -479,7 +535,7 @@ export default function ReportFormPage() {
     if (f.type === 'select') {
       const showOther = f.allowOther && values[f.qid] === 'Other';
       return (
-        <div className="mb-[18px]" key={f.qid}>
+        <div className={wrapCls} id={`fq-${f.qid}`} key={f.qid}>
           {labelEl}
           {hint && <p className="rl-hint">{hint}</p>}
           <select
@@ -498,7 +554,7 @@ export default function ReportFormPage() {
             <input
               type="text"
               value={otherText[f.qid] ?? ''}
-              onChange={(e) => setOtherText((p) => ({ ...p, [f.qid]: e.target.value }))}
+              onChange={(e) => setOther(f.qid, e.target.value)}
               placeholder={c.otherPlaceholder}
               className="rl-input mt-2"
             />
@@ -510,7 +566,7 @@ export default function ReportFormPage() {
     if (f.type === 'multiselect') {
       const chosen = multi[f.qid] ?? [];
       return (
-        <div className="mb-[18px]" key={f.qid}>
+        <div className={wrapCls} id={`fq-${f.qid}`} key={f.qid}>
           {labelEl}
           {hint && <p className="rl-hint">{hint}</p>}
           <div className="rl-checks">
@@ -543,7 +599,7 @@ export default function ReportFormPage() {
             <input
               type="text"
               value={otherText[f.qid] ?? ''}
-              onChange={(e) => setOtherText((p) => ({ ...p, [f.qid]: e.target.value }))}
+              onChange={(e) => setOther(f.qid, e.target.value)}
               placeholder={c.otherPlaceholder}
               className="rl-input mt-2"
             />
@@ -559,9 +615,9 @@ export default function ReportFormPage() {
 
   // Section card metadata: [title, small tag]
   const secMeta: Record<ReportField['group'], { t: string; opt: string | null }> = {
-    incident: { t: c.sec1, opt: null },
-    person: { t: c.sec2, opt: c.secAllOptional },
-    followup: { t: c.sec3, opt: c.secAllOptional },
+    incident: { t: c.sec1, opt: c.secRequired },
+    person: { t: c.sec2, opt: c.secRequired },
+    followup: { t: c.sec3, opt: c.secRequired },
     contact: { t: c.sec4, opt: c.secFullyOptional },
   };
 
@@ -575,27 +631,30 @@ export default function ReportFormPage() {
         <LanguageToggle current={lang} onChange={handleLang} variant="light" />
       </header>
 
-      {/* HERO — warm, supportive */}
-      <div className="rl-hero" style={{ padding: '26px 24px 20px' }}>
+      {/* HERO — same text & layout as the /report landing page (v2.14) */}
+      <div className="rl-hero">
         <div className="rl-rise rl-d1 inline-block">
-          <ShieldHeart size={56} />
+          <ShieldHeart size={74} />
         </div>
-        <h1 className="rl-rise rl-d2 font-bold text-[17px] leading-snug m-0 max-w-[320px] mx-auto">
+        <h1
+          className="rl-rise rl-d2 font-bold text-[21px] leading-[1.3] m-0"
+          style={{ whiteSpace: 'pre-line' }}
+        >
           {c.heroQ}
         </h1>
-        <div className="rl-rise rl-d3 mt-1.5">
-          <span className="rl-shout text-[21px] leading-tight">
+        <div className="rl-rise rl-d3 mt-2">
+          <span className="rl-shout text-[26px] leading-[1.05]">
             {c.heroHelp}
-            <span className="rl-hl" style={{ animationDelay: '0.35s' }} />
+            <span className="rl-hl" />
           </span>
         </div>
         <p
-          className="rl-rise rl-d4 text-[12.5px] leading-relaxed max-w-[300px] mx-auto mt-3 mb-0"
+          className="rl-rise rl-d4 text-[13px] leading-[1.65] max-w-[300px] mx-auto mt-3.5 mb-0"
           style={{ color: 'var(--rl-muted)' }}
         >
           {c.heroReassure}
         </p>
-        <div className="rl-rise rl-d5 mt-3.5">
+        <div className="rl-rise rl-d5 mt-4">
           <span className="rl-trust">
             <span className="rl-trust-dot" />
             {c.trust}
@@ -651,6 +710,7 @@ export default function ReportFormPage() {
                     <label className="rl-label">
                       {c.addPhoto} <span className="rl-label-opt">· {c.optional}</span>
                     </label>
+                    <p className="rl-hint">📷 {c.photoEncourage}</p>
                     {hasPhoto ? (
                       <div className="rl-photo-got">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -685,6 +745,27 @@ export default function ReportFormPage() {
             </section>
           </Reveal>
         ))}
+
+        {/* PDRM — this is an official report (deters joke submissions) */}
+        <Reveal>
+          <div className="rl-pdrm mb-3.5 mt-1">
+            <NextImage
+              src="/pdrm-logo.png"
+              alt="Polis Diraja Malaysia"
+              width={240}
+              height={280}
+              style={{ width: '44px', height: 'auto', flexShrink: 0 }}
+            />
+            <div className="min-w-0">
+              <h4 className="m-0 mb-1 text-[12.5px] font-bold" style={{ color: '#1E2450' }}>
+                {c.policeH}
+              </h4>
+              <p className="m-0 text-[11px] leading-[1.6]" style={{ color: '#4A4F73' }}>
+                {c.policeNote}
+              </p>
+            </div>
+          </div>
+        </Reveal>
 
         {/* NOTICE */}
         <Reveal>

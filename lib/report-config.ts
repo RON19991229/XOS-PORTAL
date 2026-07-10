@@ -62,9 +62,17 @@ export interface ReportField {
   label: L;
   hint?: L;
   placeholder?: L;
-  required?: boolean;                 // only `what_happened` is required by default
+  required?: boolean;                 // v2.14: most questions are now required
   options?: ReportOption[];           // for radio / select / multiselect
   allowOther?: boolean;               // for multiselect — adds an "other, specify" text box
+  requireOtherText?: boolean;         // if answer is "Other", the specify box becomes required
+  // v2.14: conditional follow-up text input, shown when the answer equals `value`
+  // (e.g. witnesses = Yes → "Who saw it?"). Stored in the answer's `other` field.
+  followUp?: {
+    value: string;                    // show the input when the answer equals this
+    placeholder: L;
+    required?: boolean;               // block submit if shown but left empty
+  };
 }
 
 // Well-known qids the form & dashboard treat specially (kept as columns too).
@@ -86,6 +94,7 @@ export const reportFields: ReportField[] = [
     qid: QID.urgency,
     group: 'incident',
     type: 'radio',
+    required: true,
     label: {
       en: 'Is this still happening — are you safe right now?',
       zh: '事情还在发生吗 —— 你现在安全吗？',
@@ -126,18 +135,21 @@ export const reportFields: ReportField[] = [
     qid: 'incident_date',
     group: 'incident',
     type: 'date',
+    required: true,
     label: { en: 'Date', zh: '日期', ms: 'Tarikh' },
   },
   {
     qid: 'incident_time',
     group: 'incident',
     type: 'time',
+    required: true,
     label: { en: 'Time (approx)', zh: '大约时间', ms: 'Masa (anggaran)' },
   },
   {
     qid: QID.location,
     group: 'incident',
     type: 'multiselect',
+    required: true,
     allowOther: true,
     label: { en: 'Where did it happen?', zh: '事发地点？', ms: 'Di mana ia berlaku?' },
     hint: {
@@ -162,6 +174,7 @@ export const reportFields: ReportField[] = [
     qid: 'person_role',
     group: 'person',
     type: 'radio',
+    required: true,
     label: {
       en: 'Who is this person?',
       zh: '这个人是什么身份？',
@@ -178,6 +191,7 @@ export const reportFields: ReportField[] = [
     qid: 'person_gender',
     group: 'person',
     type: 'radio',
+    required: true,
     label: { en: 'Gender', zh: '性别', ms: 'Jantina' },
     options: [
       { value: 'Male',     label: { en: 'Male',     zh: '男',     ms: 'Lelaki' } },
@@ -188,14 +202,27 @@ export const reportFields: ReportField[] = [
   {
     qid: 'person_height',
     group: 'person',
-    type: 'text',
+    type: 'select',
+    required: true,
     label: { en: 'Approx. height', zh: '大约身高', ms: 'Anggaran tinggi' },
-    placeholder: { en: 'e.g. tall / around 175cm', zh: '例：偏高 / 约175cm', ms: 'cth: tinggi / sekitar 175cm' },
+    options: [
+      { value: 'Below 150cm', label: { en: 'Below 150cm', zh: '150cm 以下', ms: 'Bawah 150cm' } },
+      { value: '150–155cm',   label: { en: '150–155cm',   zh: '150–155cm',  ms: '150–155cm' } },
+      { value: '155–160cm',   label: { en: '155–160cm',   zh: '155–160cm',  ms: '155–160cm' } },
+      { value: '160–165cm',   label: { en: '160–165cm',   zh: '160–165cm',  ms: '160–165cm' } },
+      { value: '165–170cm',   label: { en: '165–170cm',   zh: '165–170cm',  ms: '165–170cm' } },
+      { value: '170–175cm',   label: { en: '170–175cm',   zh: '170–175cm',  ms: '170–175cm' } },
+      { value: '175–180cm',   label: { en: '175–180cm',   zh: '175–180cm',  ms: '175–180cm' } },
+      { value: '180–185cm',   label: { en: '180–185cm',   zh: '180–185cm',  ms: '180–185cm' } },
+      { value: 'Above 185cm', label: { en: 'Above 185cm', zh: '185cm 以上', ms: 'Atas 185cm' } },
+      { value: 'Not sure',    label: { en: 'Not sure',    zh: '不确定',     ms: 'Tidak pasti' } },
+    ],
   },
   {
     qid: 'person_shirt',
     group: 'person',
     type: 'select',
+    required: true,
     allowOther: true,
     label: { en: 'Shirt colour', zh: '上衣颜色', ms: 'Warna baju' },
     options: [
@@ -213,8 +240,10 @@ export const reportFields: ReportField[] = [
     qid: 'person_race',
     group: 'person',
     type: 'select',
+    required: true,
     allowOther: true,
-    label: { en: 'Race / ethnicity (if known)', zh: '种族／族裔（如知道）', ms: 'Bangsa / etnik (jika tahu)' },
+    requireOtherText: true, // choosing "Other" must be accompanied by a description
+    label: { en: 'Race / ethnicity', zh: '种族／族裔', ms: 'Bangsa / etnik' },
     options: [
       { value: 'Chinese', label: { en: 'Chinese', zh: '华裔', ms: 'Cina' } },
       { value: 'Indian',  label: { en: 'Indian',  zh: '印裔', ms: 'India' } },
@@ -226,6 +255,7 @@ export const reportFields: ReportField[] = [
     qid: 'person_usual_time',
     group: 'person',
     type: 'multiselect',
+    required: true,
     label: {
       en: 'When does this person usually come?',
       zh: '这个人通常什么时候来？',
@@ -241,6 +271,83 @@ export const reportFields: ReportField[] = [
       { value: 'Afternoon', label: { en: 'Afternoon', zh: '下午',   ms: 'Tengah hari' } },
       { value: 'Evening',   label: { en: 'Evening',   zh: '晚上',   ms: 'Malam' } },
       { value: 'Weekends',  label: { en: 'Weekends',  zh: '周末',   ms: 'Hujung minggu' } },
+      { value: 'Not sure',  label: { en: 'Not sure',  zh: '不确定', ms: 'Tidak pasti' } },
+    ],
+  },
+  // ---- identifying details, structured (v2.14 — split from the old
+  //      "Other identifying details" textarea; all optional) ---------------
+  {
+    qid: 'person_hair_color',
+    group: 'person',
+    type: 'select',
+    allowOther: true,
+    label: { en: 'Hair colour', zh: '头发颜色', ms: 'Warna rambut' },
+    options: [
+      { value: 'Black',                label: { en: 'Black',                zh: '黑色',           ms: 'Hitam' } },
+      { value: 'Brown',                label: { en: 'Brown',                zh: '棕色',           ms: 'Coklat' } },
+      { value: 'Blonde',               label: { en: 'Blonde',               zh: '金色',           ms: 'Perang' } },
+      { value: 'Dyed (bright colour)', label: { en: 'Dyed (bright colour)', zh: '染发（鲜艳颜色）', ms: 'Diwarnakan (warna terang)' } },
+      { value: 'Grey / White',         label: { en: 'Grey / White',         zh: '灰白',           ms: 'Kelabu / Putih' } },
+      { value: 'Other',                label: { en: 'Other',                zh: '其他',           ms: 'Lain-lain' } },
+      { value: 'Not sure',             label: { en: 'Not sure',             zh: '不确定',         ms: 'Tidak pasti' } },
+    ],
+  },
+  {
+    qid: 'person_hair_length',
+    group: 'person',
+    type: 'select',
+    label: { en: 'Hair length / style', zh: '发量／发型', ms: 'Panjang / gaya rambut' },
+    options: [
+      { value: 'Long',                  label: { en: 'Long',                  zh: '长发',             ms: 'Panjang' } },
+      { value: 'Medium',                label: { en: 'Medium',                zh: '中长',             ms: 'Sederhana' } },
+      { value: 'Short',                 label: { en: 'Short',                 zh: '短发',             ms: 'Pendek' } },
+      { value: 'Very short / buzz cut', label: { en: 'Very short / buzz cut', zh: '很短／寸头',       ms: 'Sangat pendek / botak sikit' } },
+      { value: 'Bald / shaved',         label: { en: 'Bald / shaved',         zh: '光头／剃光',       ms: 'Botak' } },
+      { value: 'Not sure',              label: { en: 'Not sure',              zh: '不确定',           ms: 'Tidak pasti' } },
+    ],
+  },
+  {
+    qid: 'person_tattoo',
+    group: 'person',
+    type: 'radio',
+    label: { en: 'Do they have a tattoo?', zh: '有纹身吗？', ms: 'Ada tatu?' },
+    options: [
+      { value: 'Yes',      label: { en: 'Yes',      zh: '有',     ms: 'Ya' } },
+      { value: 'No',       label: { en: 'No',       zh: '没有',   ms: 'Tidak' } },
+      { value: 'Not sure', label: { en: 'Not sure', zh: '不确定', ms: 'Tidak pasti' } },
+    ],
+    followUp: {
+      value: 'Yes',
+      required: true,
+      placeholder: {
+        en: 'Where is the tattoo? e.g. left arm, neck…',
+        zh: '纹身在哪里？例：左手臂、颈部…',
+        ms: 'Di mana tatu itu? cth: lengan kiri, leher…',
+      },
+    },
+  },
+  {
+    qid: 'person_glasses',
+    group: 'person',
+    type: 'radio',
+    label: { en: 'Were they wearing glasses?', zh: '有戴眼镜吗？', ms: 'Adakah mereka memakai cermin mata?' },
+    options: [
+      { value: 'Yes',      label: { en: 'Yes',      zh: '有',     ms: 'Ya' } },
+      { value: 'No',       label: { en: 'No',       zh: '没有',   ms: 'Tidak' } },
+      { value: 'Not sure', label: { en: 'Not sure', zh: '不确定', ms: 'Tidak pasti' } },
+    ],
+  },
+  {
+    qid: 'person_build',
+    group: 'person',
+    type: 'select',
+    label: { en: 'Body build', zh: '体型', ms: 'Bentuk badan' },
+    options: [
+      { value: 'Slim',                 label: { en: 'Slim',                 zh: '偏瘦',       ms: 'Kurus' } },
+      { value: 'Average',              label: { en: 'Average',              zh: '中等',       ms: 'Sederhana' } },
+      { value: 'Athletic / muscular',  label: { en: 'Athletic / muscular',  zh: '健壮／有肌肉', ms: 'Sasa / berotot' } },
+      { value: 'Heavy / large',        label: { en: 'Heavy / large',        zh: '偏胖／魁梧',  ms: 'Berbadan besar' } },
+      { value: 'Not sure',             label: { en: 'Not sure',             zh: '不确定',     ms: 'Tidak pasti' } },
     ],
   },
   {
@@ -249,9 +356,9 @@ export const reportFields: ReportField[] = [
     type: 'textarea',
     label: { en: 'Other identifying details', zh: '其他辨识特征', ms: 'Ciri pengenalan lain' },
     hint: {
-      en: 'Hairstyle, tattoos, glasses, body build, etc.',
-      zh: '发型、纹身、眼镜、体型等。',
-      ms: 'Gaya rambut, tatu, cermin mata, bentuk badan, dll.',
+      en: 'Anything else that could help us recognise them — beard, cap, bag, accent, etc.',
+      zh: '任何有助于我们辨认对方的特征 —— 胡子、帽子、背包、口音等。',
+      ms: 'Apa-apa lagi yang boleh membantu kami mengenali mereka — janggut, topi, beg, loghat, dll.',
     },
   },
 
@@ -260,6 +367,7 @@ export const reportFields: ReportField[] = [
     qid: 'witnesses',
     group: 'followup',
     type: 'radio',
+    required: true,
     label: {
       en: 'Did anyone else see it happen?',
       zh: '当时有其他人看到吗？',
@@ -270,11 +378,21 @@ export const reportFields: ReportField[] = [
       { value: 'No',       label: { en: 'No',       zh: '没有',   ms: 'Tidak' } },
       { value: 'Not sure', label: { en: 'Not sure', zh: '不确定', ms: 'Tidak pasti' } },
     ],
+    followUp: {
+      value: 'Yes',
+      required: true,
+      placeholder: {
+        en: 'Who saw it? e.g. my friend, another member, a staff member…',
+        zh: '是谁看到的？例：我的朋友、其他会员、某位职员…',
+        ms: 'Siapa yang nampak? cth: kawan saya, ahli lain, staf…',
+      },
+    },
   },
   {
     qid: 'happened_before',
     group: 'followup',
     type: 'radio',
+    required: true,
     label: { en: 'Has this happened before?', zh: '以前是否发生过？', ms: 'Adakah ini pernah berlaku?' },
     options: [
       { value: 'Yes',      label: { en: 'Yes',      zh: '是',     ms: 'Ya' } },
@@ -286,6 +404,7 @@ export const reportFields: ReportField[] = [
     qid: 'speak_to_person',
     group: 'followup',
     type: 'select',
+    required: true,
     label: {
       en: 'Would you like us to speak to this person?',
       zh: '你希望我们与此人沟通吗？',
@@ -301,6 +420,7 @@ export const reportFields: ReportField[] = [
     qid: QID.remainAnonymous,
     group: 'followup',
     type: 'radio',
+    required: true,
     label: { en: 'Would you like to remain anonymous?', zh: '你希望保持匿名吗？', ms: 'Adakah anda mahu kekal tanpa nama?' },
     options: [
       { value: 'Yes', label: { en: 'Yes', zh: '是', ms: 'Ya' } },
@@ -365,7 +485,7 @@ export interface ReportCopy {
   sec2: string;
   sec3: string;
   sec4: string;
-  secAllOptional: string;   // small tag on cards 2 & 3
+  secRequired: string;      // small tag on cards 1–3 (v2.14: most questions required)
   secFullyOptional: string; // small tag on card 4
   // WhatsApp — one-tap chat with management
   waTalkTitle: string;      // landing card title
@@ -381,6 +501,7 @@ export interface ReportCopy {
   waFollowPrefill: string;  // prefilled follow-up message; {ref} = reference no.
   // person / photo
   addPhoto: string;
+  photoEncourage: string;   // v2.14: encourage upload + PDPA reassurance
   photoCap: string;
   photoChosen: string;
   removePhoto: string;
@@ -388,6 +509,9 @@ export interface ReportCopy {
   // multiselect other
   otherLabel: string;
   otherPlaceholder: string;
+  // PDRM card (shown above the notice; also deters joke reports)
+  policeH: string;
+  policeNote: string;
   // notice
   noticeH: string;
   notice: string[];
@@ -421,16 +545,16 @@ export const reportCopy: Record<Lang, ReportCopy> = {
       'Feel unsafe or uncomfortable at X FITNESS? Let us know — every report is confidential and taken seriously.',
     chooseLanguage: 'Choose your language',
     optional: 'optional',
-    heroQ: 'Feels unsafe? Feels uncomfortable?',
-    heroHelp: 'We are always here to help.',
+    heroQ: 'Feels unsafe?\nFeels uncomfortable?',
+    heroHelp: "WE'RE HERE TO HELP.",
     heroReassure:
-      'If something happened at X FITNESS that made you feel unsafe or uncomfortable, please tell us. We take every report seriously.',
-    trust: '100% CONFIDENTIAL \u00b7 SEEN BY OUR MANAGEMENT ONLY',
+      'If someone or something at the gym made you feel unsafe or uncomfortable, please tell us. Every report is taken seriously.',
+    trust: '100% CONFIDENTIAL \u00b7 MANAGEMENT ONLY',
     sec1: 'WHAT HAPPENED TO YOU',
     sec2: 'THE PERSON INVOLVED',
     sec3: 'A FEW MORE THINGS',
     sec4: 'YOUR DETAILS',
-    secAllOptional: 'ALL OPTIONAL',
+    secRequired: '* REQUIRED',
     secFullyOptional: '100% OPTIONAL',
     waTalkTitle: 'Prefer to talk to a person?',
     waTalkSub: 'WhatsApp our management directly.',
@@ -444,12 +568,17 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     waFollowBtn: 'WHATSAPP US',
     waFollowPrefill: 'Hi X FITNESS, I would like to follow up on my report {ref}',
     addPhoto: 'Add a photo of the person / scene',
+    photoEncourage:
+      'A photo helps our investigation a lot — even a blurry one. It will be used only to investigate this report and handled in line with the Malaysian PDPA.',
     photoCap: 'Tap to add a photo',
     photoChosen: 'Photo added',
     removePhoto: 'Remove',
     photoTooLarge: 'That image is too large. Please choose one under 12 MB.',
     otherLabel: 'Other',
     otherPlaceholder: 'Other — please specify',
+    policeH: 'This is an official report',
+    policeNote:
+      'If necessary, this report can be printed for you to lodge a police report with the Royal Malaysia Police (PDRM). Please make sure everything you submit is true and accurate.',
     noticeH: 'How we handle your report',
     notice: [
       'Seen only by X FITNESS management — kept confidential.',
@@ -460,7 +589,7 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     submit: 'SUBMIT CONFIDENTIALLY',
     submitSub: 'Your report goes straight to management. Thank you for speaking up.',
     submitting: 'SENDING…',
-    required: 'Please describe what happened before submitting.',
+    required: 'Please answer all required questions marked with * before submitting.',
     errorGeneric: 'Sorry, something went wrong. Please try again in a moment.',
     cooldown: 'You just submitted a report. Please wait a moment before sending another.',
     urgentNow:
@@ -488,16 +617,16 @@ export const reportCopy: Record<Lang, ReportCopy> = {
       '在 X FITNESS 感到不安或不舒服？告诉我们 —— 每一份举报都会保密处理并认真对待。',
     chooseLanguage: '请选择语言',
     optional: '选填',
-    heroQ: '感到不安？感到不舒服？',
-    heroHelp: '我们随时在这里帮你。',
+    heroQ: '感到不安？\n感到不舒服？',
+    heroHelp: '我们在这里帮你。',
     heroReassure:
-      '如果你在 X FITNESS 遇到让你感到不安或不舒服的事，请告诉我们。每一份举报我们都会认真对待。',
-    trust: '100% 保密 \u00b7 仅本店管理层可查看',
+      '如果在健身房有人或有事让你感到不安或不舒服，请告诉我们。每一份举报我们都会认真对待。',
+    trust: '100% 保密 \u00b7 仅管理层可查看',
     sec1: '发生了什么事',
     sec2: '涉事人员',
     sec3: '再补充几点',
     sec4: '你的资料',
-    secAllOptional: '全部选填',
+    secRequired: '* 必填',
     secFullyOptional: '完全选填',
     waTalkTitle: '想直接跟真人聊？',
     waTalkSub: '直接 WhatsApp 我们的管理层。',
@@ -511,12 +640,17 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     waFollowBtn: 'WHATSAPP 我们',
     waFollowPrefill: '你好 X FITNESS，我想跟进我的举报 {ref}',
     addPhoto: '上传对方／现场的照片',
+    photoEncourage:
+      '照片对我们的调查帮助很大 —— 就算拍得模糊也没关系。照片仅用于调查此举报，并按马来西亚个人资料保护法（PDPA）处理。',
     photoCap: '点击添加照片',
     photoChosen: '照片已添加',
     removePhoto: '移除',
     photoTooLarge: '图片太大了，请选择小于 12 MB 的图片。',
     otherLabel: '其他',
     otherPlaceholder: '其他 —— 请填写',
+    policeH: '这是一份正式举报',
+    policeNote:
+      '如有必要，此举报可以列印出来，供你向马来西亚皇家警察（PDRM）报案使用。请确保你提交的内容全部属实、准确。',
     noticeH: '我们如何处理你的举报',
     notice: [
       '仅 X FITNESS 管理层可查看 —— 保密处理。',
@@ -527,7 +661,7 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     submit: '保密提交',
     submitSub: '你的举报会直接送到管理层。谢谢你愿意说出来。',
     submitting: '提交中…',
-    required: '提交前请先描述发生了什么事。',
+    required: '提交前，请先回答所有标有 * 的必填题。',
     errorGeneric: '抱歉，出了点问题。请稍后再试一次。',
     cooldown: '你刚刚提交过举报，请稍等片刻再提交下一份。',
     urgentNow:
@@ -555,16 +689,16 @@ export const reportCopy: Record<Lang, ReportCopy> = {
       'Rasa tidak selamat atau tidak selesa di X FITNESS? Beritahu kami — setiap laporan adalah sulit dan diambil serius.',
     chooseLanguage: 'Pilih bahasa anda',
     optional: 'pilihan',
-    heroQ: 'Rasa tidak selamat? Rasa tidak selesa?',
-    heroHelp: 'Kami sentiasa di sini untuk membantu.',
+    heroQ: 'Rasa tidak selamat?\nRasa tidak selesa?',
+    heroHelp: 'KAMI SEDIA MEMBANTU.',
     heroReassure:
-      'Jika sesuatu berlaku di X FITNESS yang membuat anda rasa tidak selamat atau tidak selesa, sila beritahu kami. Setiap laporan kami ambil serius.',
-    trust: '100% SULIT \u00b7 DILIHAT OLEH PENGURUSAN KAMI SAHAJA',
+      'Jika seseorang atau sesuatu di gim membuat anda rasa tidak selamat atau tidak selesa, sila beritahu kami. Setiap laporan diambil serius.',
+    trust: '100% SULIT \u00b7 PENGURUSAN SAHAJA',
     sec1: 'APA YANG BERLAKU',
     sec2: 'ORANG YANG TERLIBAT',
     sec3: 'BEBERAPA PERKARA LAGI',
     sec4: 'MAKLUMAT ANDA',
-    secAllOptional: 'SEMUA PILIHAN',
+    secRequired: '* WAJIB',
     secFullyOptional: '100% PILIHAN',
     waTalkTitle: 'Lebih suka bercakap terus?',
     waTalkSub: 'WhatsApp pengurusan kami secara terus.',
@@ -578,12 +712,17 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     waFollowBtn: 'WHATSAPP KAMI',
     waFollowPrefill: 'Hai X FITNESS, saya ingin membuat susulan laporan saya {ref}',
     addPhoto: 'Tambah foto orang / tempat kejadian',
+    photoEncourage:
+      'Foto sangat membantu siasatan kami — walaupun kabur. Ia hanya digunakan untuk menyiasat laporan ini dan dikendalikan selaras dengan PDPA Malaysia.',
     photoCap: 'Ketik untuk tambah foto',
     photoChosen: 'Foto ditambah',
     removePhoto: 'Buang',
     photoTooLarge: 'Imej itu terlalu besar. Sila pilih yang bawah 12 MB.',
     otherLabel: 'Lain-lain',
     otherPlaceholder: 'Lain-lain — sila nyatakan',
+    policeH: 'Ini adalah laporan rasmi',
+    policeNote:
+      'Jika perlu, laporan ini boleh dicetak untuk anda membuat laporan polis dengan Polis Diraja Malaysia (PDRM). Sila pastikan semua yang anda hantar adalah benar dan tepat.',
     noticeH: 'Bagaimana kami mengendalikan laporan anda',
     notice: [
       'Dilihat oleh pengurusan X FITNESS sahaja — dirahsiakan.',
@@ -594,7 +733,7 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     submit: 'HANTAR SECARA SULIT',
     submitSub: 'Laporan anda terus kepada pengurusan. Terima kasih kerana bersuara.',
     submitting: 'MENGHANTAR…',
-    required: 'Sila terangkan apa yang berlaku sebelum menghantar.',
+    required: 'Sila jawab semua soalan wajib bertanda * sebelum menghantar.',
     errorGeneric: 'Maaf, ada masalah. Sila cuba lagi sebentar nanti.',
     cooldown: 'Anda baru sahaja menghantar laporan. Sila tunggu sebentar sebelum menghantar yang lain.',
     urgentNow:
