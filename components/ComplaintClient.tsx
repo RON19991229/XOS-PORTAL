@@ -309,23 +309,84 @@ function ComplaintCard({
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
-  const urgencyAns = answers.find((a) => a.qid === QID.urgency);
+  // -------------------------------------------------------------------------
+  // Answer lookup & formatting (v2.14.1 redesign)
+  // Answers are self-describing ({qid,label,type,value,other}) so old reports
+  // (v2.11–2.13) and any future config questions keep rendering: known qids
+  // get a fixed slot below, unknown ones fall through to the FOLLOW-UP row.
+  // -------------------------------------------------------------------------
+  const byQid = new Map(answers.map((a) => [a.qid, a]));
+  const get = (qid: string) => byQid.get(qid);
+  const val = (a?: StoredAnswer): string => {
+    if (!a) return '';
+    const v = Array.isArray(a.value) ? a.value.join(' · ') : a.value;
+    return a.other ? `${v} — ${a.other}` : v;
+  };
+
+  const urgencyAns = get(QID.urgency);
   const isUrgent = urgencyAns?.value === 'Happening now';
 
-  const locationAns = answers.find((a) => a.qid === QID.location);
+  const locationAns = get(QID.location);
   const locationParts: string[] = [];
   if (locationAns) {
     if (Array.isArray(locationAns.value)) locationParts.push(...locationAns.value);
     if (locationAns.other) locationParts.push(locationAns.other);
   }
 
-  // Everything except description(what_happened) & location & textareas -> tags
-  const tagAnswers = answers.filter(
-    (a) => a.qid !== QID.whatHappened && a.qid !== QID.location && a.type !== 'textarea',
-  );
-  const blockAnswers = answers.filter(
-    (a) => a.qid !== QID.whatHappened && a.type === 'textarea',
-  );
+  // "When" = date + time merged into one slot ("10 Jul 2026 · ~16:38").
+  const dateAns = get('incident_date');
+  const timeAns = get('incident_time');
+  const whenParts: string[] = [];
+  if (dateAns && typeof dateAns.value === 'string' && dateAns.value) {
+    const d = new Date(`${dateAns.value}T00:00:00`);
+    whenParts.push(
+      isNaN(d.getTime())
+        ? dateAns.value
+        : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+    );
+  }
+  if (timeAns && typeof timeAns.value === 'string' && timeAns.value) {
+    whenParts.push(`~${timeAns.value}`);
+  }
+
+  // "Hair" = colour + length merged ("Black · Short").
+  const hairParts = [val(get('person_hair_color')), val(get('person_hair_length'))].filter(Boolean);
+
+  // PERSON grid slots — only answered ones render.
+  const personSlots: { k: string; a?: StoredAnswer; text?: string; hot?: boolean; wide?: boolean }[] = [
+    { k: 'Who', a: get('person_role') },
+    { k: 'Gender', a: get('person_gender') },
+    { k: 'Height', a: get('person_height') },
+    { k: 'Race', a: get('person_race') },
+    { k: 'Shirt', a: get('person_shirt') },
+    { k: 'Hair', text: hairParts.join(' · ') },
+    { k: 'Tattoo', a: get('person_tattoo'), hot: get('person_tattoo')?.value === 'Yes' },
+    { k: 'Glasses', a: get('person_glasses') },
+    { k: 'Build', a: get('person_build') },
+    { k: 'Usually comes', a: get('person_usual_time') },
+    { k: 'Other identifying details', a: get('person_details'), wide: true },
+  ];
+
+  // FOLLOW-UP compact row.
+  const fuSlots: { q: string; a?: StoredAnswer; hotOnYes?: boolean }[] = [
+    { q: 'WITNESSES', a: get('witnesses') },
+    { q: 'HAPPENED BEFORE', a: get('happened_before'), hotOnYes: true },
+    { q: 'SPEAK TO PERSON', a: get('speak_to_person') },
+    { q: 'ANONYMOUS', a: get(QID.remainAnonymous) },
+    { q: 'ANYTHING ELSE', a: get('anything_else') },
+  ];
+
+  // Anything the slots above don't consume (future config questions) also
+  // lands in the FOLLOW-UP row so nothing is ever silently dropped.
+  const consumed = new Set([
+    QID.whatHappened, QID.urgency, QID.location,
+    'incident_date', 'incident_time',
+    'person_role', 'person_gender', 'person_height', 'person_race', 'person_shirt',
+    'person_hair_color', 'person_hair_length', 'person_tattoo', 'person_glasses',
+    'person_build', 'person_usual_time', 'person_details',
+    'witnesses', 'happened_before', 'speak_to_person', QID.remainAnonymous, 'anything_else',
+  ]);
+  const extraAnswers = answers.filter((a) => !consumed.has(a.qid));
 
   const contactLine = r.reporter_contact
     ? r.reporter_name
@@ -342,182 +403,285 @@ function ComplaintCard({
     setSavingNote(false);
   };
 
+  // Small label-over-value cell for the definition grids.
+  const KV = ({
+    k,
+    v,
+    hot,
+    wide,
+    soft,
+  }: {
+    k: string;
+    v: string;
+    hot?: boolean;
+    wide?: boolean;
+    soft?: boolean;
+  }) => (
+    <div className={wide ? 'col-span-full' : ''}>
+      <div className="font-mono text-[8.5px] tracking-[0.14em] text-neutral-400 uppercase mb-0.5">{k}</div>
+      <div
+        className={`text-[13.5px] leading-snug ${soft ? 'font-semibold text-neutral-700 whitespace-pre-wrap' : 'font-bold'} ${
+          hot ? 'text-danger' : 'text-neutral-900'
+        }`}
+      >
+        {v}
+      </div>
+    </div>
+  );
+
+  const SecHead = ({ dot, title }: { dot: string; title: string }) => (
+    <div className="flex items-center gap-2 font-display text-[10px] tracking-[0.16em] text-neutral-500 mb-3">
+      <span className="w-[7px] h-[7px] rounded-[2px]" style={{ background: dot }} />
+      {title}
+    </div>
+  );
+
   return (
     <div
-      className={`bg-white border border-neutral-200 border-l-[5px] ${meta.leftBorder} rounded-lg p-4 flex gap-4 ${
+      className={`bg-white border border-neutral-200 border-l-[5px] ${meta.leftBorder} rounded-xl overflow-hidden ${
         isUrgent ? 'ring-2 ring-danger/25' : ''
       }`}
     >
-      {/* photo */}
-      <div className="w-[92px] min-w-[92px] h-[92px] bg-neutral-900 rounded-lg overflow-hidden flex items-center justify-center">
-        {r.photo_path && photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photoUrl} alt="evidence" className="w-full h-full object-cover" />
-        ) : r.photo_path ? (
-          <span className="font-mono text-[8px] text-neutral-500 text-center px-1">PHOTO<br />UNAVAILABLE</span>
-        ) : (
-          <span className="font-mono text-[9px] text-neutral-600 text-center">NO<br />PHOTO</span>
+      {/* ---- header strip ---- */}
+      <div className="flex items-center gap-2.5 flex-wrap px-4 md:px-5 py-3.5 border-b border-neutral-200 bg-[#fafaf8]">
+        {r.ref_code && (
+          <span className="font-mono font-bold text-[13px] bg-ink text-accent px-2.5 py-1 rounded-md tracking-[0.12em]">
+            {r.ref_code}
+          </span>
         )}
+        <span className={`font-display text-[9px] tracking-[0.12em] px-2.5 py-1.5 rounded-md ${meta.cls}`}>
+          {meta.label}
+        </span>
+        {isUrgent && (
+          <span className="font-display text-[9px] tracking-[0.1em] text-danger border-[1.5px] border-danger/45 bg-danger/[0.07] px-2.5 py-1 rounded-md">
+            ⚠ HAPPENING NOW
+          </span>
+        )}
+        <span className="ml-auto font-mono text-[10.5px] text-neutral-500 text-right leading-relaxed">
+          {formatDateTime(r.created_at)} · <b className="text-neutral-700 font-bold">{contactLine}</b>
+        </span>
       </div>
 
-      {/* body */}
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-start gap-3 flex-wrap mb-2">
-          <span className="font-mono text-[11px] text-neutral-500">
-            {formatDateTime(r.created_at)} · {contactLine}
-          </span>
-          <div className="flex items-center gap-1.5">
-            {r.ref_code && (
-              <span className="font-mono font-bold text-[11px] bg-ink text-accent px-2 py-1 rounded tracking-wider">
-                {r.ref_code}
-              </span>
-            )}
-            <span className={`font-display text-[9px] tracking-wider px-2 py-1 rounded ${meta.cls}`}>
-              {meta.label}
-            </span>
-          </div>
-        </div>
-
-        {isUrgent && (
-          <div className="inline-flex items-center gap-1.5 bg-danger/10 text-danger border border-danger/40 font-display text-[9px] tracking-wider px-2.5 py-1 rounded mb-2">
-            ⚠ HAPPENING NOW · MAY NEED IMMEDIATE ATTENTION
-          </div>
-        )}
-
-        {locationParts.length > 0 && (
-          <div className="font-mono text-[11px] text-danger tracking-tight mb-2">
-            ⚑ {locationParts.join(' · ').toUpperCase()}
-          </div>
-        )}
-
-        <p className="text-[14px] text-neutral-800 leading-relaxed whitespace-pre-wrap mb-3">
+      {/* ---- what happened ---- */}
+      <div className="px-4 md:px-5 pt-4 pb-4 border-b border-neutral-200">
+        <div className="font-mono text-[9px] tracking-[0.22em] text-neutral-400 mb-1.5">// WHAT HAPPENED</div>
+        <p className="text-[16px] font-semibold text-neutral-900 leading-relaxed whitespace-pre-wrap m-0">
           {r.description}
         </p>
+      </div>
 
-        {tagAnswers.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {tagAnswers.map((a) => {
-              const hot = a.qid === QID.urgency && a.value === 'Happening now';
-              const role = a.qid === 'person_role';
+      {/* ---- incident ---- */}
+      {(whenParts.length > 0 || urgencyAns || locationParts.length > 0) && (
+        <div className="px-4 md:px-5 pt-3.5 pb-4 border-b border-neutral-200">
+          <SecHead dot="#ff3b30" title="INCIDENT" />
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-x-4 gap-y-3">
+            {whenParts.length > 0 && <KV k="When" v={whenParts.join(' · ')} />}
+            {urgencyAns && <KV k="Still happening?" v={val(urgencyAns)} hot={isUrgent} />}
+            {locationParts.length > 0 && (
+              <div className="col-span-full">
+                <div className="font-mono text-[8.5px] tracking-[0.14em] text-neutral-400 uppercase mb-1">Where</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {locationParts.map((p) => (
+                    <span
+                      key={p}
+                      className="font-mono font-bold text-[10.5px] bg-[#fff2f0] text-[#c2372c] border border-danger/25 px-2 py-1 rounded-md"
+                    >
+                      {p.toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ---- person description (identikit: photo + facts) ---- */}
+      <div className="px-4 md:px-5 pt-3.5 pb-4 border-b border-neutral-200">
+        <SecHead dot="#4d6bfa" title="PERSON DESCRIPTION" />
+        <div className="flex gap-4">
+          <div className="w-[96px] min-w-[96px] md:w-[120px] md:min-w-[120px]">
+            {r.photo_path && photoUrl ? (
+              <a href={photoUrl} target="_blank" rel="noopener noreferrer" className="block group">
+                <div className="w-full aspect-square bg-neutral-900 rounded-[10px] overflow-hidden border border-neutral-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoUrl}
+                    alt="evidence"
+                    className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                  />
+                </div>
+                <div className="font-mono text-[8.5px] tracking-[0.1em] text-neutral-400 text-center mt-1.5">
+                  TAP TO ENLARGE
+                </div>
+              </a>
+            ) : (
+              <div className="w-full aspect-square bg-neutral-900 rounded-[10px] flex items-center justify-center border border-neutral-200">
+                <span className="font-mono text-[9px] text-neutral-500 text-center leading-relaxed">
+                  {r.photo_path ? (
+                    <>PHOTO<br />UNAVAILABLE</>
+                  ) : (
+                    <>NO<br />PHOTO</>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0 grid grid-cols-[repeat(auto-fill,minmax(128px,1fr))] gap-x-4 gap-y-2.5 content-start">
+            {personSlots.map((s) => {
+              const v = s.text !== undefined ? s.text : val(s.a);
+              if (!v) return null;
+              return <KV key={s.k} k={s.k} v={v} hot={s.hot} wide={s.wide} soft={s.wide} />;
+            })}
+            {personSlots.every((s) => !(s.text !== undefined ? s.text : val(s.a))) && (
+              <div className="font-mono text-[10px] text-neutral-400 col-span-full">
+                No description provided.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ---- follow-up ---- */}
+      {(fuSlots.some((s) => val(s.a)) || extraAnswers.length > 0) && (
+        <div className="px-4 md:px-5 pt-3.5 pb-4 border-b border-neutral-200">
+          <SecHead dot="#FFD60A" title="FOLLOW-UP" />
+          <div className="flex flex-wrap gap-2">
+            {fuSlots.map((s) => {
+              if (!s.a) return null;
+              const raw = Array.isArray(s.a.value) ? s.a.value.join(', ') : s.a.value;
+              if (!raw && !s.a.other) return null;
+              const isYes = raw === 'Yes';
+              const isNo = raw === 'No';
+              const long = !isYes && !isNo; // free text / "Let management decide" / "Not sure"
               return (
                 <span
-                  key={a.qid}
-                  className={`font-mono text-[10px] px-2 py-1 rounded ${
-                    hot
-                      ? 'bg-[#ffece0] text-[#b3560a]'
-                      : role
-                        ? 'bg-[#eef2ff] text-[#3b4ea0]'
-                        : 'bg-neutral-100 text-neutral-600'
-                  }`}
+                  key={s.q}
+                  className="inline-flex items-center gap-1.5 bg-[#f7f7f4] border border-neutral-200 rounded-lg px-2.5 py-1.5 max-w-full"
                 >
-                  {a.label}: {Array.isArray(a.value) ? a.value.join(', ') : a.value}
-                  {a.other ? ` (${a.other})` : ''}
+                  <span className="font-mono text-[9px] tracking-[0.06em] text-neutral-500">{s.q}</span>
+                  <span
+                    className={`font-display text-[10px] tracking-[0.05em] ${
+                      isYes && s.hotOnYes
+                        ? 'text-danger'
+                        : isYes
+                          ? 'text-[#0a9c47]'
+                          : isNo
+                            ? 'text-neutral-400'
+                            : 'text-neutral-700'
+                    } ${long ? 'normal-case font-sans font-semibold text-[11px]' : ''}`}
+                  >
+                    {long ? raw : raw.toUpperCase()}
+                  </span>
+                  {s.a.other && (
+                    <span className="text-[11px] font-semibold text-neutral-600 truncate">— {s.a.other}</span>
+                  )}
                 </span>
               );
             })}
-            {r.photo_path && (
-              <span className="font-mono text-[10px] bg-neutral-100 text-neutral-600 px-2 py-1 rounded">📷 photo</span>
-            )}
+            {extraAnswers.map((a) => (
+              <span
+                key={a.qid}
+                className="inline-flex items-center gap-1.5 bg-[#f7f7f4] border border-neutral-200 rounded-lg px-2.5 py-1.5 max-w-full"
+              >
+                <span className="font-mono text-[9px] tracking-[0.06em] text-neutral-500 uppercase">{a.label}</span>
+                <span className="text-[11px] font-semibold text-neutral-700 truncate">{val(a)}</span>
+              </span>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* ---- internal case log ---- */}
+      <div className="mx-4 md:mx-5 mt-3.5 bg-[#fbfbf6] border border-dashed border-[#e0ddc9] rounded-[10px] p-3">
+        <div className="font-display text-[9.5px] tracking-[0.16em] text-[#8a7f4a] mb-2.5 flex items-center gap-1.5">
+          🗒 INTERNAL CASE LOG{' '}
+          {!isAdmin && <span className="text-neutral-400 font-mono tracking-normal">· read-only</span>}
+        </div>
+        {notes.length > 0 ? (
+          <div className="space-y-2.5 mb-2">
+            {notes.map((n) => (
+              <div key={n.id} className="flex gap-2.5">
+                <span className="w-5 h-5 flex-shrink-0 rounded-full bg-ink text-accent font-display text-[9px] flex items-center justify-center">
+                  {(n.added_by_name ?? '?').charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-mono text-[9px] text-neutral-400">
+                    {n.added_by_name ?? 'Staff'} · {formatDateTime(n.created_at)}
+                  </div>
+                  <div className="text-[12.5px] text-neutral-700 leading-snug whitespace-pre-wrap">{n.note}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="font-mono text-[10px] text-neutral-400 mb-1">No notes yet.</div>
         )}
 
-        {blockAnswers.map((a) => (
-          <div key={a.qid} className="mb-2">
-            <div className="font-mono text-[9px] tracking-widest text-neutral-400 uppercase">{a.label}</div>
-            <div className="text-[13px] text-neutral-700 leading-snug whitespace-pre-wrap">
-              {Array.isArray(a.value) ? a.value.join(', ') : a.value}
-            </div>
-          </div>
-        ))}
-
-        {/* internal case log */}
-        <div className="bg-[#fafaf7] border border-dashed border-[#e0ddc9] rounded-lg p-3 mt-3">
-          <div className="font-display text-[10px] tracking-widest text-[#8a7f4a] mb-2.5 flex items-center gap-1.5">
-            🗒 INTERNAL CASE LOG {!isAdmin && <span className="text-neutral-400 font-mono tracking-normal">· read-only</span>}
-          </div>
-          {notes.length > 0 ? (
-            <div className="space-y-2.5 mb-2">
-              {notes.map((n) => (
-                <div key={n.id} className="flex gap-2.5">
-                  <span className="w-5 h-5 flex-shrink-0 rounded-full bg-ink text-accent font-display text-[9px] flex items-center justify-center">
-                    {(n.added_by_name ?? '?').charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="font-mono text-[9px] text-neutral-400">
-                      {n.added_by_name ?? 'Staff'} · {formatDateTime(n.created_at)}
-                    </div>
-                    <div className="text-[12.5px] text-neutral-700 leading-snug whitespace-pre-wrap">{n.note}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="font-mono text-[10px] text-neutral-400 mb-1">No notes yet.</div>
-          )}
-
-          {isAdmin && (
-            <div className="flex gap-2 mt-2">
-              <input
-                type="text"
-                value={noteInput}
-                onChange={(e) => setNoteInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !savingNote) submitNote();
-                }}
-                placeholder="Add an internal note (investigation, action taken, outcome)…"
-                className="flex-1 bg-white border-[1.5px] border-neutral-200 rounded-lg px-3 py-2 text-[12.5px] outline-none focus:border-accent"
-              />
-              <button
-                onClick={submitNote}
-                disabled={savingNote || !noteInput.trim()}
-                className="font-display text-[10px] tracking-wider bg-ink text-accent px-3 rounded-lg disabled:opacity-40"
-              >
-                ADD
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* actions (admin only) */}
         {isAdmin && (
-          <div className="flex gap-2 flex-wrap mt-3 pt-3 border-t border-dashed border-neutral-200">
-            {r.status !== 'reviewing' && r.status !== 'resolved' && (
-              <button
-                onClick={() => onStatus('reviewing')}
-                disabled={busy}
-                className="font-display text-[10px] tracking-wider px-3 py-2 border-2 border-[#e0a800] text-[#a67c00] rounded hover:bg-[#e0a800]/10 disabled:opacity-50"
-              >
-                MARK REVIEWING
-              </button>
-            )}
-            {r.status !== 'resolved' && (
-              <button
-                onClick={() => onStatus('resolved')}
-                disabled={busy}
-                className="font-display text-[10px] tracking-wider px-3 py-2 border-2 border-success-green text-[#0a9c47] rounded hover:bg-success-green/10 disabled:opacity-50"
-              >
-                MARK RESOLVED
-              </button>
-            )}
-            {r.status !== 'new' && (
-              <button
-                onClick={() => onStatus('new')}
-                disabled={busy}
-                className="font-display text-[10px] tracking-wider px-3 py-2 border-2 border-neutral-300 text-neutral-500 rounded hover:bg-neutral-100 disabled:opacity-50"
-              >
-                REOPEN
-              </button>
-            )}
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !savingNote) submitNote();
+              }}
+              placeholder="Add an internal note (investigation, action taken, outcome)…"
+              className="flex-1 bg-white border-[1.5px] border-neutral-200 rounded-lg px-3 py-2 text-[12.5px] outline-none focus:border-accent"
+            />
             <button
-              onClick={onDelete}
-              disabled={busy}
-              className="font-display text-[10px] tracking-wider px-3 py-2 border-2 border-danger text-danger rounded hover:bg-danger/10 disabled:opacity-50 ml-auto"
+              onClick={submitNote}
+              disabled={savingNote || !noteInput.trim()}
+              className="font-display text-[10px] tracking-wider bg-ink text-accent px-3 rounded-lg disabled:opacity-40"
             >
-              DELETE
+              ADD
             </button>
           </div>
         )}
       </div>
+
+      {/* ---- actions (admin only) ---- */}
+      {isAdmin ? (
+        <div className="flex gap-2 flex-wrap px-4 md:px-5 py-4">
+          {r.status !== 'reviewing' && r.status !== 'resolved' && (
+            <button
+              onClick={() => onStatus('reviewing')}
+              disabled={busy}
+              className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-[#e0a800] text-[#a67c00] rounded-md hover:bg-[#e0a800]/10 disabled:opacity-50"
+            >
+              MARK REVIEWING
+            </button>
+          )}
+          {r.status !== 'resolved' && (
+            <button
+              onClick={() => onStatus('resolved')}
+              disabled={busy}
+              className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-success-green text-[#0a9c47] rounded-md hover:bg-success-green/10 disabled:opacity-50"
+            >
+              MARK RESOLVED
+            </button>
+          )}
+          {r.status !== 'new' && (
+            <button
+              onClick={() => onStatus('new')}
+              disabled={busy}
+              className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-neutral-300 text-neutral-500 rounded-md hover:bg-neutral-100 disabled:opacity-50"
+            >
+              REOPEN
+            </button>
+          )}
+          <button
+            onClick={onDelete}
+            disabled={busy}
+            className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-danger text-danger rounded-md hover:bg-danger/10 disabled:opacity-50 ml-auto"
+          >
+            DELETE
+          </button>
+        </div>
+      ) : (
+        <div className="pb-4" aria-hidden="true" />
+      )}
     </div>
   );
 }
