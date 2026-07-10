@@ -631,30 +631,31 @@ export default function ReportFormPage() {
         <LanguageToggle current={lang} onChange={handleLang} variant="light" />
       </header>
 
-      {/* HERO — same text & layout as the /report landing page (v2.14) */}
+      {/* HERO — v2.16 "elegant quote" layout, same text as the /report landing page */}
       <div className="rl-hero">
         <div className="rl-rise rl-d1 inline-block">
           <ShieldHeart size={74} />
         </div>
         <h1
-          className="rl-rise rl-d2 font-bold text-[21px] leading-[1.3] m-0"
+          className="rl-rise rl-d2 font-bold text-[19px] leading-[1.4] m-0"
           style={{ whiteSpace: 'pre-line' }}
         >
           {c.heroQ}
         </h1>
         <div className="rl-rise rl-d3 mt-2">
-          <span className="rl-shout text-[26px] leading-[1.05]">
+          <span className="rl-shout text-[25px] leading-[1.1]">
             {c.heroHelp}
             <span className="rl-hl" />
           </span>
         </div>
-        <p
-          className="rl-rise rl-d4 text-[13px] leading-[1.65] max-w-[300px] mx-auto mt-3.5 mb-0"
-          style={{ color: 'var(--rl-muted)' }}
-        >
-          {c.heroReassure}
-        </p>
-        <div className="rl-rise rl-d5 mt-4">
+        <div className="rl-rise rl-d4 rl-quoteline">
+          <p className={`rl-quote-text m-0 ${lang === 'zh' ? 'rl-quote-zh' : ''}`}>
+            <span className="rl-qmark">&ldquo;</span>
+            {c.heroQuote}
+            <span className="rl-qmark">&rdquo;</span>
+          </p>
+        </div>
+        <div className="rl-rise rl-d5 mt-[18px]">
           <span className="rl-trust">
             <span className="rl-trust-dot" />
             {c.trust}

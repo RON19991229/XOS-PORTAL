@@ -38,25 +38,23 @@ export default function ReportLandingPage() {
         <div className="rl-rise rl-d1 inline-block">
           <ShieldHeart size={74} />
         </div>
-        <h1 className="rl-rise rl-d2 font-bold text-[21px] leading-[1.3] m-0">
-          Feels unsafe?
-          <br />
-          Feels uncomfortable?
+        <h1 className="rl-rise rl-d2 font-bold text-[19px] leading-[1.4] m-0">
+          Feeling unsafe or uncomfortable?
         </h1>
         <div className="rl-rise rl-d3 mt-2">
-          <span className="rl-shout text-[26px] leading-[1.05]">
-            WE&apos;RE HERE TO HELP.
+          <span className="rl-shout text-[25px] leading-[1.1]">
+            IT&apos;S OKAY TO SPEAK UP.
             <span className="rl-hl" />
           </span>
         </div>
-        <p
-          className="rl-rise rl-d4 text-[13px] leading-[1.65] max-w-[300px] mx-auto mt-3.5 mb-0"
-          style={{ color: 'var(--rl-muted)' }}
-        >
-          If someone or something at the gym made you feel unsafe or uncomfortable, please tell us.
-          Every report is taken seriously.
-        </p>
-        <div className="rl-rise rl-d5 mt-4">
+        <div className="rl-rise rl-d4 rl-quoteline">
+          <p className="rl-quote-text m-0">
+            <span className="rl-qmark">&ldquo;</span>
+            DON&apos;T WORRY. WE&apos;RE HERE TO HELP.
+            <span className="rl-qmark">&rdquo;</span>
+          </p>
+        </div>
+        <div className="rl-rise rl-d5 mt-[18px]">
           <span className="rl-trust">
             <span className="rl-trust-dot" />
             100% CONFIDENTIAL · MANAGEMENT ONLY

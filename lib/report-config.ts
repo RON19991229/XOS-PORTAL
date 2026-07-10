@@ -478,7 +478,8 @@ export interface ReportCopy {
   // hero
   heroQ: string;
   heroHelp: string;
-  heroReassure: string;
+  /** v2.16 — elegant quote line under the highlight (replaces the reassure paragraph) */
+  heroQuote: string;
   trust: string;
   // section cards (numbered 1-4 on the warm-white form)
   sec1: string;
@@ -545,10 +546,9 @@ export const reportCopy: Record<Lang, ReportCopy> = {
       'Feel unsafe or uncomfortable at X FITNESS? Let us know — every report is confidential and taken seriously.',
     chooseLanguage: 'Choose your language',
     optional: 'optional',
-    heroQ: 'Feels unsafe?\nFeels uncomfortable?',
-    heroHelp: "WE'RE HERE TO HELP.",
-    heroReassure:
-      'If someone or something at the gym made you feel unsafe or uncomfortable, please tell us. Every report is taken seriously.',
+    heroQ: 'Feeling unsafe or uncomfortable?',
+    heroHelp: "IT'S OKAY TO SPEAK UP.",
+    heroQuote: "DON'T WORRY. WE'RE HERE TO HELP.",
     trust: '100% CONFIDENTIAL \u00b7 MANAGEMENT ONLY',
     sec1: 'WHAT HAPPENED TO YOU',
     sec2: 'THE PERSON INVOLVED',
@@ -617,10 +617,9 @@ export const reportCopy: Record<Lang, ReportCopy> = {
       '在 X FITNESS 感到不安或不舒服？告诉我们 —— 每一份举报都会保密处理并认真对待。',
     chooseLanguage: '请选择语言',
     optional: '选填',
-    heroQ: '感到不安？\n感到不舒服？',
-    heroHelp: '我们在这里帮你。',
-    heroReassure:
-      '如果在健身房有人或有事让你感到不安或不舒服，请告诉我们。每一份举报我们都会认真对待。',
+    heroQ: '感到不舒服或受到骚扰？',
+    heroHelp: '勇敢告诉我们。',
+    heroQuote: '别担心，我们会帮助你。',
     trust: '100% 保密 \u00b7 仅管理层可查看',
     sec1: '发生了什么事',
     sec2: '涉事人员',
@@ -689,10 +688,9 @@ export const reportCopy: Record<Lang, ReportCopy> = {
       'Rasa tidak selamat atau tidak selesa di X FITNESS? Beritahu kami — setiap laporan adalah sulit dan diambil serius.',
     chooseLanguage: 'Pilih bahasa anda',
     optional: 'pilihan',
-    heroQ: 'Rasa tidak selamat?\nRasa tidak selesa?',
-    heroHelp: 'KAMI SEDIA MEMBANTU.',
-    heroReassure:
-      'Jika seseorang atau sesuatu di gim membuat anda rasa tidak selamat atau tidak selesa, sila beritahu kami. Setiap laporan diambil serius.',
+    heroQ: 'Rasa tidak selamat atau tidak selesa?',
+    heroHelp: 'BERANILAH BERSUARA.',
+    heroQuote: 'JANGAN RISAU. KAMI SEDIA MEMBANTU.',
     trust: '100% SULIT \u00b7 PENGURUSAN SAHAJA',
     sec1: 'APA YANG BERLAKU',
     sec2: 'ORANG YANG TERLIBAT',

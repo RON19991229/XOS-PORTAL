@@ -497,6 +497,24 @@ html, body {
   font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .14em; font-weight: 700;
 }
 .rl-trust-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rl-green); animation: rlPulse 2s infinite; }
+
+/* v2.16 — elegant hero quote (Variant A): coral→yellow divider + serif/italic quote */
+.rl-quoteline {
+  position: relative; max-width: 300px; margin: 16px auto 0; padding-top: 14px;
+}
+.rl-quoteline::before {
+  content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 34px; height: 2.5px; border-radius: 2px;
+  background: linear-gradient(90deg, #FF8A73, #FFD60A);
+}
+.rl-quote-text {
+  font-style: italic; font-weight: 600; font-size: 15.5px; line-height: 1.55; color: #5C5348;
+}
+.rl-quote-text.rl-quote-zh {
+  font-family: 'Noto Serif SC', Georgia, 'Times New Roman', serif;
+  font-style: normal; line-height: 1.7;
+}
+.rl-qmark { color: #FF8A73; font-family: Georgia, serif; font-weight: 700; font-style: normal; }
 @keyframes rlPulse {
   0% { box-shadow: 0 0 0 0 rgba(15,169,88,.4); }
   70% { box-shadow: 0 0 0 7px rgba(15,169,88,0); }

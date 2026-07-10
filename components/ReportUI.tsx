@@ -9,6 +9,13 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
+// v2.16 — fonts for the hero quote line, self-hosted (loaded with /report/* only):
+// Inter 600 italic (EN/BM quote) + Noto Serif SC 600 (中文引言).
+// Fontsource splits Noto Serif SC into unicode-range subsets, so the browser
+// only downloads the glyph ranges actually used on the page.
+import '@fontsource/inter/600-italic.css';
+import '@fontsource/noto-serif-sc/600.css';
+
 // ---------------------------------------------------------------------------
 // Light brand mark — Ron's real logos (v2.12.1):
 //   report-logo-tile.png  = full XF logo on black, shown in a rounded tile
