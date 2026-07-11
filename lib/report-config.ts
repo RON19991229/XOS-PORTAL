@@ -477,9 +477,10 @@ export interface ReportCopy {
   optional: string;
   // hero
   heroQ: string;
-  heroHelp: string;
-  /** v2.16 — elegant quote line under the highlight (replaces the reassure paragraph) */
-  heroQuote: string;
+  /** v2.17 — big line, ink-coloured part (e.g. "It's okay to") */
+  heroLead: string;
+  /** v2.17 — big line, gold-accent part (e.g. "speak up"). No trailing punctuation — keeps the centred lockup optically straight. */
+  heroAccent: string;
   trust: string;
   // section cards (numbered 1-4 on the warm-white form)
   sec1: string;
@@ -547,8 +548,8 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     chooseLanguage: 'Choose your language',
     optional: 'optional',
     heroQ: 'Feeling unsafe or uncomfortable?',
-    heroHelp: "IT'S OKAY TO SPEAK UP.",
-    heroQuote: "DON'T WORRY. WE'RE HERE TO HELP.",
+    heroLead: "It\u2019s okay to",
+    heroAccent: 'speak up',
     trust: '100% CONFIDENTIAL \u00b7 MANAGEMENT ONLY',
     sec1: 'WHAT HAPPENED TO YOU',
     sec2: 'THE PERSON INVOLVED',
@@ -618,8 +619,8 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     chooseLanguage: '请选择语言',
     optional: '选填',
     heroQ: '感到不舒服或受到骚扰？',
-    heroHelp: '勇敢告诉我们。',
-    heroQuote: '别担心，我们会帮助你。',
+    heroLead: '别怕，',
+    heroAccent: '勇敢告诉我们',
     trust: '100% 保密 \u00b7 仅管理层可查看',
     sec1: '发生了什么事',
     sec2: '涉事人员',
@@ -689,8 +690,8 @@ export const reportCopy: Record<Lang, ReportCopy> = {
     chooseLanguage: 'Pilih bahasa anda',
     optional: 'pilihan',
     heroQ: 'Rasa tidak selamat atau tidak selesa?',
-    heroHelp: 'BERANILAH BERSUARA.',
-    heroQuote: 'JANGAN RISAU. KAMI SEDIA MEMBANTU.',
+    heroLead: 'Jangan takut,',
+    heroAccent: 'beranilah bersuara',
     trust: '100% SULIT \u00b7 PENGURUSAN SAHAJA',
     sec1: 'APA YANG BERLAKU',
     sec2: 'ORANG YANG TERLIBAT',

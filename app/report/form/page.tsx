@@ -631,32 +631,31 @@ export default function ReportFormPage() {
         <LanguageToggle current={lang} onChange={handleLang} variant="light" />
       </header>
 
-      {/* HERO — v2.16 "elegant quote" layout, same text as the /report landing page */}
-      <div className="rl-hero">
-        <div className="rl-rise rl-d1 inline-block">
-          <ShieldHeart size={74} />
+      {/* HERO — v2.17 compact: small shield, one-line big text, no reassure
+          paragraph (already read on the landing page). Gets users to the
+          form quickly. */}
+      <div className="rl-glow text-center px-[26px] pt-[18px] pb-1">
+        <div className="rl-rise rl-d1">
+          <ShieldHeart size={52} />
         </div>
-        <h1
-          className="rl-rise rl-d2 font-bold text-[19px] leading-[1.4] m-0"
-          style={{ whiteSpace: 'pre-line' }}
-        >
+        <p className="rl-rise rl-d2 rl-q2 text-[14px] leading-[1.5] mt-3.5 mb-0">
           {c.heroQ}
+        </p>
+        <h1
+          className={`rl-rise rl-d3 rl-big mt-1.5 mb-0 ${
+            lang === 'zh'
+              ? 'rl-big-zh text-[25px] leading-[1.25]'
+              : lang === 'ms'
+                ? 'text-[24px] leading-[1.12]'
+                : 'text-[30px] leading-[1.12]'
+          }`}
+        >
+          {c.heroLead}
+          {lang === 'zh' ? '' : ' '}
+          <span className="rl-big-accent">{c.heroAccent}</span>
         </h1>
-        <div className="rl-rise rl-d3 mt-2">
-          <span className="rl-shout text-[25px] leading-[1.1]">
-            {c.heroHelp}
-            <span className="rl-hl" />
-          </span>
-        </div>
-        <div className="rl-rise rl-d4 rl-quoteline">
-          <p className={`rl-quote-text m-0 ${lang === 'zh' ? 'rl-quote-zh' : ''}`}>
-            <span className="rl-qmark">&ldquo;</span>
-            {c.heroQuote}
-            <span className="rl-qmark">&rdquo;</span>
-          </p>
-        </div>
-        <div className="rl-rise rl-d5 mt-[18px]">
-          <span className="rl-trust">
+        <div className="rl-rise rl-d4 mt-4">
+          <span className="rl-trust2 rl-trust2-sm">
             <span className="rl-trust-dot" />
             {c.trust}
           </span>

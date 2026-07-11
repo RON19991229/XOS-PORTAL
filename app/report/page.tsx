@@ -33,29 +33,25 @@ export default function ReportLandingPage() {
         <ReportBrand />
       </header>
 
-      {/* HERO */}
-      <div className="rl-hero">
-        <div className="rl-rise rl-d1 inline-block">
-          <ShieldHeart size={74} />
+      {/* HERO — v2.17 flat redesign: outline shield, gold-accent big line,
+          empathetic reassure. No glow, no highlight bar. */}
+      <div className="rl-glow text-center px-7 pt-8 pb-1">
+        <div className="rl-rise rl-d1">
+          <ShieldHeart size={84} />
         </div>
-        <h1 className="rl-rise rl-d2 font-bold text-[19px] leading-[1.4] m-0">
+        <p className="rl-rise rl-d2 rl-q2 text-[20px] leading-[1.45] mt-[30px] mb-0">
           Feeling unsafe or uncomfortable?
+        </p>
+        <h1 className="rl-rise rl-d3 rl-big text-[50px] leading-[1.08] mt-2.5 mb-0">
+          It&rsquo;s okay to
+          <span className="rl-big-accent block">speak up</span>
         </h1>
-        <div className="rl-rise rl-d3 mt-2">
-          <span className="rl-shout text-[25px] leading-[1.1]">
-            IT&apos;S OKAY TO SPEAK UP.
-            <span className="rl-hl" />
-          </span>
-        </div>
-        <div className="rl-rise rl-d4 rl-quoteline">
-          <p className="rl-quote-text m-0">
-            <span className="rl-qmark">&ldquo;</span>
-            DON&apos;T WORRY. WE&apos;RE HERE TO HELP.
-            <span className="rl-qmark">&rdquo;</span>
-          </p>
-        </div>
-        <div className="rl-rise rl-d5 mt-[18px]">
-          <span className="rl-trust">
+        <p className="rl-rise rl-d4 rl-reassure">
+          Been followed, watched, or made to feel unsafe at the gym?{' '}
+          <b>You&rsquo;re not overreacting.</b> Tell us &mdash; and we&rsquo;ll stand with you
+        </p>
+        <div className="rl-rise rl-d5 mt-6">
+          <span className="rl-trust2">
             <span className="rl-trust-dot" />
             100% CONFIDENTIAL · MANAGEMENT ONLY
           </span>

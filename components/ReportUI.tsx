@@ -9,12 +9,12 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
-// v2.16 — fonts for the hero quote line, self-hosted (loaded with /report/* only):
-// Inter 600 italic (EN/BM quote) + Noto Serif SC 600 (中文引言).
-// Fontsource splits Noto Serif SC into unicode-range subsets, so the browser
-// only downloads the glyph ranges actually used on the page.
-import '@fontsource/inter/600-italic.css';
-import '@fontsource/noto-serif-sc/600.css';
+// v2.17 — hero display fonts, self-hosted (loaded with /report/* only):
+// Archivo 800 (EN/BM big line, same family as the brand's Archivo Black) +
+// Noto Sans SC 900 (中文 big line). Fontsource splits Noto Sans SC into
+// unicode-range subsets, so only the glyph ranges on the page get downloaded.
+import '@fontsource/archivo/800.css';
+import '@fontsource/noto-sans-sc/900.css';
 
 // ---------------------------------------------------------------------------
 // Light brand mark — Ron's real logos (v2.12.1):
@@ -49,23 +49,34 @@ export function ReportBrand() {
 // ---------------------------------------------------------------------------
 // The shield-heart mark (same drawing as v2.11, recolored for light bg).
 // ---------------------------------------------------------------------------
-export function ShieldHeart({ size = 74 }: { size?: number }) {
+export function ShieldHeart({ size = 84 }: { size?: number }) {
+  // v2.17 — flat outline shield (ink stroke) + solid coral heart with a
+  // gentle heartbeat. v2.17.1 — soft breathing coral halo behind it.
   return (
-    <div className="rl-shield" style={{ width: size, height: size }}>
-      <div className="rl-shield-halo" />
-      <svg width={size} height={size} viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <span className="rl-shield2wrap">
+      <span className="rl-shield2-halo" />
+      <svg
+        className="rl-shield2"
+        width={size}
+        height={size}
+        viewBox="0 0 86 86"
+        fill="none"
+        aria-hidden="true"
+      >
         <path
-          d="M24 4l16 6v11c0 10-6.8 18.3-16 21-9.2-2.7-16-11-16-21V10l16-6z"
-          fill="#FFF6D6"
-          stroke="#EBC500"
-          strokeWidth="2"
+          d="M43 8 L71 18 V41 C71 59 59 71.5 43 77 C27 71.5 15 59 15 41 V18 Z"
+          stroke="#292420"
+          strokeWidth="4.5"
+          strokeLinejoin="round"
+          fill="none"
         />
         <path
-          d="M24 20.5c-1.6-3-6.5-2.6-6.5 1.4 0 3 3.4 5.3 6.5 7.6 3.1-2.3 6.5-4.6 6.5-7.6 0-4-4.9-4.4-6.5-1.4z"
-          fill="#FF8A73"
+          className="rl-heartbeat"
+          d="M43 34.5 c3-6 12-5.5 12 1.4 c0 5.2-7.2 10.4-12 14 c-4.8-3.6-12-8.8-12-14 c0-6.9 9-7.4 12-1.4Z"
+          fill="#E8694A"
         />
       </svg>
-    </div>
+    </span>
   );
 }
 
