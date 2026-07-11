@@ -368,6 +368,10 @@ function ComplaintCard({
 
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  // v2.17.2 — if the evidence file is a format the browser can't render
+  // inline (e.g. HEIC uploaded via the raw fallback), degrade to an
+  // openable FILE tile instead of a broken <img>.
+  const [imgBroken, setImgBroken] = useState(false);
 
   // -------------------------------------------------------------------------
   // Answer lookup & formatting (v2.14.1 redesign)
@@ -528,18 +532,30 @@ function ComplaintCard({
         <SecHead dot="#4d6bfa" title="PERSON DESCRIPTION" />
         <div className="flex gap-4">
           <div className="w-[96px] min-w-[96px] md:w-[120px] md:min-w-[120px]">
-            {r.photo_path && photoUrl ? (
+            {r.photo_path && photoUrl && !imgBroken ? (
               <a href={photoUrl} target="_blank" rel="noopener noreferrer" className="block group">
                 <div className="w-full aspect-square bg-neutral-900 rounded-[10px] overflow-hidden border border-neutral-200">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photoUrl}
                     alt="evidence"
+                    onError={() => setImgBroken(true)}
                     className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
                   />
                 </div>
                 <div className="font-mono text-[8.5px] tracking-[0.1em] text-neutral-400 text-center mt-1.5">
                   TAP TO ENLARGE
+                </div>
+              </a>
+            ) : r.photo_path && photoUrl && imgBroken ? (
+              <a href={photoUrl} target="_blank" rel="noopener noreferrer" className="block group">
+                <div className="w-full aspect-square bg-neutral-900 rounded-[10px] flex items-center justify-center border border-neutral-200 group-hover:opacity-90 transition-opacity">
+                  <span className="font-mono text-[9px] text-neutral-400 text-center leading-relaxed">
+                    📎 FILE
+                  </span>
+                </div>
+                <div className="font-mono text-[8.5px] tracking-[0.1em] text-neutral-400 text-center mt-1.5">
+                  TAP TO OPEN
                 </div>
               </a>
             ) : (

@@ -271,24 +271,45 @@ export default function ReportFormPage() {
       const isAnonymous = remainAnon === 'No' ? false : !reporterContact;
       const ref = makeRefCode();
 
-      // Optional photo: upload first (anon INSERT into private bucket), then
-      // reference it on the row. Orphan photo on failure is acceptable.
+      // Optional photo: upload first, then reference it on the row. Orphan
+      // photo on failure is acceptable. v2.17.2 — if canvas can't decode the
+      // file (e.g. HEIC on some Android browsers) we upload the ORIGINAL
+      // bytes instead of silently dropping the photo, and every failure is
+      // logged so it's diagnosable from the browser console.
       let photoPath: string | null = null;
       if (photoFile) {
         try {
-          const blob = await compressImage(photoFile);
+          let blob: Blob;
+          let ext = 'jpg';
+          let contentType = 'image/jpeg';
+          try {
+            blob = await compressImage(photoFile);
+          } catch (compressErr) {
+            // eslint-disable-next-line no-console
+            console.error('[complaint photo] compress failed, uploading original:', compressErr);
+            blob = photoFile;
+            contentType = photoFile.type || 'application/octet-stream';
+            const m = /\.([a-z0-9]+)$/i.exec(photoFile.name);
+            ext = (m?.[1] || 'bin').toLowerCase();
+          }
           const id =
             typeof crypto !== 'undefined' && 'randomUUID' in crypto
               ? crypto.randomUUID()
               : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-          const path = `${id}.jpg`;
+          const path = `${id}.${ext}`;
           const { error: upErr } = await supabase.storage
             .from(BUCKET)
-            .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-          if (!upErr) photoPath = path;
+            .upload(path, blob, { contentType, upsert: false });
+          if (!upErr) {
+            photoPath = path;
+          } else {
+            // eslint-disable-next-line no-console
+            console.error('[complaint photo] upload failed:', upErr);
+          }
           // If the photo fails, we still submit the report without it.
-        } catch {
-          /* ignore photo errors — report still goes through */
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error('[complaint photo] unexpected error:', e);
         }
       }
 
