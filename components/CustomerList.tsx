@@ -3,6 +3,7 @@
 import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
+import { getCached, setCached } from '@/lib/client-cache';
 import { Customer } from '@/lib/types';
 import GenderBadge from './GenderBadge';
 
@@ -33,15 +34,21 @@ const NEW_DAYS = 7;                        // registered in last 7 days = "new"
 // rows mounted in the DOM is capped, with a LOAD MORE button to extend.
 const RENDER_CHUNK = 200;
 
+const CUSTOMER_COLUMNS =
+  'id, name, ic, phone, nationality, status, warning_count, membership, gender, visit_count, last_visit_at, created_at';
+const CACHE_KEY = 'customers:list';
+
 export default function CustomerList({ baseHref, role }: CustomerListProps) {
   const supabase = useMemo(() => createClient(), []);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  // v2.19.0: start from the in-tab cache (if this page was visited before)
+  // so the list appears instantly; the full fetch below then refreshes it.
+  const [customers, setCustomers] = useState<Customer[]>(() => getCached<Customer[]>(CACHE_KEY) ?? []);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('recent');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getCached<Customer[]>(CACHE_KEY));
   const [renderLimit, setRenderLimit] = useState(RENDER_CHUNK);
 
   // Deferred search: the input itself stays instantly responsive while the
@@ -62,54 +69,65 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
   // duplicated across page boundaries), accumulating until a short page
   // signals the end. As of v2.15.0 this runs exactly ONCE on mount —
   // status filtering moved client-side (see statusFiltered below).
+  //
+  // v2.19.0: pages are fetched in PARALLEL. Page 0 also asks for the exact
+  // row count, which tells us how many more pages exist; those are then
+  // requested all at once instead of one after another (~4,200 customers =
+  // 5 pages: 2 round trips instead of 5). Rows are de-duplicated by id in
+  // case a customer registers between page requests and shifts a boundary.
   const PAGE_SIZE = 1000;
   const MAX_PAGES = 50; // hard safety cap (50k rows) to prevent any runaway loop
 
+  const fetchPage = (page: number, withCount = false) =>
+    supabase
+      .from('customers')
+      // v2.15.0: no status filter in the query — the full set is loaded once
+      // and filtered client-side, so chip switches need zero network traffic.
+      .select(CUSTOMER_COLUMNS, withCount ? { count: 'exact' } : undefined)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
+
   const fetchCustomers = async () => {
-    setLoading(true);
-
-    const all: Customer[] = [];
-    let page = 0;
-    let reachedEnd = false;
-    let failed = false;
-
-    while (!reachedEnd && page < MAX_PAGES) {
-      const from = page * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      // v2.15.0: no status filter in the query anymore — we always load the
-      // full set once and filter client-side. Previously every STATUS chip
-      // click triggered a full round of paginated DB requests; now chip
-      // switches are instant with zero network traffic.
-      const { data, error } = await supabase
-        .from('customers')
-        .select('id, name, ic, phone, nationality, status, warning_count, membership, gender, visit_count, last_visit_at, created_at')
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .range(from, to);
-
-      if (error) {
-        // Stop paginating on error. Keep whatever we already fetched so the
-        // list doesn't blank out; surface the problem instead of silently
-        // showing a truncated list.
-        console.error('fetchCustomers page', page, 'failed:', error.message);
-        failed = true;
-        break;
-      }
-
-      const rows = (data ?? []) as Customer[];
-      all.push(...rows);
-
-      // A page shorter than PAGE_SIZE means we've reached the last page.
-      if (rows.length < PAGE_SIZE) reachedEnd = true;
-      page += 1;
+    const first = await fetchPage(0, true);
+    if (first.error) {
+      // Keep whatever is on screen (cached rows) rather than blanking it.
+      console.error('fetchCustomers page 0 failed:', first.error.message);
+      setLoading(false);
+      return;
     }
 
-    // Only replace the list if we successfully read at least the first page,
-    // OR we got a clean (possibly empty) result. On a hard failure mid-way we
-    // still show what we have rather than wiping the screen.
-    if (!failed || all.length > 0) {
+    const firstRows = (first.data ?? []) as Customer[];
+    // If count is unavailable, fall back to "one more page if page 0 was full".
+    const total = first.count ?? (firstRows.length === PAGE_SIZE ? PAGE_SIZE + 1 : firstRows.length);
+    const pageCount = Math.min(MAX_PAGES, Math.ceil(total / PAGE_SIZE));
+
+    const rest = await Promise.all(
+      Array.from({ length: Math.max(0, pageCount - 1) }, (_, i) => fetchPage(i + 1)),
+    );
+
+    const seen = new Set<string>();
+    const all: Customer[] = [];
+    let failed = false;
+    for (const res of [first, ...rest]) {
+      if (res.error) {
+        console.error('fetchCustomers page failed:', res.error.message);
+        failed = true;
+        continue;
+      }
+      for (const row of (res.data ?? []) as Customer[]) {
+        if (!seen.has(row.id)) {
+          seen.add(row.id);
+          all.push(row);
+        }
+      }
+    }
+
+    // A failed later page would silently truncate the list — in that case
+    // keep the previous (cached) list if we have one.
+    if (!failed || customers.length === 0) {
       setCustomers(all);
+      if (!failed) setCached(CACHE_KEY, all);
     }
     setLoading(false);
   };

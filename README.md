@@ -5,6 +5,23 @@
 
 ---
 
+## ⚡ v2.19.0 (2026-10-01) — 后台切页提速（外观不变）
+
+| 改动 | 效果 |
+|------|------|
+| 🧭 **导航栏放进共享 layout** | `app/admin/layout.tsx`、`app/staff/layout.tsx`。切页时导航栏不再重新加载、不再重复查投诉数量 |
+| 💀 **骨架屏 `loading.tsx`** | 点击导航后马上显示页面轮廓，不会卡在旧页面上等 |
+| 🔑 **登录检查去重** | `lib/auth.ts` 用 React `cache()`，layout 和 page 共用同一次查询 |
+| 💾 **页面缓存** | CUSTOMERS / TODAY / HISTORY 切回来时先显示上次的数据，后台再刷新（`lib/client-cache.ts`，只存在当前浏览器分页，登出即清空，不写入 localStorage） |
+| ⚡ **CUSTOMERS 并行下载** | 4,200+ 顾客原本 5 个请求一个接一个，现在先拿总数再同时下载 |
+| 👤 **客户详情** | 「紧急联络人是被 ban 的顾客」检查不再挡住页面显示；顺便修复同一电话有 2 个以上被 ban 顾客时警告不显示的 bug |
+
+**改动文件**：`lib/auth.ts`、`lib/client-cache.ts`（新）、`components/DashboardSkeleton.tsx`（新）、`app/{admin,staff}/layout.tsx`（新）、`app/{admin,staff}/loading.tsx`（新）、16 个 admin/staff `page.tsx`（移除各自的导航栏）、`components/{CustomerList,TodayList,HistoryClient,CustomerDetail}.tsx`、`app/globals.css`（`.skeleton`，支持 reduced-motion）
+
+**无 SQL。** Staff 仍然只读，顾客端 `/checkin` 与 `/report` 未改动。
+
+---
+
 ## 🛡 v2.18.4 (2026-10-01) — Next.js 安全补丁
 
 - `next` / `eslint-config-next` 14.2.15 → **14.2.35**（14.x 最后的安全补丁版本，包含 2025 年的 middleware 授权绕过漏洞修复）

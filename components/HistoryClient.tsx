@@ -3,6 +3,7 @@
 import { memo, useDeferredValue, useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
+import { getCached, setCached } from '@/lib/client-cache';
 import { formatTime, parseTimestamp, calcAge, parseICDob } from '@/lib/utils';
 import GenderBadge from './GenderBadge';
 
@@ -185,18 +186,29 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
   // Fetch: pass the days-difference of the selected range to the existing RPC,
   // then we trim precisely to [fromKey, toKey] on the client (Method A).
   const fetchHistory = async (from: string, to: string) => {
-    setLoading(true);
     // days_back is counted from KL "today"; fetch enough to cover `from`.
     const daysBack = Math.max(0, dayDiff(from, today)) + 1;
+    // Trim to the selected window (RPC returns from `from`..today; we cut off
+    // anything after `to`).
+    const trim = (days: HistoryDay[]) =>
+      days.filter((d) => d.day_key >= from && d.day_key <= to);
+
+    // v2.19.0: if this range was loaded earlier in this tab, show it
+    // immediately and refresh in the background (no "Loading..." flash).
+    const cacheKey = `history:${today}:${daysBack}`;
+    const cached = getCached<HistoryDay[]>(cacheKey);
+    if (cached) {
+      setHistory(trim(cached));
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
     const { data } = await supabase.rpc('get_history_visits', { days_back: daysBack });
     if (data) {
-      // Trim to the selected window (RPC returns from `from`..today; we cut off
-      // anything after `to`).
-      const trimmed = (data as HistoryDay[]).filter(
-        (d) => d.day_key >= from && d.day_key <= to
-      );
-      setHistory(trimmed);
-    } else {
+      setCached(cacheKey, data as HistoryDay[]);
+      setHistory(trim(data as HistoryDay[]));
+    } else if (!cached) {
       setHistory([]);
     }
     setLoading(false);

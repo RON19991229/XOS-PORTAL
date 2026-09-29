@@ -77,22 +77,26 @@ export default function CustomerDetail({
       supabase.from('customer_notes').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }),
     ]);
 
-    if (cust.data) {
-      setCustomer(cust.data);
-      if (cust.data.emergency_phone) {
-        const { data: matchBanned } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('phone', cust.data.emergency_phone)
-          .eq('status', 'banned')
-          .maybeSingle();
-        setEmergencySuspicious(!!matchBanned);
-      }
-    }
+    if (cust.data) setCustomer(cust.data);
     if (vis.data) setVisits(vis.data);
     if (warns.data) setWarnings(warns.data);
     if (nts.data) setNotes(nts.data);
     setLoading(false);
+
+    // v2.19.0: the "emergency contact is a banned customer" check used to run
+    // BEFORE the page rendered (an extra sequential round trip). The profile
+    // now shows immediately and the warning badge appears when this returns.
+    if (cust.data?.emergency_phone) {
+      const { data: matchBanned } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('phone', cust.data.emergency_phone)
+        .eq('status', 'banned')
+        .limit(1);
+      setEmergencySuspicious(!!matchBanned && matchBanned.length > 0);
+    } else {
+      setEmergencySuspicious(false);
+    }
   };
 
   useEffect(() => {

@@ -1,19 +1,33 @@
+// v2.19.0 — auth lookup is memoised per request with React cache(), so the
+// dashboard layout (which renders DashboardNav) and the page (which enforces
+// its own role list) share ONE getUser() + ONE app_users query instead of
+// paying for both twice on every navigation.
+import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { createClient } from './supabase-server';
 
-export async function requireAuth(allowedRoles: ('staff' | 'admin')[]) {
+type Role = 'staff' | 'admin';
+
+const getAuthContext = cache(async () => {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
+  if (!user) return { supabase, user: null, appUser: null, error: null };
 
   const { data: appUser, error } = await supabase
     .from('app_users')
     .select('*')
     .eq('id', user.id)
     .maybeSingle();
+
+  return { supabase, user, appUser, error };
+});
+
+export async function requireAuth(allowedRoles: Role[]) {
+  const { supabase, user, appUser, error } = await getAuthContext();
+
+  if (!user) {
+    redirect('/login');
+  }
 
   if (error || !appUser) {
     // User exists in auth but not in app_users — sign them out
@@ -32,7 +46,7 @@ export async function requireAuth(allowedRoles: ('staff' | 'admin')[]) {
   return {
     userId: user.id,
     email: user.email!,
-    role: appUser.role as 'staff' | 'admin',
+    role: appUser.role as Role,
     displayName: appUser.display_name || user.email!,
   };
 }

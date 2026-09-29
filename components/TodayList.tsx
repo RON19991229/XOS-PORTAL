@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime } from '@/lib/utils';
 import { playChime } from '@/lib/chime';
+import { getCached, setCached } from '@/lib/client-cache';
 import GenderBadge from './GenderBadge';
 import CheckinToastStack, { ToastEvent } from './CheckinToast';
 
@@ -24,6 +25,8 @@ interface VisitRow {
   gender: 'male' | 'female' | null;
 }
 
+const CACHE_KEY = 'today:visits';
+
 interface TodayListProps {
   baseHref: '/staff/customers' | '/admin/customers';
   role: 'staff' | 'admin';
@@ -33,8 +36,10 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
   // createBrowserClient is a singleton, but memoizing guarantees a stable
   // identity for the useCallback dependency arrays below.
   const supabase = useMemo(() => createClient(), []);
-  const [visits, setVisits] = useState<VisitRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  // v2.19.0: show the last-seen feed instantly when navigating back to
+  // TODAY; fetchVisits() below refreshes it straight away.
+  const [visits, setVisits] = useState<VisitRow[]>(() => getCached<VisitRow[]>(CACHE_KEY) ?? []);
+  const [loading, setLoading] = useState(() => !getCached<VisitRow[]>(CACHE_KEY));
 
   // Toast events currently shown in the top-right corner. Each event
   // auto-removes after 6 seconds (matches CheckinToast's leave timer).
@@ -146,6 +151,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
     isInitialLoadRef.current = false;
 
     setVisits(rows);
+    setCached(CACHE_KEY, rows);
     setLoading(false);
     // Reads only refs + setters, so this callback is stable for the
     // lifetime of the component (supabase is memoized above).
