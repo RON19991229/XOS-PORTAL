@@ -13,6 +13,7 @@
  */
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
@@ -182,8 +183,8 @@ function ShellInner({ role, userName, children }: { role: Role; userName: string
           aria-label="Main"
           className="hidden md:flex fixed left-0 top-0 bottom-0 w-[76px] z-40 flex-col items-center gap-1 py-4 bg-white border-r border-line"
         >
-          <Link href={base} className="w-11 h-11 bg-accent text-ink grid place-items-center font-display text-[22px] mb-4" aria-label="X FITNESS — TODAY">
-            X
+          <Link href={base} className="block w-14 h-14 mb-3" aria-label="X FITNESS — TODAY">
+            <Image src="/report-logo-tile.png" alt="X FITNESS" width={56} height={56} priority className="w-14 h-14" />
           </Link>
           {links.map((l) => (
             <Link
@@ -218,8 +219,8 @@ function ShellInner({ role, userName, children }: { role: Role; userName: string
 
         {/* ---- Top bar ---- */}
         <header className="sticky top-0 z-30 h-16 bg-white border-b border-line flex items-center gap-2 md:gap-3 px-3 md:px-6">
-          <Link href={base} className="md:hidden w-9 h-9 flex-shrink-0 bg-accent text-ink grid place-items-center font-display text-lg" aria-label="TODAY">
-            X
+          <Link href={base} className="md:hidden block w-11 h-11 flex-shrink-0" aria-label="X FITNESS — TODAY">
+            <Image src="/report-logo-tile.png" alt="X FITNESS" width={44} height={44} priority className="w-11 h-11" />
           </Link>
           <div className="min-w-0">
             <p className="hidden sm:block font-mono text-[10px] tracking-[0.3em] text-muted leading-none mb-1">

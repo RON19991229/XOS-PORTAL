@@ -41,7 +41,7 @@ Three frontends:
 | Path | Who | Notes |
 |---|---|---|
 | `/checkin/*` | Customer (phone, via QR) | Mobile-first, **trilingual EN / 中文 / BM** via `lib/i18n.ts` |
-| `/staff/*` | Front desk (Windows PC) | **Read-only** everywhere |
+| `/staff/*` | Front desk (Windows PC) | **Read-only**, except **+ WARNING** and **+ NOTE** on customer detail (Ron confirmed Oct 2026 this is intended) |
 | `/admin/*` | Ron | Full control |
 | `/report`, `/report/form` | Public (members) | Complaint / harassment report form (v2.10+), trilingual, warm-white theme |
 
@@ -141,7 +141,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 - **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.22.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
-- Staff access is read-only by design — never add write actions to `/staff/*`.
+- Staff access is read-only by design — never add write actions to `/staff/*`. The only intended exceptions are the existing **+ WARNING** / **+ NOTE** buttons on customer detail (Ron wants front desk to be able to warn and annotate). Attention List photos are intentionally **not** blurred in privacy mode (staff must recognise faces).
 - Every admin write that changes customer data should write to `audit_log` (before/after values).
 
 ## Communication with Ron
