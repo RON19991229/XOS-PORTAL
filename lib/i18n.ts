@@ -101,6 +101,21 @@ export const translations = {
     phoneNotMatch: 'Phone number does not match our records',
 
     language: 'LANG',
+
+    // Remember this phone (v2.21.0)
+    rememberedNote: 'This phone remembers you',
+    notYouPrefix: 'NOT',
+    useAnotherId: 'USE ANOTHER IC / PASSPORT',
+    forgetMe: 'Forget me',
+    forgotten: 'Removed from this phone.',
+    rememberTitle: 'FASTER NEXT TIME?',
+    rememberBody: 'Skip nationality & IC next time.',
+    rememberBtn: 'REMEMBER THIS PHONE',
+    rememberNote: 'Saved on this phone only. Tap “Forget me” anytime.',
+    rememberNo: 'No thanks',
+    rememberSaved: 'SAVED ON THIS PHONE',
+    rememberSavedSub: 'Next time: scan QR → tap CONTINUE.',
+    rememberDeclined: "OK — we won't ask again on this phone.",
   },
   zh: {
     chooseNationality: '请选择国籍',
@@ -193,6 +208,20 @@ export const translations = {
     phoneNotMatch: '电话号码与我们的记录不符',
 
     language: '语言',
+
+    rememberedNote: '这部手机已记住您',
+    notYouPrefix: '不是',
+    useAnotherId: '使用其他 IC / 护照',
+    forgetMe: '忘记我',
+    forgotten: '已从这部手机删除。',
+    rememberTitle: '下次更快？',
+    rememberBody: '下次不用再选国籍、输入 IC。',
+    rememberBtn: '记住这部手机',
+    rememberNote: '只保存在这部手机上，随时可点「忘记我」删除。',
+    rememberNo: '不用了',
+    rememberSaved: '已记住这部手机',
+    rememberSavedSub: '下次：扫 QR → 点「继续」。',
+    rememberDeclined: '好的，这部手机不会再问您。',
   },
   ms: {
     chooseNationality: 'PILIH KEWARGANEGARAAN',
@@ -285,6 +314,20 @@ export const translations = {
     phoneNotMatch: 'Nombor telefon tidak sepadan dengan rekod kami',
 
     language: 'BAHASA',
+
+    rememberedNote: 'Telefon ini mengingati anda',
+    notYouPrefix: 'BUKAN',
+    useAnotherId: 'GUNA IC / PASPORT LAIN',
+    forgetMe: 'Lupakan saya',
+    forgotten: 'Dipadam daripada telefon ini.',
+    rememberTitle: 'LEBIH CEPAT LAIN KALI?',
+    rememberBody: 'Lain kali tak perlu pilih warganegara & isi IC.',
+    rememberBtn: 'INGAT TELEFON INI',
+    rememberNote: 'Disimpan dalam telefon ini sahaja. Tekan “Lupakan saya” bila-bila masa.',
+    rememberNo: 'Tidak, terima kasih',
+    rememberSaved: 'DISIMPAN DALAM TELEFON INI',
+    rememberSavedSub: 'Lain kali: imbas QR → tekan TERUSKAN.',
+    rememberDeclined: 'OK — kami tidak akan tanya lagi di telefon ini.',
   },
 };
 

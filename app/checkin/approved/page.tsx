@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lang, t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils';
-import { safeSession } from '@/lib/safe-storage';
+import { safeSession, safeJsonParse } from '@/lib/safe-storage';
+import { Customer } from '@/lib/types';
+import {
+  getRemembered,
+  saveRemembered,
+  hasDeclinedRemember,
+  declineRemember,
+} from '@/lib/remember-me';
 
 /**
  * APPROVED — Full-screen green page (per user request 2026-05-06).
@@ -14,12 +21,17 @@ import { safeSession } from '@/lib/safe-storage';
  *   - Black ✓ box rotated -3° to keep X FITNESS visual identity.
  *   - All text in black (max contrast on green).
  *   - Auto-redirects to /checkin after 12 seconds.
+ *   - v2.21.0: black "FASTER NEXT TIME?" box offers to remember this phone.
+ *     Only shown when the phone doesn't remember anyone yet (so a friend
+ *     using "NOT X?" can't overwrite the owner) and hasn't said "No thanks".
  */
 export default function ApprovedPage() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>('en');
   const [name, setName] = useState('');
   const [now, setNow] = useState('');
+  const [offer, setOffer] = useState<{ ic: string; nationality: Customer['nationality']; name: string } | null>(null);
+  const [offerState, setOfferState] = useState<'ask' | 'saved' | 'declined'>('ask');
 
   useEffect(() => {
     const savedLang = safeSession.getItem('xf-lang') as Lang | null;
@@ -32,6 +44,13 @@ export default function ApprovedPage() {
     if (savedLang) setLang(savedLang);
     setName(savedName);
     setNow(formatDateTime(new Date()));
+
+    const c = safeJsonParse<Customer>(safeSession.getItem('xf-customer'));
+    const nationality =
+      c?.nationality ?? (safeSession.getItem('xf-nationality') as Customer['nationality'] | null);
+    if (c?.ic && nationality && !getRemembered() && !hasDeclinedRemember()) {
+      setOffer({ ic: c.ic, nationality, name: c.name || savedName });
+    }
 
     const timeout = setTimeout(() => {
       safeSession.clear();
@@ -80,6 +99,56 @@ export default function ApprovedPage() {
 
         <p className="font-mono text-xs text-ink/60 mt-4 xd-rise xd-d7">{now}</p>
       </div>
+
+      {offer && (
+        <div className="px-4 pb-8 w-full max-w-md mx-auto xd-rise xd-d7">
+          <div className="bg-ink text-bone p-5 flex flex-col gap-3">
+            {offerState === 'ask' && (
+              <>
+                <p className="font-mono text-[10px] tracking-[0.25em] text-accent">
+                  // {t(lang, 'rememberTitle')}
+                </p>
+                <p className="font-display text-lg leading-tight">{t(lang, 'rememberBody')}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    saveRemembered(offer.ic, offer.nationality, offer.name);
+                    setOfferState('saved');
+                  }}
+                  className="w-full py-4 bg-accent text-ink font-display text-sm tracking-wider"
+                >
+                  {t(lang, 'rememberBtn')}
+                </button>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-neutral-400 leading-snug">{t(lang, 'rememberNote')}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      declineRemember();
+                      setOfferState('declined');
+                    }}
+                    className="flex-shrink-0 text-xs text-neutral-300 underline underline-offset-4 px-1 py-2"
+                  >
+                    {t(lang, 'rememberNo')}
+                  </button>
+                </div>
+              </>
+            )}
+            {offerState === 'saved' && (
+              <div className="flex items-center gap-3">
+                <span className="w-9 h-9 flex-shrink-0 grid place-items-center bg-success-green text-ink font-display">✓</span>
+                <div>
+                  <p className="font-display text-base">{t(lang, 'rememberSaved')}</p>
+                  <p className="text-xs text-neutral-400 mt-0.5">{t(lang, 'rememberSavedSub')}</p>
+                </div>
+              </div>
+            )}
+            {offerState === 'declined' && (
+              <p className="text-sm text-neutral-300">{t(lang, 'rememberDeclined')}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* countdown bar — mirrors the 12s auto-return to /checkin so
           customers can see how long the screen stays up */}

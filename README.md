@@ -5,6 +5,25 @@
 
 ---
 
+## 📱 v2.21.0 (2026-10-01) — 顾客端「记住这部手机」
+
+回头客入场成功后，绿色页面下方会问 **FASTER NEXT TIME? → REMEMBER THIS PHONE**（三语）。顾客点了之后，下次扫 QR：
+
+1. 首页直接显示 **HELLO, TAN** + **CONTINUE →**，不用再选国籍、输入 IC
+2. **规则页照常完整显示**（Ron 决定：re-rack、不准 vape 等每次都要看完，这是健身房文化）
+3. 点 CHECK IN → 绿色页面
+
+- **所有检查照旧**：30 分钟冷却、被 ban、未满 12 岁，都和手动输入 IC 走**同一段代码**（新文件 `lib/checkin-lookup.ts`）
+- 只有顾客自己点了才会保存，**只存在这部手机上**（localStorage：IC + 名字第一个字），服务器端什么都不变
+- 首页有 **NOT TAN? USE ANOTHER IC / PASSPORT**（朋友借手机，走正常流程，不会盖掉原本记住的人）和 **Forget me**（删除）
+- 点「No thanks」后，这部手机不会再问
+- 已经记住某人的手机，不会再询问其他人（防止被覆盖）
+- 原本计划的「常客精简规则」**不做**
+
+**改动文件**：`app/checkin/page.tsx`、`app/checkin/approved/page.tsx`、`app/checkin/id-input/page.tsx`（检查逻辑搬到共用文件，行为不变）、`lib/i18n.ts`（EN/中文/BM 都加了）、新增 `lib/remember-me.ts`、`lib/checkin-lookup.ts`。**无 SQL。**
+
+---
+
 ## 🖼 v2.20.1 (2026-10-01) — 规则页图片压缩
 
 顾客端 Reminders 页的 4 张规则图从 PNG 换成 WebP：**743 KB → 178 KB**（-76%），画面不变。回头客每次 check-in 都会加载这页，网络慢的时候差别很明显。

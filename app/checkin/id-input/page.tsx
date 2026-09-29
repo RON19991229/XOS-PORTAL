@@ -4,16 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
-import {
-  validateMyIC,
-  validatePassport,
-  parseICDob,
-  calcAge,
-  ageCategory,
-  digitsOnly,
-  parseTimestamp,
-} from '@/lib/utils';
+import { validateMyIC, validatePassport, digitsOnly } from '@/lib/utils';
 import { safeSession, safeLocal } from '@/lib/safe-storage';
+import { runCheckinLookup } from '@/lib/checkin-lookup';
 import CheckinHeader from '@/components/CheckinHeader';
 import { Atmo, StepRail } from '@/components/CheckinFX';
 import ScrollHint from '@/components/ScrollHint';
@@ -74,106 +67,15 @@ export default function IdInputPage() {
 
     setLoading(true);
 
-    // ============================================================
-    // GLOBAL 30-MINUTE COOLDOWN — based on IC, not customer_id.
-    // This applies to ANY recent visit (approved, denied_banned,
-    // denied_age) so that banned users / under-age users can't
-    // spam the system either.
-    // ============================================================
-    // v2.18.3: exact-IC RPC — anon can no longer SELECT the visits table.
-    const { data: recentAnyVisits } = await supabase
-      .rpc('checkin_last_visit', { p_ic: id });
-
-    if (recentAnyVisits && recentAnyVisits.length > 0) {
-      const lastVisit = parseTimestamp(recentAnyVisits[0].visited_at);
-      // If the timestamp couldn't be parsed (shouldn't happen now), skip the
-      // client cooldown — the DB trigger still enforces it server-side.
-      if (lastVisit) {
-        const now = new Date();
-        const minutesSince = (now.getTime() - lastVisit.getTime()) / 60000;
-
-        if (minutesSince < 30) {
-          const remaining = Math.ceil(30 - minutesSince);
-          setLoading(false);
-          setError(
-            lang === 'zh'
-              ? `您 ${Math.floor(minutesSince)} 分钟前已尝试入场。请等候 ${remaining} 分钟后再试。`
-              : lang === 'ms'
-              ? `Anda telah cuba daftar masuk ${Math.floor(minutesSince)} minit yang lalu. Sila tunggu ${remaining} minit lagi.`
-              : `You attempted check-in ${Math.floor(minutesSince)} minute(s) ago. Please wait ${remaining} more minutes before trying again.`
-          );
-          return;
-        }
-      }
-    }
-
-    // Look up customer via secure RPC.
-    // Returns minimal fields only: id, nationality, ic, name, dob, status,
-    // membership, gender. Phone, emergency contact, and guardian info are
-    // NOT exposed to the anon role — they're only readable by authenticated
-    // staff/admin via `customers` table. The RPC matches on exact IC, so it
-    // cannot be used to enumerate or pattern-search.
-    const { data: customers, error: dbError } = await supabase
-      .rpc('lookup_customer_for_checkin', { p_ic: id });
-
-    if (dbError) {
+    // v2.21.0: cooldown → lookup → age → ban routing lives in
+    // lib/checkin-lookup.ts (shared with the remembered-phone path on /checkin).
+    const result = await runCheckinLookup(supabase, id, nationality, lang);
+    if (!result.ok) {
       setLoading(false);
-      setError(t(lang, 'error'));
+      setError(result.error);
       return;
     }
-
-    const customer = customers && customers.length > 0 ? customers[0] : null;
-
-    safeSession.setItem('xf-ic', id);
-
-    // Age check ONLY for Malaysians (foreigners skip)
-    if (nationality === 'malaysian') {
-      const dob = parseICDob(id);
-      const age = calcAge(dob);
-      const cat = ageCategory(age);
-
-      if (cat === 'under-12') {
-        if (customer) {
-          await supabase.from('visits').insert({
-            customer_id: customer.id,
-            ic: id,
-            status: 'denied_age',
-          });
-        } else {
-          await supabase.from('visits').insert({
-            customer_id: null,
-            ic: id,
-            status: 'denied_age',
-          });
-        }
-        safeSession.setItem('xf-age', String(age));
-        router.push('/checkin/under-age');
-        return;
-      }
-
-      safeSession.setItem('xf-age', String(age));
-      safeSession.setItem('xf-age-category', cat);
-    } else {
-      // Foreigner: skip age category, mark as 16+
-      safeSession.setItem('xf-age-category', '16-plus');
-    }
-
-    // Banned check
-    if (customer && customer.status === 'banned') {
-      safeSession.setItem('xf-customer', JSON.stringify(customer));
-      router.push('/checkin/banned');
-      return;
-    }
-
-    // Existing active customer → reminders → check-in
-    if (customer) {
-      safeSession.setItem('xf-customer', JSON.stringify(customer));
-      router.push('/checkin/reminders');
-      return;
-    }
-
-    // New customer → register
-    router.push('/checkin/register');
+    router.push(result.next);
   };
 
   const placeholder = nationality === 'malaysian'

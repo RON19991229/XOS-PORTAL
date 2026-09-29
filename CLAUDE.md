@@ -47,6 +47,7 @@ Three frontends:
 
 **Customer flow:** language → nationality (Malaysian IC / Foreigner passport) → `/checkin/id-input` → 30-min cooldown check → branch to `register` / `reminders` / `banned` / `under-age` → `approved` (full-screen green `#16c75b`) or `banned` (full-screen red).
 
+- **Remembered phone (v2.21.0):** opt-in on `/checkin/approved` saves IC + first name in the customer's localStorage (`lib/remember-me.ts`). `/checkin` then offers CONTINUE, which runs `lib/checkin-lookup.ts` (the same cooldown/lookup/age/ban code as `/checkin/id-input`) and still goes through the **full** reminders page — Ron wants every rule shown on every visit; don't add a "compact rules" shortcut.
 - Anon lookups go through RPCs (`lookup_customer_for_checkin`, `lookup_customer_by_phone`), **not** direct `select` on `customers`.
 - Admin nav: TODAY · HISTORY · CUSTOMERS · ATTENTION · COMPLAINT · REPORTS · IMPORT · AUDIT · EXIT
 - Staff nav: TODAY · HISTORY · CUSTOMERS · ATTENTION · COMPLAINT
@@ -135,7 +136,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.20.1**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.21.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`.
