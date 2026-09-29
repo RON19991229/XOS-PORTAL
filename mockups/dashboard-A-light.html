@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup A Light · Control Room</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root { --bg:#f4f4f1; --card:#ffffff; --line:#e4e4df; --line2:#d6d6d0; --ink:#0a0a0a; --muted:#6b6b66; --faint:#9a9a94; --accent:#FFD60A; --danger:#ff3b30; --green:#16c75b; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  .display { font-family: 'Archivo Black', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: var(--muted); }
+  .shell { display: flex; height: 100vh; min-height: 720px; }
+
+  /* left rail */
+  .rail { width: 76px; flex-shrink: 0; background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 18px 0; gap: 4px; }
+  .logo { width: 44px; height: 44px; background: var(--accent); color: var(--ink); display: grid; place-items: center; font: 22px 'Archivo Black'; margin-bottom: 18px; }
+  .ri { position: relative; width: 60px; height: 56px; border: 0; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font: 8.5px 'JetBrains Mono'; letter-spacing: .08em; }
+  .ri:hover { color: var(--ink); background: #f4f4f1; }
+  .ri.on { background: var(--accent); color: var(--ink); font-weight: 700; }
+  .badge { position: absolute; top: 6px; right: 10px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--danger); color: #fff; font: 700 10px Inter; display: grid; place-items: center; }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .top { height: 76px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 28px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .live { width: 8px; height: 8px; border-radius: 4px; background: var(--green); display: inline-block; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .search { height: 44px; width: 340px; white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); font-size: 14px; cursor: pointer; text-align: left; }
+  .search:hover, .tbtn:hover { border-color: var(--ink); color: var(--ink); }
+  .kbd { font: 11px 'JetBrains Mono'; border: 1px solid var(--line2); padding: 3px 6px; color: var(--muted); background: #fff; }
+  .tbtn { height: 44px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line2); color: var(--muted); font: 11px 'JetBrains Mono'; letter-spacing: .12em; cursor: pointer; white-space: nowrap; }
+  .tbtn.priv-on { background: var(--ink); border-color: var(--ink); color: var(--accent); }
+  .tbtn.priv-on:hover { color: var(--accent); }
+
+  /* KPI strip */
+  .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+  .kpi { background: var(--card); border: 1px solid var(--line); padding: 14px 18px; position: relative; min-height: 96px; }
+  .kpi .num { font: 38px/1.1 'Archivo Black'; margin-top: 4px; }
+  .kpi.clear { border-color: var(--ink); box-shadow: inset 4px 0 0 var(--accent); }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 44px; margin-top: 8px; }
+  .bars div { flex: 1; background: #d9d9d3; }
+  .bars div.peak { background: var(--ink); }
+  .masked { display: flex; align-items: center; gap: 8px; margin-top: 8px; height: 42px; }
+  .masked .dots { font: 30px/1 'Archivo Black'; letter-spacing: .12em; color: #cfcfc8; }
+  .lockchip { font: 9px 'JetBrains Mono'; letter-spacing: .14em; color: var(--muted); border: 1px solid var(--line2); padding: 3px 6px; }
+
+  .body { flex: 1; display: flex; min-height: 0; }
+  .feed { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: auto; background: var(--card); }
+  .cols, .row { display: grid; gap: 12px; align-items: center; padding: 0 24px; }
+  .cols { background: var(--ink); color: var(--accent); font: 700 10px 'JetBrains Mono'; letter-spacing: .18em; padding-top: 10px; padding-bottom: 10px; position: sticky; top: 0; z-index: 2; }
+  .row { width: 100%; min-height: 54px; border: 0; border-bottom: 1px solid var(--line); text-align: left; cursor: pointer; background: #fff; }
+  .row:hover { background: #fffbe0 !important; }
+  .row.sel { box-shadow: inset 4px 0 0 var(--ink); }
+  .pill { justify-self: center; font: 700 10px 'JetBrains Mono'; letter-spacing: .12em; padding: 5px 9px; }
+  .member { font: 700 9px 'JetBrains Mono'; letter-spacing: .12em; padding: 3px 6px; background: var(--green); color: var(--ink); flex-shrink: 0; }
+  .gender { font: 700 10px 'JetBrains Mono'; width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--line2); color: var(--muted); flex-shrink: 0; }
+  .sub { font: 12px 'JetBrains Mono'; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .del { justify-self: center; width: 30px; height: 30px; border: 1px solid transparent; background: transparent; color: var(--danger); cursor: pointer; }
+  .del:hover { border-color: var(--danger); }
+  aside { width: 360px; flex-shrink: 0; border-left: 1px solid var(--line); background: var(--bg); overflow: auto; }
+  .alert { width: 100%; text-align: left; padding: 14px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; background: #fff; border: 1px solid var(--line); }
+  .alert:hover { border-color: var(--ink); }
+  .stat { background: #fff; border: 1px solid var(--line); padding: 12px; }
+
+  /* toolbar for HISTORY / CUSTOMERS */
+  .toolbar { display: flex; flex-direction: column; gap: 10px; padding: 14px 24px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .frow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .frow .flabel { width: 70px; font: 10px 'JetBrains Mono'; letter-spacing: .18em; color: var(--muted); }
+  .chip { height: 30px; padding: 0 11px; border: 1px solid var(--line2); background: #fff; font: 700 10px 'JetBrains Mono'; letter-spacing: .1em; cursor: pointer; color: var(--muted); }
+  .chip:hover { border-color: var(--ink); color: var(--ink); }
+  .chip.on { background: var(--ink); border-color: var(--ink); color: var(--accent); }
+  .datehdr { position: sticky; top: 34px; z-index: 1; display: flex; justify-content: space-between; padding: 8px 24px; background: #f4f4f1; border-bottom: 1px solid var(--line); font: 700 11px 'JetBrains Mono'; letter-spacing: .15em; }
+  .inp { height: 40px; border: 1px solid var(--line2); background: #fff; padding: 0 12px; font-size: 14px; outline: none; }
+  .inp:focus { border-color: var(--ink); }
+
+  /* profile */
+  .pgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .pgrid > div { background: #fff; padding: 12px 14px; }
+  .abtn { height: 40px; padding: 0 16px; border: 1px solid var(--ink); background: #fff; font: 11px 'Archivo Black'; letter-spacing: .08em; cursor: pointer; }
+  .abtn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .abtn.warn { background: var(--accent); }
+
+  /* palette */
+  .scrim { position: fixed; inset: 0; background: rgba(10,10,10,.35); display: flex; justify-content: center; padding-top: 120px; z-index: 20; }
+  .palette { width: 640px; height: fit-content; background: #fff; border: 1px solid var(--line2); box-shadow: 0 30px 80px rgba(0,0,0,.25); }
+  .palette input { flex: 1; height: 58px; background: transparent; border: 0; outline: none; font-size: 17px; font-family: Inter; }
+  .result { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 18px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+  .result:hover { background: #fffbe0; }
+
+  /* privacy */
+  .blur .sens { filter: blur(7px); user-select: none; }
+  .blur .sens-bars { filter: blur(6px); opacity: .5; }
+
+  /* mockup-only controls */
+  .mock { position: fixed; bottom: 14px; left: 90px; display: flex; gap: 6px; z-index: 40; align-items: center; }
+  .mock span, .mock button { font: 10px 'JetBrains Mono'; letter-spacing: .15em; background: var(--accent); color: var(--ink); padding: 6px 10px; border: 0; }
+  .mock button { background: var(--ink); color: var(--accent); cursor: pointer; }
+  .mock button.on { background: var(--accent); color: var(--ink); outline: 1px solid var(--ink); }
+  .toast { position: fixed; top: 88px; right: 24px; background: var(--ink); color: #fff; padding: 12px 16px; font: 12px 'JetBrains Mono'; z-index: 30; }
+  /* narrower screens: the side column becomes a slide-over drawer */
+  @media (max-width: 1180px) {
+    aside.no-sel { display: none; }
+    aside.has-sel { position: fixed; right: 0; top: 76px; bottom: 0; z-index: 15; box-shadow: -20px 0 50px rgba(0,0,0,.15); }
+    .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .search { width: 220px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .live { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="mock"><span>MOCKUP · SAMPLE DATA</span><button data-act="role" id="roleBtn">VIEW AS: ADMIN</button><button data-act="relock">▶ SIMULATE 2 MIN IDLE</button></div>
+<script>
+// ---------- sample data ----------
+const VISITS = [
+  { id: 'v1', cid: 'c1', time: '18:42', name: 'TAN WEI MING', g: 'M', ic: '950312-01-5521', phone: '+60 12-338 4417', status: 'ok', member: true },
+  { id: 'v2', cid: 'c2', time: '18:39', name: 'NUR AISYAH BINTI RAHMAN', g: 'F', ic: '010822-10-6634', phone: '+60 17-902 1180', status: 'ok', member: false },
+  { id: 'v3', cid: 'c3', time: '18:31', name: 'LIM KAH HENG', g: 'M', ic: '880105-01-7713', phone: '+60 16-771 2093', status: 'banned', member: false },
+  { id: 'v4', cid: 'c4', time: '18:27', name: 'RAJESH KUMAR A/L MUTHU', g: 'M', ic: '920417-14-5009', phone: '+60 11-2045 7781', status: 'warn', member: false },
+  { id: 'v5', cid: 'c5', time: '18:20', name: 'DANIEL OKAFOR', g: 'M', ic: 'A09318381', phone: '+234 803 555 0192', status: 'ok', member: false, foreign: true },
+  { id: 'v6', cid: null, time: '18:14', name: 'UNDERAGE ATTEMPT', g: '', ic: '140903-01-2210', phone: '—', status: 'age', member: false },
+  { id: 'v7', cid: 'c7', time: '18:09', name: 'SITI NURHALIZA BINTI ZAINAL', g: 'F', ic: '970630-01-4128', phone: '+60 13-667 0932', status: 'ok', member: true },
+  { id: 'v8', cid: 'c8', time: '18:02', name: 'CHONG JUN HAO', g: 'M', ic: '030211-01-8857', phone: '+60 12-910 6630', status: 'ok', member: false },
+  { id: 'v9', cid: 'c9', time: '17:58', name: 'MUHAMMAD HAKIM BIN ISMAIL', g: 'M', ic: '990915-01-6671', phone: '+60 19-455 2208', status: 'ok', member: false },
+  { id: 'v10', cid: 'c10', time: '17:51', name: 'WONG MEI LING', g: 'F', ic: '940728-01-3346', phone: '+60 16-220 8815', status: 'ok', member: true }
+];
+const CUSTOMERS = {
+  c1: { visits: 86, warnings: 0, last: 'Yesterday 19:10', since: '12 Mar 2025', age: 31, rel: 'Spouse', ephone: '+60 12-771 0021', note: 'Regular evening member.' },
+  c2: { visits: 3, warnings: 0, last: '26 Sep 18:05', since: '14 Sep 2026', age: 25, rel: 'Mother', ephone: '+60 17-221 9087', note: '' },
+  c3: { visits: 41, warnings: 3, last: '14 Aug 20:40', since: '02 Jan 2025', age: 38, rel: 'Friend', ephone: '+60 16-002 1180', note: 'BANNED 15 Aug — aggressive behaviour towards staff. Do not admit; call manager.', warnList: ['03 Jun · Not re-racking plates', '21 Jul · Slippers on gym floor', '15 Aug · Aggressive behaviour towards staff → BAN'] },
+  c4: { visits: 22, warnings: 2, last: '29 Sep 18:50', since: '08 Feb 2026', age: 34, rel: 'Sibling', ephone: '+60 11-3390 1122', note: 'One more warning = ban.', warnList: ['11 Sep · Not re-racking plates', '29 Sep · Not re-racking plates'] },
+  c5: { visits: 5, warnings: 0, last: '28 Sep 07:15', since: '01 Sep 2026', age: null, rel: 'Friend', ephone: '+60 11-5530 7710', note: 'Foreign passport holder.' },
+  c7: { visits: 124, warnings: 0, last: 'Yesterday 18:02', since: '20 Nov 2024', age: 29, rel: 'Father', ephone: '+60 13-400 1919', note: '' },
+  c8: { visits: 9, warnings: 0, last: '27 Sep 17:40', since: '03 Aug 2026', age: 23, rel: 'Mother', ephone: '+60 12-610 6632', note: '' },
+  c9: { visits: 17, warnings: 0, last: '29 Sep 17:30', since: '15 May 2026', age: 27, rel: 'Partner', ephone: '+60 19-777 0101', note: '' },
+  c10: { visits: 58, warnings: 0, last: '28 Sep 18:10', since: '30 Jun 2025', age: 32, rel: 'Spouse', ephone: '+60 16-220 1144', note: 'Prefers morning slots on weekends.' }
+};
+const EXTRA_CUSTOMERS = [
+  ['c11', 'LEE CHEE KEONG', 'M', '870211-01-5541', '+60 12-554 1180', 212, '30 Sep 07:02', 'ok', true],
+  ['c12', 'FARAH NADIA BINTI OMAR', 'F', '000514-01-2288', '+60 17-883 4410', 14, '25 Sep 19:44', 'ok', false],
+  ['c13', 'KEVIN NG', 'M', '961102-01-7733', '+60 16-910 2231', 1, '02 Jul 20:15', 'ok', false],
+  ['c14', 'ARUN PILLAI', 'M', '910903-10-4417', '+60 11-2200 8841', 33, '11 Aug 18:30', 'warn', false]
+];
+const PILL = {
+  ok: ['ALLOWED', 'var(--green)', 'var(--ink)', '#fff'],
+  banned: ['BANNED', 'var(--danger)', '#fff', '#fff1f0'],
+  warn: ['WARNING', 'var(--accent)', 'var(--ink)', '#fffbe6'],
+  age: ['UNDER 12', 'var(--danger)', '#fff', '#fff6f5']
+};
+const HOURS = [2, 4, 6, 5, 3, 2, 2, 3, 2, 3, 4, 6, 9, 11, 8, 5, 3, 1];
+const NAV = [
+  ['TODAY', 'today', 'M12 8v4l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z'],
+  ['HISTORY', 'history', 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4'],
+  ['CUSTMR', 'customers', 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8'],
+  ['ATTN', 'other', 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'],
+  ['CMPLNT', 'other', 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'],
+  ['REPORT', 'other', 'M3 3v18h18M7 15l4-4 3 3 5-6', true],
+  ['IMPORT', 'other', 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', true],
+  ['AUDIT', 'other', 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9', true]
+];
+
+// Privacy starts ON every time the dashboard is opened.
+const state = { page: 'today', navLabel: 'TODAY', privacy: true, selected: null, palette: false, role: 'admin', range: '7D', hStatus: 'ALL', cStatus: 'ALL', cType: 'ALL', q: '', toast: '' };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const denied = (v) => v.status === 'banned' || v.status === 'age';
+const isAdmin = () => state.role === 'admin';
+const allCustomers = () => {
+  const list = VISITS.filter((v) => v.cid).map((v) => ({ id: v.cid, name: v.name, g: v.g, ic: v.ic, phone: v.phone, visits: CUSTOMERS[v.cid].visits, last: v.time === '—' ? CUSTOMERS[v.cid].last : 'Today ' + v.time, status: v.status, member: v.member }));
+  EXTRA_CUSTOMERS.forEach(([id, name, g, ic, phone, visits, last, status, member]) => list.push({ id, name, g, ic, phone, visits, last, status, member }));
+  return list;
+};
+const findCustomer = (id) => allCustomers().find((c) => c.id === id);
+const icon = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+const pill = (s) => { const p = PILL[s]; return `<span class="pill" style="background:${p[1]};color:${p[2]}">${p[0]}</span>`; };
+const masked = () => `<div class="masked"><span class="dots">•••</span><span class="lockchip">HIDDEN</span></div>`;
+
+// ---------- shell ----------
+function view() {
+  const titles = { today: 'TODAY', history: 'HISTORY', customers: 'CUSTOMERS', profile: 'CUSTOMER', other: state.navLabel };
+  return `<div class="shell">
+  <nav class="rail" aria-label="Main"><div class="logo">X</div>
+    ${NAV.filter((n) => isAdmin() || !n[3]).map(([label, page, d]) => `<button class="ri ${state.navLabel === label ? 'on' : ''}" data-nav="${page}" data-label="${label}" aria-label="${label}">${icon(d)}${label}${label === 'CMPLNT' ? '<span class="badge">2</span>' : ''}</button>`).join('')}
+    <div style="flex:1"></div><button class="ri" style="height:48px">EXIT</button>
+  </nav>
+  <div class="main">
+    <div class="top">
+      <div><div class="label" style="letter-spacing:.3em">// ${state.page === 'today' ? 'LIVE FEED' : 'X FITNESS'} · ${isAdmin() ? 'ADMIN' : 'STAFF'}</div>
+        <div style="display:flex;align-items:baseline;gap:14px"><h1 class="display" style="margin:0;font-size:30px">${titles[state.page]}</h1><span class="mono" style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px"><span class="live"></span>WED 01 OCT · 18:43</span></div></div>
+      <div style="flex:1"></div>
+      <button class="search" data-act="palette">${icon('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5')}<span style="flex:1">Find customer — name, IC, phone</span><span class="kbd">Ctrl K</span></button>
+      <button class="tbtn">🔊 SOUND ON</button>
+      <button class="tbtn ${state.privacy ? 'priv-on' : ''}" data-act="privacy" title="${state.privacy ? 'Click to show numbers and names' : 'Click to hide numbers and names'}">${state.privacy ? '🔒 PRIVACY ON' : '👁 PRIVACY OFF'}</button>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;min-height:0" class="${state.privacy ? 'blur' : ''}">
+      ${state.page === 'today' ? today() : state.page === 'history' ? history() : state.page === 'customers' ? customers() : state.page === 'profile' ? profile() : other()}
+    </div>
+  </div></div>
+  ${state.toast ? `<div class="toast">${state.toast}</div>` : ''}
+  ${state.palette ? palette() : ''}`;
+}
+
+// ---------- TODAY ----------
+function today() {
+  const max = Math.max(...HOURS);
+  const nD = VISITS.filter(denied).length;
+  const sel = state.selected && findCustomer(state.selected);
+  const cols = isAdmin() ? '80px minmax(0,1fr) 170px 160px 110px 40px' : '80px minmax(0,1fr) 170px 160px 110px';
+  const num = (n, color) => state.privacy ? masked() : `<div class="num" style="color:${color || 'inherit'}">${n}</div>`;
+  return `<section class="kpis">
+      <div class="kpi"><div class="label">CHECK-INS TODAY</div>${num(VISITS.length)}</div>
+      <div class="kpi"><div class="label">ALLOWED</div>${num(VISITS.length - nD, 'var(--green)')}</div>
+      <div class="kpi"><div class="label">DENIED</div>${num(nD, 'var(--danger)')}</div>
+      <div class="kpi clear"><div class="label">LAST CHECK-IN</div><div class="num" style="font-size:28px;line-height:1.5">1 MIN AGO</div></div>
+      <div class="kpi"><div class="label">BY HOUR · 6AM–11PM</div>${state.privacy ? masked() : `<div class="bars">${HOURS.map((n, i) => `<div class="${i === 12 ? 'peak' : ''}" style="height:${Math.round(n / max * 100)}%" title="${6 + i}:00 · ${n}"></div>`).join('')}</div>`}</div>
+    </section>
+    <div class="body">
+      <section class="feed">
+        <div class="cols" style="grid-template-columns:${cols}"><div>TIME</div><div>NAME</div><div>IC / PASSPORT</div><div>PHONE</div><div style="text-align:center">STATUS</div>${isAdmin() ? '<div style="text-align:center">DEL</div>' : ''}</div>
+        ${VISITS.map((v) => `<div class="row ${v.cid && state.selected === v.cid ? 'sel' : ''}" ${v.cid ? `data-sel="${v.cid}"` : ''} style="grid-template-columns:${cols};background:${PILL[v.status][3]}">
+          <span class="mono" style="font-size:14px;font-weight:700">${v.time}</span>
+          <span style="display:flex;align-items:center;gap:8px;min-width:0;font-weight:700;font-size:14px">${v.member ? '<span class="member">MEMBER</span>' : ''}${v.g ? `<span class="gender">${v.g}</span>` : ''}<span class="sens" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.name)}</span></span>
+          <span class="sub sens">${v.foreign ? '🌍 ' : ''}${esc(v.ic)}</span><span class="sub sens">${esc(v.phone)}</span>
+          ${pill(v.status)}${isAdmin() ? `<button class="del" data-act="del" title="Delete this visit record">🗑</button>` : ''}</div>`).join('')}
+      </section>
+      <aside class="${sel ? 'has-sel' : 'no-sel'}">${sel ? panel(sel) : alerts()}</aside>
+    </div>`;
+}
+function alerts() {
+  const items = [
+    ['c3', 'BANNED — DO NOT ADMIT', 'var(--danger)', 'Aggressive behaviour towards staff. Call manager.', '18:31'],
+    ['c4', 'WARNING 2/3', '#8a6d00', 'Not re-racking plates. One more warning = ban.', '18:27'],
+    [null, 'UNDER 12 REFUSED', 'var(--danger)', 'IC shows age 12. Refused automatically.', '18:14'],
+    [null, '2 NEW COMPLAINTS', 'var(--ink)', 'Harassment report · Changing room. Open COMPLAINT to assign.', 'TODAY']
+  ];
+  return `<div class="label" style="padding:18px 20px 10px;letter-spacing:.25em">NEEDS ATTENTION · ${items.length}</div>
+  <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px 16px">${items.map(([id, tag, c, d, time], i) => { const cu = id && findCustomer(id); return `<button class="alert" ${id ? `data-sel="${id}"` : ''} style="box-shadow:inset 4px 0 0 ${c}">
+    <span style="display:flex;justify-content:space-between"><span class="mono" style="font-size:10px;font-weight:700;letter-spacing:.15em;color:${c}">${tag}</span><span class="mono" style="font-size:11px;color:var(--muted)">${time}</span></span>
+    <span style="font-weight:700;font-size:15px" class="${cu ? 'sens' : ''}">${cu ? esc(cu.name) : i === 2 ? 'Underage attempt' : 'Harassment report'}</span><span style="font-size:13px;color:var(--muted);line-height:1.4">${d}</span></button>`; }).join('')}</div>`;
+}
+function panel(c) {
+  const x = CUSTOMERS[c.id] || { visits: c.visits, warnings: c.status === 'warn' ? 1 : 0, last: c.last, note: '' };
+  const p = PILL[c.status];
+  return `<div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-height:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="label" style="letter-spacing:.25em">CUSTOMER</span><button data-act="close" aria-label="Close" style="width:36px;height:36px;border:1px solid var(--line2);background:#fff;cursor:pointer;font-size:18px">×</button></div>
+    <div style="padding:16px;background:${p[1]};color:${p[2]}"><div class="mono" style="font-size:11px;font-weight:700;letter-spacing:.15em">${p[0]}${c.member ? ' · MEMBER' : ''}</div><div class="display sens" style="font-size:22px;line-height:1.15;margin-top:4px">${esc(c.name)}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="stat"><div class="label" style="font-size:9px">VISITS</div><div class="display" style="font-size:24px">${x.visits}</div></div><div class="stat"><div class="label" style="font-size:9px">WARNINGS</div><div class="display" style="font-size:24px">${x.warnings}/3</div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">IC / Passport</span><span class="mono sens">${esc(c.ic)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Phone</span><span class="mono sens">${esc(c.phone)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Last visit before today</span><span>${esc(x.last)}</span></div></div>
+    ${x.note ? `<div class="stat" style="font-size:13px;line-height:1.5">${esc(x.note)}</div>` : ''}
+    <div style="flex:1"></div>
+    <button data-act="profile" data-id="${c.id}" class="display" style="padding:14px;background:var(--ink);color:var(--accent);border:0;font-size:13px;letter-spacing:.08em;cursor:pointer">OPEN FULL PROFILE →</button></div>`;
+}
+
+// ---------- HISTORY ----------
+function historyRows() {
+  const days = { '7D': 7, '30D': 30, TODAY: 1 }[state.range] || 7;
+  const labels = ['WED 01 OCT', 'TUE 30 SEP', 'MON 29 SEP', 'SUN 28 SEP', 'SAT 27 SEP', 'FRI 26 SEP', 'THU 25 SEP'];
+  const out = [];
+  for (let d = 0; d < Math.min(days, 3); d++) {
+    const rows = VISITS.map((v, i) => ({ ...v, time: d === 0 ? v.time : `${String(19 - Math.floor(i / 2)).padStart(2, '0')}:${String((i * 17 + d * 7) % 60).padStart(2, '0')}` }))
+      .filter((v) => state.hStatus === 'ALL' || (state.hStatus === 'DENIED' ? denied(v) : state.hStatus === 'WARNED' ? v.status === 'warn' : v.status === 'ok'));
+    out.push([labels[d], rows]);
+  }
+  return out;
+}
+function history() {
+  const groups = historyRows();
+  const total = groups.reduce((n, g) => n + g[1].length, 0);
+  const chips = (key, opts) => opts.map((o) => `<button class="chip ${state[key] === o ? 'on' : ''}" data-set="${key}" data-val="${o}">${o}</button>`).join('');
+  const cols = '80px minmax(0,1fr) 170px 160px 110px';
+  return `<div class="toolbar">
+      <div class="frow"><span class="flabel">RANGE</span>${chips('range', ['TODAY', '7D', '30D'])}<span style="width:12px"></span><input class="inp mono" style="height:30px;width:130px;font-size:12px" value="25 Sep 2026" aria-label="From"><span class="mono" style="color:var(--muted)">→</span><input class="inp mono" style="height:30px;width:130px;font-size:12px" value="01 Oct 2026" aria-label="To">
+        <div style="flex:1"></div><span class="label">SHOWING</span><span class="display sens" style="font-size:20px;margin-left:6px">${state.privacy ? '•••' : total}</span><span class="label" style="margin-left:6px">VISITS</span></div>
+      <div class="frow"><span class="flabel">STATUS</span>${chips('hStatus', ['ALL', 'ALLOWED', 'WARNED', 'DENIED'])}
+        <span style="width:16px"></span><span class="flabel" style="width:auto;margin-right:4px">GENDER</span><button class="chip on">ALL</button><button class="chip">M</button><button class="chip">F</button>
+        <span style="width:16px"></span><span class="flabel" style="width:auto;margin-right:4px">AGE</span><button class="chip on">ALL</button><button class="chip">12–15</button><button class="chip">16–25</button><button class="chip">26+</button>
+        <span style="width:16px"></span><span class="flabel" style="width:auto;margin-right:4px">TIME</span><button class="chip on">ALL</button><button class="chip">AM</button><button class="chip">PM</button>
+        <span style="width:16px"></span><span class="flabel" style="width:auto;margin-right:4px">FREQ</span><button class="chip on">ALL</button><button class="chip">1ST VISIT</button><button class="chip">REGULAR</button></div>
+    </div>
+    <div class="body"><section class="feed">
+      <div class="cols" style="grid-template-columns:${cols}"><div>TIME</div><div>NAME</div><div>IC / PASSPORT</div><div>PHONE</div><div style="text-align:center">STATUS</div></div>
+      ${groups.map(([label, rows]) => `<div class="datehdr"><span>${label}</span><span style="color:var(--muted)" class="sens">${state.privacy ? '' : rows.length + ' VISITS'}</span></div>
+        ${rows.map((v) => `<div class="row" ${v.cid ? `data-profile="${v.cid}"` : ''} style="grid-template-columns:${cols};background:${PILL[v.status][3]}">
+          <span class="mono" style="font-size:14px;font-weight:700">${v.time}</span>
+          <span style="display:flex;align-items:center;gap:8px;min-width:0;font-weight:700;font-size:14px">${v.member ? '<span class="member">MEMBER</span>' : ''}${v.g ? `<span class="gender">${v.g}</span>` : ''}<span class="sens" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.name)}</span></span>
+          <span class="sub sens">${esc(v.ic)}</span><span class="sub sens">${esc(v.phone)}</span>${pill(v.status)}</div>`).join('')}`).join('')}
+      <div class="mono" style="padding:18px 24px;color:var(--muted);font-size:11px;letter-spacing:.1em">… older days load as you scroll</div>
+    </section></div>`;
+}
+
+// ---------- CUSTOMERS ----------
+function customers() {
+  const q = state.q.trim().toLowerCase();
+  const list = allCustomers()
+    .filter((c) => !q || c.name.toLowerCase().includes(q) || c.ic.includes(q) || c.phone.replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§'))
+    .filter((c) => state.cStatus === 'ALL' || (state.cStatus === 'BANNED' ? c.status === 'banned' : state.cStatus === 'WARNED' ? c.status === 'warn' : c.status === 'ok'))
+    .filter((c) => state.cType === 'ALL' || (state.cType === 'MEMBER' ? c.member : !c.member))
+    .sort((a, b) => b.visits - a.visits);
+  const chips = (key, opts) => opts.map((o) => `<button class="chip ${state[key] === o ? 'on' : ''}" data-set="${key}" data-val="${o}">${o}</button>`).join('');
+  const cols = 'minmax(0,1fr) 80px 150px 170px 160px 110px';
+  const sel = state.selected && findCustomer(state.selected);
+  return `<div class="toolbar">
+      <div class="frow"><input id="cq" class="inp" style="flex:1;max-width:460px" placeholder="Search name, IC or phone…" value="${esc(state.q)}" aria-label="Search customers">
+        <select class="inp mono" style="font-size:12px" aria-label="Sort"><option>VISITS · MOST FIRST</option><option>VISITS · LEAST FIRST</option><option>LAST VISIT · RECENT FIRST</option><option>NAME · A–Z</option></select>
+        <div style="flex:1"></div><span class="display sens" style="font-size:20px">${state.privacy ? '•••' : '4,213'}</span><span class="label" style="margin-left:6px">CUSTOMERS</span></div>
+      <div class="frow"><span class="flabel">STATUS</span>${chips('cStatus', ['ALL', 'ACTIVE', 'WARNED', 'BANNED'])}
+        <span style="width:16px"></span><span class="flabel" style="width:auto;margin-right:4px">TYPE</span>${chips('cType', ['ALL', 'MEMBER', 'WALK-IN'])}
+        <span style="width:16px"></span><span class="flabel" style="width:auto;margin-right:4px">ACTIVITY</span><button class="chip on">ALL</button><button class="chip">LAST 30 DAYS</button><button class="chip">DORMANT 90D+</button></div>
+    </div>
+    <div class="body"><section class="feed">
+      <div class="cols" style="grid-template-columns:${cols}"><div>NAME</div><div>VISITS</div><div>LAST SEEN</div><div>IC / PASSPORT</div><div>PHONE</div><div style="text-align:center">STATUS</div></div>
+      ${list.map((c) => `<div class="row ${state.selected === c.id ? 'sel' : ''}" data-sel="${c.id}" style="grid-template-columns:${cols};background:${PILL[c.status][3]}">
+        <span style="display:flex;align-items:center;gap:8px;min-width:0;font-weight:700;font-size:14px">${c.member ? '<span class="member">MEMBER</span>' : ''}<span class="gender">${c.g}</span><span class="sens" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</span></span>
+        <span class="display" style="font-size:16px">${c.visits}</span><span class="sub">${esc(c.last)}</span><span class="sub sens">${esc(c.ic)}</span><span class="sub sens">${esc(c.phone)}</span>${pill(c.status)}</div>`).join('') || '<div style="padding:40px;text-align:center" class="display">NO CUSTOMERS FOUND</div>'}
+    </section><aside class="${sel ? 'has-sel' : 'no-sel'}">${sel ? panel(sel) : `<div style="padding:24px;color:var(--muted);font-size:13px;line-height:1.6"><div class="label" style="margin-bottom:10px">CUSTOMER</div>Click a customer to see their summary here without leaving the list.</div>`}</aside></div>`;
+}
+
+// ---------- PROFILE ----------
+function profile() {
+  const c = findCustomer(state.selected) || findCustomer('c4');
+  const x = CUSTOMERS[c.id] || { visits: c.visits, warnings: 0, last: c.last, since: '—', age: null, rel: '—', ephone: '—', note: '' };
+  const p = PILL[c.status];
+  return `<div style="flex:1;overflow:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+    <button data-act="back" class="mono" style="align-self:flex-start;border:0;background:transparent;cursor:pointer;font-size:11px;letter-spacing:.12em;color:var(--muted)">← BACK</button>
+    <div style="display:flex;gap:16px;align-items:stretch">
+      <div style="width:120px;height:120px;background:#e9e9e4;display:grid;place-items:center;color:var(--faint)" class="mono">NO PHOTO</div>
+      <div style="flex:1;padding:18px 20px;background:${p[1]};color:${p[2]};display:flex;flex-direction:column;justify-content:center">
+        <div class="mono" style="font-size:11px;font-weight:700;letter-spacing:.15em">${p[0]}${c.member ? ' · MEMBER' : ''}${x.warnings ? ` · WARNINGS ${x.warnings}/3` : ''}</div>
+        <div class="display sens" style="font-size:32px;line-height:1.1;margin-top:6px">${esc(c.name)}</div></div>
+      ${isAdmin() ? `<div style="display:flex;flex-direction:column;gap:8px;justify-content:center"><button class="abtn warn">+ WARNING</button><button class="abtn danger">${c.status === 'banned' ? 'UNBAN' : 'BAN'}</button><button class="abtn">EDIT</button></div>` : ''}
+    </div>
+    <div class="pgrid">
+      <div><div class="label">IC / PASSPORT</div><div class="mono sens" style="margin-top:4px">${esc(c.ic)}</div></div>
+      <div><div class="label">PHONE</div><div class="mono sens" style="margin-top:4px">${esc(c.phone)}</div></div>
+      <div><div class="label">AGE · GENDER</div><div style="margin-top:4px">${x.age ?? '—'} · ${c.g || '—'}</div></div>
+      <div><div class="label">EMERGENCY</div><div class="sens" style="margin-top:4px">${esc(x.rel)} · <span class="mono">${esc(x.ephone)}</span></div></div>
+      <div><div class="label">MEMBER SINCE</div><div style="margin-top:4px">${esc(x.since)}</div></div>
+      <div><div class="label">TOTAL VISITS</div><div class="display" style="margin-top:2px;font-size:20px">${x.visits}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="stat"><div class="label" style="margin-bottom:10px">WARNINGS</div>${(x.warnList || []).map((w) => `<div style="padding:8px 0;border-top:1px solid var(--line);font-size:13px">⚠ ${esc(w)}</div>`).join('') || '<div style="font-size:13px;color:var(--muted)">No warnings.</div>'}</div>
+      <div class="stat"><div class="label" style="margin-bottom:10px">NOTES</div><div style="font-size:13px;line-height:1.5">${esc(x.note || 'No notes.')}</div>${isAdmin() ? '<button class="chip" style="margin-top:10px">+ ADD NOTE</button>' : ''}</div>
+    </div>
+    <div class="stat"><div class="label" style="margin-bottom:10px">RECENT VISITS</div>${['01 Oct 18:27', '29 Sep 18:50', '27 Sep 19:05', '25 Sep 18:40', '22 Sep 19:12'].map((d) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:13px"><span class="mono">${d}</span><span class="mono" style="color:var(--green);font-weight:700">ALLOWED</span></div>`).join('')}</div>
+    ${isAdmin() ? '' : '<div class="mono" style="font-size:11px;color:var(--muted);letter-spacing:.1em">STAFF VIEW · READ-ONLY</div>'}
+  </div>`;
+}
+function other() {
+  return `<div style="flex:1;display:grid;place-items:center;text-align:center;padding:40px"><div><div class="display" style="font-size:24px">${state.navLabel}</div><div style="color:var(--muted);margin-top:8px;font-size:14px;max-width:420px;line-height:1.5">Same shell (left rail + light theme). Page content stays as it is today — only restyled to match.</div></div></div>`;
+}
+
+// ---------- palette ----------
+function palette() {
+  return `<div class="scrim" data-act="closePalette"><div class="palette" role="dialog" aria-label="Find customer">
+    <div style="display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--line)">${icon('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5')}<input id="q" placeholder="Type a name, IC or phone…" aria-label="Search customers" autocomplete="off"><button class="kbd" data-act="closePalette" style="cursor:pointer">ESC</button></div>
+    <div id="results" style="padding:8px 0"></div>
+    <div class="mono" style="border-top:1px solid var(--line);padding:10px 18px;display:flex;gap:18px;font-size:10px;color:var(--muted);letter-spacing:.1em"><span>ENTER OPEN</span><span>ESC CLOSE</span><span style="margin-left:auto">${state.privacy ? 'PRIVACY ON · RESULTS SHOW AFTER YOU TYPE' : ''}</span></div></div></div>`;
+}
+function renderResults(q) {
+  q = (q || '').trim().toLowerCase();
+  const el = document.getElementById('results');
+  if (state.privacy && !q) { el.innerHTML = '<div style="padding:18px;color:var(--muted);font-size:14px">Start typing to search.</div>'; return; }
+  const res = allCustomers().filter((c) => !q || c.name.toLowerCase().includes(q) || c.ic.toLowerCase().includes(q)).slice(0, 6);
+  el.innerHTML = res.length
+    ? `<div class="label" style="padding:6px 18px">CUSTOMERS · ${res.length}</div>` + res.map((c) => `<button class="result" data-profile="${c.id}"><span style="width:10px;height:10px;background:${PILL[c.status][1]}"></span><span style="flex:1;font-weight:600;font-size:14px">${esc(c.name)}</span><span class="mono" style="font-size:12px;color:var(--muted)">${esc(c.ic)}</span></button>`).join('')
+    : `<div style="padding:18px;color:var(--muted);font-size:14px">No customer matches “${esc(q)}”.</div>`;
+}
+
+// ---------- events ----------
+let lastActivity = Date.now();
+function render() {
+  document.getElementById('app').innerHTML = view();
+  document.getElementById('roleBtn').textContent = 'VIEW AS: ' + state.role.toUpperCase();
+  if (state.palette) { const q = document.getElementById('q'); q.focus(); q.addEventListener('input', () => renderResults(q.value)); renderResults(''); }
+  const cq = document.getElementById('cq');
+  if (cq) cq.addEventListener('input', () => { state.q = cq.value; const pos = cq.selectionStart; render(); const n = document.getElementById('cq'); n.focus(); n.setSelectionRange(pos, pos); });
+}
+function relock(msg) { state.privacy = true; state.toast = msg; render(); setTimeout(() => { state.toast = ''; render(); }, 2600); }
+document.addEventListener('click', (e) => {
+  lastActivity = Date.now();
+  const t = e.target.closest('[data-act],[data-sel],[data-nav],[data-set],[data-profile]');
+  if (!t) return;
+  if (t.classList.contains('scrim') && e.target !== t) return;
+  const a = t.dataset.act;
+  if (a === 'relock') { if (!state.privacy) relock('No activity for 2 min · privacy turned back on'); else { state.toast = 'Privacy is already on — turn it off first'; render(); setTimeout(() => { state.toast = ''; render(); }, 2000); } return; }
+  if (a === 'role') { state.role = isAdmin() ? 'staff' : 'admin'; if (state.navLabel !== 'TODAY' && state.page === 'other') { state.page = 'today'; state.navLabel = 'TODAY'; } }
+  if (a === 'del') { e.stopPropagation(); alert('Mockup: asks to confirm, then deletes this visit (admin only, as today).'); return; }
+  if (t.dataset.nav) { state.page = t.dataset.nav; state.navLabel = t.dataset.label; state.selected = null; }
+  if (t.dataset.set) state[t.dataset.set] = t.dataset.val;
+  if (t.dataset.sel) state.selected = state.selected === t.dataset.sel && !a ? null : t.dataset.sel;
+  if (t.dataset.profile) { state.selected = t.dataset.profile; state.page = 'profile'; state.palette = false; }
+  if (a === 'profile') { state.selected = t.dataset.id; state.page = 'profile'; }
+  if (a === 'back') { state.page = state.navLabel === 'HISTORY' ? 'history' : state.navLabel === 'CUSTMR' ? 'customers' : 'today'; }
+  if (a === 'palette') state.palette = true;
+  if (a === 'closePalette') state.palette = false;
+  if (a === 'close') state.selected = null;
+  if (a === 'privacy') state.privacy = !state.privacy;
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  lastActivity = Date.now();
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); state.palette = true; render(); }
+  if (e.key === 'Escape') { state.palette = false; if (state.page !== 'profile') state.selected = null; render(); }
+});
+document.addEventListener('mousemove', () => { lastActivity = Date.now(); });
+// Real behaviour: privacy switches itself back on after 2 minutes with no mouse/keyboard activity.
+setInterval(() => { if (!state.privacy && Date.now() - lastActivity > 120000) relock('No activity for 2 min · privacy turned back on'); }, 5000);
+render();
+</script>
+</body>
+</html>
