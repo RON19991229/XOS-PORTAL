@@ -49,24 +49,17 @@ export default function RemindersPage() {
     setCustomer(c);
 
     // Fetch visit stats (best-effort, non-blocking).
-    // Filter by `ic` not `customer_id` because anon's column-level grant on
-    // visits is (ic, visited_at, status) — `customer_id` is admin-only.
+    // v2.18.3: exact-IC RPC (approved count + last approved visit) — anon
+    // can no longer SELECT the visits table directly.
     (async () => {
-      const { data: visits } = await supabase
-        .from('visits')
-        .select('visited_at')
-        .eq('ic', c.ic)
-        .eq('status', 'approved')
-        .order('visited_at', { ascending: false });
+      const { data } = await supabase
+        .rpc('checkin_visit_stats', { p_ic: c.ic });
+      const row = data && data.length > 0 ? data[0] : null;
 
-      if (visits && visits.length > 0) {
-        setStats({
-          totalVisits: visits.length,
-          lastVisitAt: visits[0].visited_at,
-        });
-      } else {
-        setStats({ totalVisits: 0, lastVisitAt: null });
-      }
+      setStats({
+        totalVisits: row?.total_visits ?? 0,
+        lastVisitAt: row?.last_visit_at ?? null,
+      });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);

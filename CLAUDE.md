@@ -82,6 +82,8 @@ migration-v2.10.2-complaint-insert-anyone.sql
 migration-v2.11-complaint-notes-refcode.sql    (incident_notes + ref code)
 migration-v2.17.2-incident-photos-rls-hotfix.sql
 migration-v2.18.2-security-lockdown.sql         (is_app_user() RLS + lock dashboard RPCs)
+migration-v2.18.3-step1-checkin-rpcs.sql        (checkin_last_visit / checkin_visit_stats — before frontend)
+migration-v2.18.3-step2-revoke-anon-visits-read.sql (revoke anon SELECT on visits — after frontend)
 ```
 `EMERGENCY-ROLLBACK.sql` exists for emergencies — note it re-grants anon SELECT on `customers` (undoes v2.7 hardening), so only use it as a last resort.
 `supabase-schema.sql` is the v1 base and is **not** the current live schema — the live DB = base + all migrations + v2.7 hardening. When unsure, inspect the live DB (Supabase MCP / SQL Editor) rather than trusting the file. New migrations: `migration-vX.Y.Z-<topic>.sql`, idempotent, re-runnable.
@@ -131,7 +133,7 @@ migration-v2.18.2-security-lockdown.sql         (is_app_user() RLS + lock dashbo
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.18.2**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed). Note: README's top entry is stale (still v2.7) — v2.8 → v2.18 history was never written there.
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.18.3**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed). Note: README's top entry is stale (still v2.7) — v2.8 → v2.18 history was never written there.
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`.
@@ -153,7 +155,7 @@ migration-v2.18.2-security-lockdown.sql         (is_app_user() RLS + lock dashbo
 - Upgrade Next.js 14.2.15 (security advisory pending).
 - `README.md` changelog is stale since v2.7 — backfill a short v2.8–v2.18 summary when convenient.
 - WhatsApp number for `/report` lives in `lib/report-config.ts` (`WHATSAPP_URL`).
-- Drop stale anon SELECT policy `'Public can read customer for check-in'` on `customers` (harmless, GRANT already revoked).
+- ~~Drop stale anon SELECT policy on `customers`~~ — done in v2.18.3 step 2.
 - History page: apply v2.7.5 pagination pattern if a single day ever exceeds 1,000 visits.
 - Google Wallet pass (Phase 1, JWT via Next.js API route) → Apple Wallet (Phase 2, `passkit-generator`). Wallet flips scan direction → needs a scanner mode in staff/admin. Avoid 3rd-party wallet SaaS (silos data away from Supabase).
 - `my-ic.ts` standalone IC validator (from the lucky-draw project) could replace the inline IC logic.

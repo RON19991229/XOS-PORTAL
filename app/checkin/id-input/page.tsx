@@ -80,12 +80,9 @@ export default function IdInputPage() {
     // denied_age) so that banned users / under-age users can't
     // spam the system either.
     // ============================================================
+    // v2.18.3: exact-IC RPC — anon can no longer SELECT the visits table.
     const { data: recentAnyVisits } = await supabase
-      .from('visits')
-      .select('visited_at, status')
-      .eq('ic', id)
-      .order('visited_at', { ascending: false })
-      .limit(1);
+      .rpc('checkin_last_visit', { p_ic: id });
 
     if (recentAnyVisits && recentAnyVisits.length > 0) {
       const lastVisit = parseTimestamp(recentAnyVisits[0].visited_at);

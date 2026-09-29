@@ -5,6 +5,27 @@
 
 ---
 
+## 🔒 v2.18.3 (2026-10-01) — 堵住「列出所有到访者 IC」漏洞
+
+**漏洞**：anon 对 `visits` 表有 `ic, status, visited_at` 的读取权限，策略名叫 "Public can read own ic visits"，但写的是 `USING (true)` → 任何人用公开 key 就能列出**所有来过的人的 IC 号码 + 到访时间**。
+
+**修复**：顾客端不再直接读 `visits` 表，改用 2 个只能按单一 IC 查询的 RPC：
+- `checkin_last_visit(p_ic)` — id-input 页的 30 分钟冷却提示
+- `checkin_visit_stats(p_ic)` — reminders 页的「上次到访 / 总次数」
+
+然后收回 anon 对 `visits` 的读取权限，并删掉旧的 anon SELECT 策略（包括 backlog 里 customers 那条过期策略）。顾客看到的画面和流程**完全不变**。
+
+**改动文件**：`app/checkin/id-input/page.tsx`、`app/checkin/reminders/page.tsx`、2 个 SQL 文件
+
+**部署顺序（3 步，不能乱）**
+1. SQL Editor 跑 `migration-v2.18.3-step1-checkin-rpcs.sql`（只新增函数，旧前端照常运作）
+2. push 前端 → Vercel 自动部署
+3. SQL Editor 跑 `migration-v2.18.3-step2-revoke-anon-visits-read.sql`，VERIFY 5 行都要 `true`
+
+**测试**：PGlite Postgres 17 复刻线上 anon 权限 + 冷却 / sanitize trigger，26/26 通过（RPC 结果正确、通配符查不到、收回后 anon 读不到表、check-in INSERT 和 30 分钟冷却照常）。
+
+---
+
 ## 🔒 v2.18.2 (2026-09-30) — 安全紧急修复（只有 SQL）
 
 **修了什么漏洞**
