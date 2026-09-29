@@ -174,7 +174,7 @@ export default function RemindersPage() {
           <div className="border border-ink-line mb-4 overflow-hidden">
             <div className="bg-black">
               <Image
-                src="/rerack.png"
+                src="/rerack.webp"
                 alt="RE-RACK"
                 width={740}
                 height={740}
@@ -194,10 +194,10 @@ export default function RemindersPage() {
           <div className="border border-ink-line mb-5 overflow-hidden">
             <div className="bg-black">
               <Image
-                src="/no-slippers.png"
+                src="/no-slippers.webp"
                 alt="NO SLIPPERS"
                 width={690}
-                height={250}
+                height={260}
                 className="w-full h-auto"
                 priority
               />
@@ -228,7 +228,7 @@ export default function RemindersPage() {
         <div className="border border-ink-line mb-4 overflow-hidden">
           <div className="bg-black">
             <Image
-              src="/do.png"
+              src="/do.webp"
               alt="DO — gym etiquette"
               width={1080}
               height={1080}
@@ -243,7 +243,7 @@ export default function RemindersPage() {
         <div className="border border-ink-line mb-5 overflow-hidden">
           <div className="bg-black">
             <Image
-              src="/dont.png"
+              src="/dont.webp"
               alt="DON'T — gym etiquette"
               width={1080}
               height={1080}

@@ -5,6 +5,18 @@
 
 ---
 
+## 🖼 v2.20.1 (2026-10-01) — 规则页图片压缩
+
+顾客端 Reminders 页的 4 张规则图从 PNG 换成 WebP：**743 KB → 178 KB**（-76%），画面不变。回头客每次 check-in 都会加载这页，网络慢的时候差别很明显。
+
+- `rerack` 108→64 KB、`no-slippers` 24→11 KB、`do` 284→48 KB、`dont` 327→55 KB（do/dont 从 1080 缩到 900px，页面最宽只显示约 450px，高清屏仍然清晰）
+- 修正 `no-slippers` 的尺寸标注（690×260），加载时不再跳动
+- 旧的 PNG 文件保留在 `public/`，没有页面再使用
+
+**改动文件**：`app/checkin/reminders/page.tsx`、新增 4 个 `public/*.webp`。**无 SQL。**
+
+---
+
 ## 🔔 v2.20.0 (2026-10-01) — Check-in 弹窗 v2
 
 前台平时主要靠弹窗确认谁进来了，所以这版重做弹窗（`components/CheckinAlerts.tsx`，取代旧的 `CheckinToast`）：
