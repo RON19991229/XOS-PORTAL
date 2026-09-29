@@ -5,6 +5,28 @@
 
 ---
 
+## 🔒 v2.18.2 (2026-09-30) — 安全紧急修复（只有 SQL）
+
+**修了什么漏洞**
+
+| 漏洞 | 严重度 | 说明 |
+|------|------|------|
+| 开放注册 + `USING (true)` | 🔴 严重 | Supabase Auth 开着「任何人可注册 + 自动确认」。customers / visits / warnings / notes 的 RLS 只检查「有没有登录」，所以任何人用网页里公开的 key 注册一个账号，就能**读、改、删全部顾客资料**（包括解 ban）。/admin 页面拦得住，但直接调 API 拦不住。 |
+| `get_history_visits` anon 可调用 | 🔴 严重 | SECURITY DEFINER + 没有登录检查 + anon 有 EXECUTE → 未登录的人可以拉出全部到访记录（名字 / IC / 电话 / 生日）。`get_dashboard_stats`、`get_visit_trends` 同样问题（只泄露统计数字）。 |
+
+**修复**：新增 `is_app_user()`（只有 `app_users` 名单里的人算数）。所有 `USING (true)` 策略改成要求 `is_app_user()`；3 个 RPC 加登录检查 + 收回 anon 权限。**staff/admin 权限完全不变，顾客 check-in 流程不受影响。**
+
+**测试**：在 Postgres 17（PGlite）复刻线上权限设置，先复现漏洞，再跑 migration 两次，32/32 项通过（admin 全部照常、陌生账号 0 行、anon 调不了 RPC、anon 注册 + check-in 照常）。
+
+**部署步骤**
+1. Supabase Dashboard → Authentication → Sign In / Providers → **关掉 "Allow new users to sign up"** → Save（之后加 staff 用 Authentication → Users → Add user）
+2. Supabase SQL Editor → 贴上 `migration-v2.18.2-security-lockdown.sql` 全部内容 → RUN
+3. 看最下面的 VERIFY 结果，4 行 `ok` 都应该是 `true`
+4. 用 admin 登录 → TODAY / HISTORY / CUSTOMERS / REPORTS 都要正常显示
+5. 前端没有改动（只 push SQL 文件 + README 存档）
+
+---
+
 ## ⚡ v2.18.1 (2026-09-30)
 
 **服务器搬到新加坡 — 前台切页变快**
