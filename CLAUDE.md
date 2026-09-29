@@ -8,7 +8,7 @@ Replaces the old Google Form. Core job: recognise returning walk-ins, and **stop
 
 ## Stack
 
-- **Next.js 14 App Router** (14.2.15) + **TypeScript** + **Tailwind CSS**
+- **Next.js 14 App Router** (14.2.35) + **TypeScript** + **Tailwind CSS**
 - **Supabase**: PostgreSQL 17 + Auth + Storage — project `ugfwxftzhxnukcmbaztm`, region ap-southeast-1 (Singapore), free tier
 - **Vercel** hosting, auto-deploy from GitHub `RON19991229/XOS-PORTAL` (renamed from XOS-WALKIN) branch `main`
   - Vercel project is named `xos-walkin` (id `prj_XrHkP6nLpwgDq6L9UmBGaX94eW3B`), only domain `xos-portal.vercel.app`
@@ -133,7 +133,7 @@ migration-v2.18.3-step2-revoke-anon-visits-read.sql (revoke anon SELECT on visit
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.18.3**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed). Note: README's top entry is stale (still v2.7) — v2.8 → v2.18 history was never written there.
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.18.4**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed). Note: README's top entry is stale (still v2.7) — v2.8 → v2.18 history was never written there.
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`.
@@ -152,7 +152,7 @@ migration-v2.18.3-step2-revoke-anon-visits-read.sql (revoke anon SELECT on visit
 
 ## Known backlog
 
-- Upgrade Next.js 14.2.15 (security advisory pending).
+- Next.js is on 14.2.35 (last 14.x patch). Some advisories are only fixed in 15/16 — major upgrade deferred. `xlsx` 0.18.5 has unfixed advisories on npm (admin-only import).
 - `README.md` changelog is stale since v2.7 — backfill a short v2.8–v2.18 summary when convenient.
 - WhatsApp number for `/report` lives in `lib/report-config.ts` (`WHATSAPP_URL`).
 - ~~Drop stale anon SELECT policy on `customers`~~ — done in v2.18.3 step 2.

@@ -5,6 +5,16 @@
 
 ---
 
+## 🛡 v2.18.4 (2026-10-01) — Next.js 安全补丁
+
+- `next` / `eslint-config-next` 14.2.15 → **14.2.35**（14.x 最后的安全补丁版本，包含 2025 年的 middleware 授权绕过漏洞修复）
+- `npm audit fix`（非破坏性）：nanoid、ws、postcss 升级
+- **仍未修（已知）**：部分 `next` 漏洞只在 15/16 修复（升大版本风险高，暂缓）；`xlsx` 0.18.5 有原型污染 / ReDoS 漏洞，npm 上没有修复版（SheetJS 只在官方 CDN 发布 0.20.x）。它只用在 admin IMPORT 页面，而且只处理你自己上传的文件，风险低。
+
+**改动文件**：`package.json`、`package-lock.json`。**无 SQL。**
+
+---
+
 ## 🔒 v2.18.3 (2026-10-01) — 堵住「列出所有到访者 IC」漏洞
 
 **漏洞**：anon 对 `visits` 表有 `ic, status, visited_at` 的读取权限，策略名叫 "Public can read own ic visits"，但写的是 `USING (true)` → 任何人用公开 key 就能列出**所有来过的人的 IC 号码 + 到访时间**。
