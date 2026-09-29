@@ -11,7 +11,9 @@
 - `npm audit fix`（非破坏性）：nanoid、ws、postcss 升级
 - **仍未修（已知）**：部分 `next` 漏洞只在 15/16 修复（升大版本风险高，暂缓）；`xlsx` 0.18.5 有原型污染 / ReDoS 漏洞，npm 上没有修复版（SheetJS 只在官方 CDN 发布 0.20.x）。它只用在 admin IMPORT 页面，而且只处理你自己上传的文件，风险低。
 
-**改动文件**：`package.json`、`package-lock.json`。**无 SQL。**
+**文档整理**：补写 v2.7.2 → v2.17.2 历史（见下方）；删除 `EMERGENCY-ROLLBACK.sql`（它会重新开放顾客资料外泄，只对 v2.7.1 以前的旧前端有用）；`TRAVEL-OPS-README.md` 标注为已过时。
+
+**改动文件**：`package.json`、`package-lock.json`、文档。**无 SQL。**
 
 ---
 
@@ -78,6 +80,32 @@
 **投诉正式打印版** — Admin COMPLAINT → 🖨 PRINT，生成 A4 双语（EN/BM）内部事件报告。可选：附证据照片、附 case log（默认关）、隐藏举报人资料。所有用户内容都有转义。
 
 **改动文件**：新增 `lib/complaint-print.ts`、`public/print-logo.png`；`components/ComplaintClient.tsx`；图标压缩。**无 SQL 改动。**
+
+---
+
+## 📜 v2.7.2 → v2.17.2 简要历史（2026-10 补写）
+
+> 这段时间的版本当时没写进 README，下面是根据 git 记录和代码注释整理的摘要。**SQL** = 该版本带 migration，要先在 SQL Editor 跑。
+
+| 版本 | 日期 | 内容 | SQL |
+|------|------|------|-----|
+| v2.7.2 | 05-09 | 顾客端改用 `lookup_customer_for_checkin` / `lookup_customer_by_phone` RPC（配合 v2.7 安全加固，anon 不能再直接读 customers） | — |
+| v2.7.3 | 05-23 | `lib/safe-storage.ts`：sessionStorage 在隐私模式 / 被禁用时不再崩溃；`EMERGENCY-ROLLBACK.sql`（已于 v2.18.4 删除）+ 旅行运维手册 | — |
+| v2.7.4 | 05-31 | TODAY 新 check-in 弹出通知 + 提示音 + 黄色闪烁 | — |
+| v2.7.5 | 06-01 | CUSTOMERS 分页读取（修复超过 1,000 人后新顾客不显示的问题） | — |
+| v2.8 | 06-21 | HISTORY 筛选器（时段 / 年龄 / 状态等），`get_history_visits` 增加字段 | ✅ `migration-v2.8-history-filters.sql` |
+| v2.8.1 | 06-22 | Reminders 页加入 DO / DON'T 图示（`do.png`、`dont.png`） | — |
+| v2.9 | 06-25 | **ATTENTION 名单**：admin 上传照片标记需注意的顾客，staff 只读 | ✅ `migration-v2.9-attention-list.sql` |
+| v2.10 – v2.10.3 | 07-09 | **COMPLAINT 投诉系统**：公开 `/report` 三语表单 + admin/staff 投诉后台；多次 RLS 热修（公开 INSERT 必须 `TO PUBLIC`） | ✅ v2.10 / v2.10.1 / v2.10.2 |
+| v2.11 – v2.11.1 | 07-10 | 投诉 case log（`incident_notes`）+ 参考编号；导航栏 COMPLAINT 红点（未处理数量） | ✅ `migration-v2.11-complaint-notes-refcode.sql` |
+| v2.12 – v2.12.1 | 07-10 | `/report` 页视觉改版（`ReportUI`、暖色 glow 背景、logo） | — |
+| v2.13.0 | 07-10 | 顾客端 check-in 视觉 / 动效（`CheckinFX`） | — |
+| v2.14.0 – v2.14.1 | 07-10 | 投诉表单加入 PDRM 报警指引；投诉后台卡片重做 | — |
+| v2.15.0 | 07-10 | **性能**：TODAY 时钟独立（不再每秒重绘整个列表）、CUSTOMERS 分批渲染 + 客户端筛选、HISTORY 缓存日期格式化、签名 URL 缓存 | — |
+| v2.16.0 – v2.17.1 | 07-11 | `/report` 扁平化重设计 + 呼吸光晕 halo（v2.17.0 因删掉 glow 背景被退回） | — |
+| v2.17.2 | 07-11 | 投诉证据照片上传 RLS 热修；浏览器无法显示的图片格式有 fallback | ✅ `migration-v2.17.2-incident-photos-rls-hotfix.sql` |
+
+> ⚠️ 2026-08-16：一个其他项目的 commit（"v7.6"）被误推进这个 repo，随后 revert，并在 Vercel 做了 rollback。rollback 让 Vercel 暂停了「push 自动上线」，导致正式站一直停在 v2.17.2，直到 2026-09-30 在 v2.18.1 重新 promote 才恢复。**以后如果在 Vercel 做 rollback，修好后记得 Promote 最新部署。**
 
 ---
 
