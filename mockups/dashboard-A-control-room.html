@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup A · Control Room — TODAY</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root { --ink:#0a0a0a; --soft:#161616; --line:#2a2a2a; --bone:#f5f5f5; --accent:#FFD60A; --danger:#ff3b30; --green:#16c75b; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--ink); color: var(--bone); font-family: Inter, sans-serif; }
+  button { font: inherit; color: inherit; }
+  .display { font-family: 'Archivo Black', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #8a8a8a; }
+  .shell { display: flex; height: 100vh; min-height: 720px; }
+  .rail { width: 76px; flex-shrink: 0; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 18px 0; gap: 6px; }
+  .logo { width: 44px; height: 44px; background: var(--accent); color: var(--ink); display: grid; place-items: center; font: 22px 'Archivo Black'; margin-bottom: 18px; }
+  .ri { position: relative; width: 60px; height: 56px; border: 0; background: transparent; color: #9a9a9a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; font: 8.5px 'JetBrains Mono'; letter-spacing: .08em; }
+  .ri:hover { color: var(--accent); }
+  .ri.on { background: var(--accent); color: var(--ink); }
+  .badge { position: absolute; top: 6px; right: 10px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--danger); color: var(--ink); font: 700 10px Inter; display: grid; place-items: center; }
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .top { height: 76px; flex-shrink: 0; display: flex; align-items: center; gap: 20px; padding: 0 28px; border-bottom: 1px solid var(--line); }
+  .live { width: 8px; height: 8px; border-radius: 4px; background: var(--green); display: inline-block; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .search { height: 44px; width: 380px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--soft); border: 1px solid var(--line); color: #9a9a9a; font-size: 14px; cursor: pointer; text-align: left; }
+  .search:hover, .tbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .kbd { font: 11px 'JetBrains Mono'; border: 1px solid #3a3a3a; padding: 3px 6px; color: #bdbdbd; }
+  .tbtn { height: 44px; padding: 0 16px; display: flex; align-items: center; gap: 8px; background: var(--soft); border: 1px solid var(--line); color: #bdbdbd; font: 11px 'JetBrains Mono'; letter-spacing: .12em; cursor: pointer; }
+  .tbtn.on { background: var(--accent); color: var(--ink); }
+  .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+  .kpi { padding: 18px 24px; border-right: 1px solid var(--line); }
+  .kpi .num { font: 40px/1.1 'Archivo Black'; }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 44px; margin-top: 6px; }
+  .bars div { flex: 1; background: #3a3a3a; }
+  .bars div.peak { background: var(--accent); }
+  .body { flex: 1; display: flex; min-height: 0; }
+  .feed { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: auto; }
+  .cols, .row { display: grid; grid-template-columns: 80px minmax(0, 1fr) 180px 170px 120px; gap: 12px; align-items: center; padding: 0 24px; }
+  .cols { background: var(--accent); color: var(--ink); font: 700 10px 'JetBrains Mono'; letter-spacing: .18em; padding-top: 10px; padding-bottom: 10px; position: sticky; top: 0; }
+  .row { width: 100%; height: 54px; border: 0; border-bottom: 1px solid #1f1f1f; text-align: left; cursor: pointer; }
+  .row:hover { background: #1c1c1c !important; }
+  .pill { justify-self: center; font: 700 10px 'JetBrains Mono'; letter-spacing: .12em; padding: 5px 9px; color: var(--ink); }
+  .member { font: 9px 'JetBrains Mono'; letter-spacing: .12em; padding: 3px 6px; border: 1px solid var(--green); color: var(--green); }
+  aside { width: 360px; flex-shrink: 0; border-left: 1px solid var(--line); background: #111; overflow: auto; }
+  .alert { width: 100%; text-align: left; padding: 14px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; background: transparent; }
+  .stat { background: var(--soft); padding: 12px; }
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; justify-content: center; padding-top: 120px; z-index: 20; }
+  .palette { width: 640px; height: fit-content; background: var(--soft); border: 1px solid #3a3a3a; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .palette input { flex: 1; height: 58px; background: transparent; border: 0; outline: none; color: var(--bone); font-size: 17px; font-family: Inter; }
+  .result { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 18px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+  .result:hover { background: #1c1c1c; }
+  .mock-note { position: fixed; bottom: 14px; left: 90px; font: 10px 'JetBrains Mono'; letter-spacing: .15em; background: var(--accent); color: var(--ink); padding: 6px 10px; z-index: 40; }
+  .blur .sens { filter: blur(6px); user-select: none; }
+  @media (prefers-reduced-motion: reduce) { .live { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="mock-note">MOCKUP · SAMPLE DATA · CTRL+K = SEARCH</div>
+<script>
+const VISITS = [
+  { id: 'v1', time: '18:42', name: 'TAN WEI MING', ic: '950312-01-5521', phone: '+60 12-338 4417', status: 'ok', member: true, visits: 86, warnings: 0, last: 'Yesterday 19:10', note: 'Regular evening member. No notes.' },
+  { id: 'v2', time: '18:39', name: 'NUR AISYAH BINTI RAHMAN', ic: '010822-10-6634', phone: '+60 17-902 1180', status: 'ok', member: false, visits: 3, warnings: 0, last: '26 Sep 18:05', note: 'New walk-in this month.' },
+  { id: 'v3', time: '18:31', name: 'LIM KAH HENG', ic: '880105-01-7713', phone: '+60 16-771 2093', status: 'banned', member: false, visits: 41, warnings: 3, last: '14 Aug 20:40', note: 'BANNED 15 Aug — aggressive behaviour towards staff. Do not admit; call manager.' },
+  { id: 'v4', time: '18:27', name: 'RAJESH KUMAR A/L MUTHU', ic: '920417-14-5009', phone: '+60 11-2045 7781', status: 'warn', member: false, visits: 22, warnings: 2, last: '29 Sep 18:50', note: 'Warning 2/3 — not re-racking plates (2x). One more = ban.' },
+  { id: 'v5', time: '18:20', name: 'DANIEL OKAFOR', ic: 'A09318381', phone: '+234 803 555 0192', status: 'ok', member: false, visits: 5, warnings: 0, last: '28 Sep 07:15', note: 'Foreign passport holder.' },
+  { id: 'v6', time: '18:14', name: 'UNDERAGE ATTEMPT', ic: '140903-01-2210', phone: '—', status: 'age', member: false, visits: 0, warnings: 0, last: '—', note: 'IC shows age 12. Entry refused automatically.' },
+  { id: 'v7', time: '18:09', name: 'SITI NURHALIZA BINTI ZAINAL', ic: '970630-01-4128', phone: '+60 13-667 0932', status: 'ok', member: true, visits: 124, warnings: 0, last: 'Yesterday 18:02', note: 'Member since 2025.' },
+  { id: 'v8', time: '18:02', name: 'CHONG JUN HAO', ic: '030211-01-8857', phone: '+60 12-910 6630', status: 'ok', member: false, visits: 9, warnings: 0, last: '27 Sep 17:40', note: 'No notes.' },
+  { id: 'v9', time: '17:58', name: 'MUHAMMAD HAKIM BIN ISMAIL', ic: '990915-01-6671', phone: '+60 19-455 2208', status: 'ok', member: false, visits: 17, warnings: 0, last: '29 Sep 17:30', note: 'No notes.' },
+  { id: 'v10', time: '17:51', name: 'WONG MEI LING', ic: '940728-01-3346', phone: '+60 16-220 8815', status: 'ok', member: true, visits: 58, warnings: 0, last: '28 Sep 18:10', note: 'Member. Prefers morning slots on weekends.' }
+];
+const PILL = { ok: ['ALLOWED', '#16c75b', 'transparent'], banned: ['BANNED', '#ff3b30', 'rgba(255,59,48,.14)'], warn: ['WARNING', '#FFD60A', 'rgba(255,214,10,.07)'], age: ['UNDER 12', '#ff3b30', 'rgba(255,59,48,.10)'] };
+const HOURS = [2, 4, 6, 5, 3, 2, 2, 3, 2, 3, 4, 6, 9, 11, 8, 5, 3, 1];
+const ICONS = { TODAY: 'M12 8v4l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', HISTORY: 'M3 12a9 9 0 1 0 3-6.7M3 4v4h4', CUSTMR: 'M16 20v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-2a4 4 0 0 0-3-3.9M16 2.1a4 4 0 0 1 0 7.8', ATTN: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', CMPLNT: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z', REPORT: 'M3 3v18h18M7 15l4-4 3 3 5-6', IMPORT: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3', AUDIT: 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9' };
+const state = { privacy: false, selected: null, palette: false };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const denied = (v) => v.status === 'banned' || v.status === 'age';
+
+function view() {
+  const max = Math.max(...HOURS);
+  const nD = VISITS.filter(denied).length;
+  const sel = VISITS.find((v) => v.id === state.selected);
+  return `<div class="shell">
+  <nav class="rail" aria-label="Main"><div class="logo">X</div>
+    ${Object.keys(ICONS).map((k, i) => `<button class="ri ${i === 0 ? 'on' : ''}" aria-label="${k}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${ICONS[k]}"/></svg>${k}${k === 'CMPLNT' ? '<span class="badge">2</span>' : ''}</button>`).join('')}
+    <div style="flex:1"></div><button class="ri" style="height:48px">EXIT</button>
+  </nav>
+  <div class="main">
+    <div class="top">
+      <div><div class="label" style="letter-spacing:.3em">// LIVE FEED · ADMIN</div>
+        <div style="display:flex;align-items:baseline;gap:14px"><h1 class="display" style="margin:0;font-size:30px">TODAY</h1><span class="mono" style="font-size:12px;color:#bdbdbd;display:flex;align-items:center;gap:8px"><span class="live"></span>WED 01 OCT · 18:43</span></div></div>
+      <div style="flex:1"></div>
+      <button class="search" data-act="palette"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span style="flex:1">Find customer — name, IC, phone</span><span class="kbd">Ctrl K</span></button>
+      <button class="tbtn ${state.privacy ? 'on' : ''}" data-act="privacy">${state.privacy ? 'PRIVACY ON' : 'PRIVACY'}</button>
+    </div>
+    <section class="kpis">
+      <div class="kpi"><div class="label">CHECK-INS</div><div class="num">${VISITS.length}</div></div>
+      <div class="kpi"><div class="label">ALLOWED</div><div class="num" style="color:#16c75b">${VISITS.length - nD}</div></div>
+      <div class="kpi"><div class="label">DENIED</div><div class="num" style="color:#ff3b30">${nD}</div></div>
+      <div class="kpi"><div class="label">LAST CHECK-IN</div><div class="num" style="font-size:28px;line-height:1.45">1 MIN AGO</div></div>
+      <div class="kpi" style="border-right:0"><div class="label">BY HOUR · 6AM–11PM</div><div class="bars">${HOURS.map((n, i) => `<div class="${i === 12 ? 'peak' : ''}" style="height:${Math.round(n / max * 100)}%" title="${6 + i}:00 · ${n}"></div>`).join('')}</div></div>
+    </section>
+    <div class="body">
+      <section class="feed ${state.privacy ? 'blur' : ''}">
+        <div class="cols"><div>TIME</div><div>NAME</div><div>IC / PASSPORT</div><div>PHONE</div><div style="text-align:center">STATUS</div></div>
+        ${VISITS.map((v) => { const p = PILL[v.status]; return `<button class="row" data-sel="${v.id}" style="background:${p[2]}">
+          <span class="mono" style="font-size:14px;font-weight:700">${v.time}</span>
+          <span style="display:flex;align-items:center;gap:8px;min-width:0;font-weight:700;font-size:14px">${v.member ? '<span class="member">MEMBER</span>' : ''}<span class="sens" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.name)}</span></span>
+          <span class="mono sens" style="font-size:12px;color:#bdbdbd">${esc(v.ic)}</span><span class="mono sens" style="font-size:12px;color:#bdbdbd">${esc(v.phone)}</span>
+          <span class="pill" style="background:${p[1]}">${p[0]}</span></button>`; }).join('')}
+      </section>
+      <aside>${sel ? detail(sel) : alerts()}</aside>
+    </div>
+  </div></div>
+  ${state.palette ? `<div class="scrim" data-act="closePalette"><div class="palette" role="dialog" aria-label="Find customer">
+    <div style="display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid #2a2a2a"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFD60A" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="q" placeholder="Type a name, IC or phone…" aria-label="Search customers" autocomplete="off"><button class="kbd" data-act="closePalette" style="background:transparent;cursor:pointer">ESC</button></div>
+    <div id="results" style="padding:8px 0"></div>
+    <div class="mono" style="border-top:1px solid #2a2a2a;padding:10px 18px;display:flex;gap:18px;font-size:10px;color:#8a8a8a;letter-spacing:.1em"><span>↑↓ MOVE</span><span>ENTER OPEN</span><span>ESC CLOSE</span></div></div></div>` : ''}`;
+}
+function alerts() {
+  const items = [
+    ['v3', 'BANNED — DO NOT ADMIT', '#ff3b30', '#ff3b30', 'rgba(255,59,48,.10)', 'Aggressive behaviour towards staff. Call manager.'],
+    ['v4', 'WARNING 2/3', '#FFD60A', '#5a4d10', 'rgba(255,214,10,.06)', 'Not re-racking plates. One more warning = ban.'],
+    ['v6', 'UNDER 12 REFUSED', '#ff3b30', '#3a2020', 'transparent', 'IC shows age 12. Refused automatically.'],
+    [null, '2 NEW COMPLAINTS', '#FFD60A', '#2a2a2a', 'transparent', 'Harassment report · Changing room. Open COMPLAINT to assign.']
+  ];
+  return `<div class="label" style="padding:18px 20px 10px;letter-spacing:.25em">NEEDS ATTENTION · ${items.length}</div>
+  <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px 16px">${items.map(([id, tag, c, b, bg, d]) => { const v = VISITS.find((x) => x.id === id); return `<button class="alert" ${id ? `data-sel="${id}"` : ''} style="border:1px solid ${b};background:${bg}">
+    <span style="display:flex;justify-content:space-between"><span class="mono" style="font-size:10px;font-weight:700;letter-spacing:.15em;color:${c}">${tag}</span><span class="mono" style="font-size:11px;color:#9a9a9a">${v ? v.time : 'TODAY'}</span></span>
+    <span style="font-weight:700;font-size:15px">${v ? (id === 'v6' ? 'Underage attempt' : esc(v.name)) : 'Harassment report'}</span><span style="font-size:13px;color:#bdbdbd;line-height:1.4">${d}</span></button>`; }).join('')}</div>`;
+}
+function detail(v) {
+  const p = PILL[v.status];
+  return `<div style="padding:18px 20px;display:flex;flex-direction:column;gap:16px;min-height:100%">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span class="label" style="letter-spacing:.25em">CUSTOMER</span><button data-act="close" aria-label="Close" style="width:36px;height:36px;border:1px solid #2a2a2a;background:transparent;cursor:pointer;font-size:18px">×</button></div>
+    <div style="padding:16px;background:${p[1]};color:#0a0a0a"><div class="mono" style="font-size:11px;font-weight:700;letter-spacing:.15em">${p[0]}</div><div class="display" style="font-size:22px;line-height:1.15;margin-top:4px">${esc(v.name)}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div class="stat"><div class="label" style="font-size:9px">VISITS</div><div class="display" style="font-size:24px">${v.visits}</div></div><div class="stat"><div class="label" style="font-size:9px">WARNINGS</div><div class="display" style="font-size:24px">${v.warnings}/3</div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span style="color:#9a9a9a">IC / Passport</span><span class="mono">${esc(v.ic)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#9a9a9a">Phone</span><span class="mono">${esc(v.phone)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#9a9a9a">Last visit before today</span><span>${esc(v.last)}</span></div></div>
+    <div class="stat" style="font-size:13px;line-height:1.5;color:#d0d0d0">${esc(v.note)}</div>
+    <div style="flex:1"></div>
+    <a href="#" class="display" style="display:block;text-align:center;padding:14px;background:#FFD60A;color:#0a0a0a;font-size:13px;letter-spacing:.08em;text-decoration:none">OPEN FULL PROFILE</a></div>`;
+}
+function renderResults(q) {
+  q = (q || '').trim().toLowerCase();
+  const res = VISITS.filter((v) => v.status !== 'age' && (!q || v.name.toLowerCase().includes(q) || v.ic.toLowerCase().includes(q))).slice(0, 6);
+  document.getElementById('results').innerHTML = res.length
+    ? `<div class="label" style="padding:6px 18px">CUSTOMERS · ${res.length}</div>` + res.map((v) => `<button class="result" data-sel="${v.id}"><span style="width:10px;height:10px;background:${PILL[v.status][1]}"></span><span style="flex:1;font-weight:600;font-size:14px">${esc(v.name)}</span><span class="mono" style="font-size:12px;color:#9a9a9a">${esc(v.ic)}</span></button>`).join('')
+    : `<div style="padding:18px;color:#9a9a9a;font-size:14px">No customer matches “${esc(q)}”.</div>`;
+}
+function render() {
+  document.getElementById('app').innerHTML = view();
+  if (state.palette) { const q = document.getElementById('q'); q.focus(); q.addEventListener('input', () => renderResults(q.value)); renderResults(''); }
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act],[data-sel]');
+  if (!t) return;
+  if (t.classList.contains('scrim') && e.target !== t) return;
+  if (t.dataset.sel) { state.selected = t.dataset.sel; state.palette = false; }
+  const a = t.dataset.act;
+  if (a === 'palette') state.palette = true;
+  if (a === 'closePalette') state.palette = false;
+  if (a === 'close') state.selected = null;
+  if (a === 'privacy') state.privacy = !state.privacy;
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); state.palette = true; render(); }
+  if (e.key === 'Escape') { state.palette = false; state.selected = null; render(); }
+});
+render();
+</script>
+</body>
+</html>

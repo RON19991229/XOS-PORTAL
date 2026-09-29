@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup C · Glance Mode — TODAY</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root { --ink:#0a0a0a; --soft:#161616; --line:#2a2a2a; --bone:#f5f5f5; --accent:#FFD60A; --danger:#ff3b30; --green:#16c75b; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--ink); color: var(--bone); font-family: Inter, sans-serif; }
+  button { font: inherit; }
+  .display { font-family: 'Archivo Black', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .label { font: 10px 'JetBrains Mono'; letter-spacing: .2em; color: #8a8a8a; }
+  header { height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 20px; border-bottom: 1px solid var(--line); }
+  .logo { width: 34px; height: 34px; background: var(--accent); color: var(--ink); display: grid; place-items: center; font: 17px 'Archivo Black'; margin-right: 12px; }
+  nav a { font: 11px 'Archivo Black'; letter-spacing: .12em; padding: 8px 11px; color: #9a9a9a; text-decoration: none; }
+  nav a.on { background: var(--accent); color: var(--ink); }
+  .hbtn { height: 38px; padding: 0 14px; background: transparent; border: 1px solid var(--line); color: #bdbdbd; font: 11px 'JetBrains Mono'; letter-spacing: .1em; cursor: pointer; margin-left: 8px; }
+  .hbtn.demo { border: 1px dashed var(--accent); color: var(--accent); }
+  .hbtn.on { background: var(--accent); color: var(--ink); }
+  .wrap { display: flex; height: calc(100vh - 56px); min-height: 640px; }
+  .left { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .hero { flex: 1; color: var(--ink); padding: 40px 48px; display: flex; flex-direction: column; justify-content: space-between; animation: slam .28s ease-out; }
+  @keyframes slam { from { transform: scale(.97); opacity: .4; } to { transform: none; opacity: 1; } }
+  .flash { animation: flash 1.1s ease-in-out infinite; }
+  @keyframes flash { 50% { opacity: .55; } }
+  .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+  .tile { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; background: var(--soft); color: var(--bone); text-decoration: none; }
+  aside { width: 280px; flex-shrink: 0; border-left: 1px solid var(--line); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .kpi { background: var(--soft); padding: 18px; }
+  .kpi .num { font: 56px/1.05 'Archivo Black'; }
+  .mock-note { position: fixed; bottom: 14px; left: 14px; font: 10px 'JetBrains Mono'; letter-spacing: .15em; background: var(--accent); color: var(--ink); padding: 6px 10px; }
+  @media (prefers-reduced-motion: reduce) { .hero, .flash { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="mock-note">MOCKUP · PRESS “SIMULATE NEXT CHECK-IN”</div>
+<script>
+const FEED = [
+  { time: '17:51', name: 'WONG MEI LING', ic: '940728-01-3346', status: 'ok', member: true, n: 58 },
+  { time: '17:58', name: 'MUHAMMAD HAKIM BIN ISMAIL', ic: '990915-01-6671', status: 'ok', member: false, n: 17 },
+  { time: '18:02', name: 'CHONG JUN HAO', ic: '030211-01-8857', status: 'ok', member: false, n: 9 },
+  { time: '18:09', name: 'SITI NURHALIZA BINTI ZAINAL', ic: '970630-01-4128', status: 'ok', member: true, n: 124 },
+  { time: '18:14', name: 'UNDERAGE ATTEMPT', ic: '140903-01-2210', status: 'age', member: false, n: 0 },
+  { time: '18:20', name: 'DANIEL OKAFOR', ic: 'A09318381', status: 'ok', member: false, n: 5 },
+  { time: '18:27', name: 'RAJESH KUMAR A/L MUTHU', ic: '920417-14-5009', status: 'warn', member: false, n: 22 },
+  { time: '18:31', name: 'LIM KAH HENG', ic: '880105-01-7713', status: 'banned', member: false, n: 41 },
+  { time: '18:39', name: 'NUR AISYAH BINTI RAHMAN', ic: '010822-10-6634', status: 'ok', member: false, n: 3 },
+  { time: '18:42', name: 'TAN WEI MING', ic: '950312-01-5521', status: 'ok', member: true, n: 86 }
+];
+const S = {
+  ok: { bg: '#16c75b', head: 'ALLOWED', short: 'OK', action: 'Allowed in. No action needed.' },
+  warn: { bg: '#FFD60A', head: 'WARNING 2/3', short: 'WARN', action: 'Allowed in — remind about re-racking plates. One more warning = ban.' },
+  banned: { bg: '#ff3b30', head: 'DO NOT ADMIT', short: 'BANNED', action: 'BANNED 15 Aug — aggressive behaviour towards staff. Stop entry and call the manager.', flash: true },
+  age: { bg: '#ff3b30', head: 'UNDER 12', short: 'AGE', action: 'IC shows age 12. Entry refused automatically — a guardian cannot override.' }
+};
+const state = { idx: 5, privacy: false };
+const mask = (s) => s.split(' ').map((w) => (w.length > 1 ? w[0] + '•••' : w)).join(' ');
+function render() {
+  const seen = FEED.slice(0, state.idx + 1);
+  const cur = seen[seen.length - 1];
+  const s = S[cur.status];
+  const nm = (v) => (state.privacy ? mask(v.name) : v.name);
+  const nD = seen.filter((v) => v.status === 'banned' || v.status === 'age').length;
+  document.getElementById('app').innerHTML = `
+  <header><div class="logo">X</div>
+    <nav>${['TODAY', 'HISTORY', 'CUSTOMERS', 'ATTENTION', 'COMPLAINT'].map((n) => `<a href="#" class="${n === 'TODAY' ? 'on' : ''}">${n}</a>`).join('')}</nav>
+    <div style="flex:1"></div>
+    <button class="hbtn demo" data-act="next">▶ SIMULATE NEXT CHECK-IN</button>
+    <button class="hbtn ${state.privacy ? 'on' : ''}" data-act="privacy">${state.privacy ? 'PRIVACY ON' : 'PRIVACY'}</button>
+  </header>
+  <div class="wrap">
+    <section class="left" aria-live="polite">
+      <div class="hero" style="background:${s.bg}" key="${state.idx}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start"><div class="mono" style="font-size:14px;font-weight:700;letter-spacing:.3em">LATEST CHECK-IN · ${cur.time}</div>${cur.member ? '<span class="display" style="font-size:14px;letter-spacing:.15em;border:3px solid #0a0a0a;padding:6px 12px">MEMBER</span>' : ''}</div>
+        <div><div class="display ${s.flash ? 'flash' : ''}" style="font-size:clamp(64px,8vw,120px);line-height:.95;letter-spacing:-.02em">${s.head}</div><div class="display" style="font-size:44px;line-height:1.1;margin-top:18px">${nm(cur)}</div></div>
+        <div style="display:flex;gap:40px;align-items:flex-end" class="mono">
+          <div style="font-size:16px;font-weight:700"><div style="font-size:11px;letter-spacing:.25em">VISIT</div>#${cur.n}</div>
+          <div style="font-size:16px;font-weight:700"><div style="font-size:11px;letter-spacing:.25em">IC / PASSPORT</div>${state.privacy ? cur.ic.slice(0, 2) + '••••••••' : cur.ic}</div>
+          <div style="margin-left:auto;max-width:520px;text-align:right;font:600 18px/1.35 Inter">${s.action}</div></div>
+      </div>
+      <div><div class="label" style="letter-spacing:.3em;margin-bottom:8px">EARLIER TODAY</div>
+        <div class="tiles">${seen.slice(0, -1).reverse().slice(0, 5).map((v) => `<a href="#" class="tile" style="border-top:6px solid ${S[v.status].bg}"><span class="mono" style="display:flex;justify-content:space-between;font-size:11px"><b>${v.time}</b><b style="color:${S[v.status].bg};letter-spacing:.1em">${S[v.status].short}</b></span><span style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm(v)}</span></a>`).join('')}</div></div>
+    </section>
+    <aside>
+      <div class="mono" style="font-size:11px;color:#bdbdbd">WED 01 OCT · 18:43</div>
+      <div class="kpi"><div class="label">CHECK-INS</div><div class="num">${seen.length}</div></div>
+      <div class="kpi"><div class="label">ALLOWED</div><div class="num" style="color:#16c75b">${seen.length - nD}</div></div>
+      <div class="kpi"><div class="label">DENIED</div><div class="num" style="color:#ff3b30">${nD}</div></div>
+      <div style="flex:1"></div>
+      <a href="#" class="display" style="display:flex;justify-content:space-between;padding:14px 16px;background:#FFD60A;color:#0a0a0a;text-decoration:none;font-size:12px;letter-spacing:.1em">2 NEW COMPLAINTS <span>→</span></a>
+    </aside>
+  </div>`;
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]');
+  if (!t) return;
+  if (t.dataset.act === 'next') state.idx = (state.idx + 1) % FEED.length;
+  if (t.dataset.act === 'privacy') state.privacy = !state.privacy;
+  render();
+});
+render();
+</script>
+</body>
+</html>

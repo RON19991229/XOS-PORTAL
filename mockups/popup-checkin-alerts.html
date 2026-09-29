@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check-in popup v2 — demo (live since v2.20.0)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root { --ink:#0a0a0a; --bone:#f5f5f5; --accent:#FFD60A; --danger:#ff3b30; --green:#16c75b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bone); color: var(--ink); font-family: Inter, sans-serif; }
+  button { font: inherit; }
+  .display { font-family: 'Archivo Black', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  header { height: 64px; background: var(--ink); color: var(--bone); display: flex; align-items: center; gap: 6px; padding: 0 24px; border-bottom: 3px solid var(--accent); }
+  nav a { font: 11px 'Archivo Black'; letter-spacing: .12em; padding: 9px 12px; color: #bdbdbd; text-decoration: none; }
+  nav a.on { background: var(--accent); color: var(--ink); }
+  .sound { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 10px; font: 700 10px 'JetBrains Mono'; letter-spacing: .12em; cursor: pointer; border: 1px solid; }
+  .demo { background: #fffbe0; border-bottom: 1px dashed #c9a800; padding: 10px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .demo button { font: 10px 'Archivo Black'; letter-spacing: .1em; padding: 8px 12px; border: 1px solid var(--ink); background: #fff; cursor: pointer; }
+  .demo button:hover { background: var(--accent); }
+  main { padding: 22px 24px; }
+  .cols, .crow { display: grid; grid-template-columns: minmax(0,1fr) 110px 140px 180px 120px; gap: 12px; align-items: center; padding: 0 16px; }
+  .cols { background: var(--ink); color: var(--accent); font: 10px 'JetBrains Mono'; letter-spacing: .18em; padding-top: 8px; padding-bottom: 8px; }
+  .crow { height: 46px; border-bottom: 1px solid #efefef; background: #fff; font-size: 14px; }
+
+  /* ---- popup styles: same as production app/globals.css (v2.20.0) ---- */
+  .stack { position: fixed; top: 118px; right: 16px; width: 400px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; z-index: 60; pointer-events: none; }
+  .card { pointer-events: auto; background: #fff; border: 2px solid var(--ink); box-shadow: 0 16px 40px rgba(0,0,0,.22); animation: cin .28s cubic-bezier(.2,.9,.3,1.2); }
+  .card.warn { border-width: 3px; }
+  @keyframes cin { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .chead { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; font: 700 12px 'JetBrains Mono'; letter-spacing: .15em; }
+  .x { width: 24px; height: 24px; border: 1px solid rgba(10,10,10,.4); background: transparent; cursor: pointer; line-height: 1; }
+  .bar { height: 5px; animation: shrink linear forwards; }
+  @keyframes shrink { from { width: 100%; } to { width: 0; } }
+  .more { pointer-events: auto; align-self: flex-end; font: 11px 'Archivo Black'; letter-spacing: .12em; padding: 9px 14px; background: var(--ink); color: var(--accent); text-decoration: none; }
+  .photo { background: #d9d9d9; color: #6b6b6b; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0; }
+  .backdrop { position: fixed; inset: 0; z-index: 70; background: rgba(10,10,10,.55); display: grid; place-items: center; padding: 16px; }
+  .modal { width: 100%; background: #fff; box-shadow: 0 30px 80px rgba(0,0,0,.45); animation: pop .22s ease-out; }
+  .modal.banned { max-width: 860px; border: 6px solid var(--danger); animation: pop .22s ease-out, mflash 1s steps(1) infinite; }
+  .modal.age { max-width: 640px; border: 4px solid var(--danger); }
+  @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes mflash { 0%, 100% { border-color: #ff3b30; } 50% { border-color: #0a0a0a; } }
+  .mbtn { font: 11px 'JetBrains Mono'; letter-spacing: .1em; padding: 8px 10px; border: 1px solid #d4d4d4; background: #fff; cursor: pointer; }
+  .ack { font: 14px 'Archivo Black'; letter-spacing: .06em; padding: 16px 24px; background: var(--ink); color: #fff; border: 0; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) { .card, .modal, .modal.banned { animation: none; } .bar { animation: none; width: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="display" style="font-size:20px;margin-right:14px">X FITNESS</span>
+  <span class="display" style="font-size:10px;letter-spacing:.15em;background:#FFD60A;color:#0a0a0a;padding:4px 8px;margin-right:18px">STAFF</span>
+  <nav><a href="#">COMPLAINT</a><a href="#">TODAY</a><a href="#">HISTORY</a><a href="#" class="on">CUSTOMERS</a><a href="#">ATTENTION</a></nav>
+  <div style="flex:1"></div>
+  <button id="sound" class="sound"></button>
+</header>
+<div class="demo">
+  <span class="mono" style="font-size:10px;font-weight:700;letter-spacing:.2em;color:#6b5a00;margin-right:6px">MOCKUP — SIMULATE A CHECK-IN:</span>
+  <button data-demo="ok">ALLOWED</button><button data-demo="member">MEMBER</button><button data-demo="warn">WARNING 2/3</button>
+  <button data-demo="banned">BANNED</button><button data-demo="age">UNDER 12</button><button data-demo="rush">RUSH × 5</button>
+  <button data-demo="all" style="background:#0a0a0a;color:#FFD60A">SHOW ALL AT ONCE</button>
+</div>
+<main>
+  <div class="mono" style="font-size:10px;letter-spacing:.3em;color:#6b6b6b">// YOU ARE ON THE CUSTOMERS PAGE — POPUPS STILL APPEAR</div>
+  <h1 class="display" style="margin:2px 0 14px;font-size:36px">CUSTOMERS</h1>
+  <div style="background:#fff;border:1px solid #e5e5e5">
+    <div class="cols"><div>NAME</div><div>VISITS</div><div>LAST SEEN</div><div>IC / PASSPORT</div><div style="text-align:center">STATUS</div></div>
+    <div id="rows"></div>
+  </div>
+</main>
+<div class="stack" id="stack" aria-live="polite"></div>
+<div id="modal"></div>
+
+<script>
+const CUSTOMERS = [['SITI NURHALIZA BINTI ZAINAL', 124, 'yesterday', '970630-01-4128', 'OK'], ['TAN WEI MING', 86, 'today', '950312-01-5521', 'OK'], ['WONG MEI LING', 58, '3d ago', '940728-01-3346', 'OK'], ['LIM KAH HENG', 41, 'Aug 14', '880105-01-7713', 'BANNED'], ['RAJESH KUMAR A/L MUTHU', 22, '2d ago', '920417-14-5009', '2/3'], ['MUHAMMAD HAKIM BIN ISMAIL', 17, '2d ago', '990915-01-6671', 'OK'], ['CHONG JUN HAO', 9, '4d ago', '030211-01-8857', 'OK'], ['DANIEL OKAFOR', 5, '3d ago', 'A09318381', 'OK'], ['NUR AISYAH BINTI RAHMAN', 3, '5d ago', '010822-10-6634', 'OK']];
+document.getElementById('rows').innerHTML = CUSTOMERS.map(([n, v, l, ic, s]) => `<div class="crow"><b>${n}</b><span class="mono" style="font-weight:700">${v}</span><span class="mono" style="font-size:12px;color:#4a4a4a">${l}</span><span class="mono" style="font-size:12px;color:#4a4a4a">${ic}</span><span class="mono" style="justify-self:center;font-size:10px;font-weight:700;padding:4px 8px;background:${s === 'OK' ? '#16c75b' : s === 'BANNED' ? '#ff3b30' : '#FFD60A'}">${s === 'OK' ? '✓ OK' : s === 'BANNED' ? '✕ BANNED' : '⚠ ' + s}</span></div>`).join('');
+
+const PHOTO = (big) => `<div class="photo" style="width:${big ? 190 : 70}px;height:${big ? 230 : 84}px"><svg width="${big ? 72 : 32}" height="${big ? 72 : 32}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>${big ? '<span class="mono" style="font-size:10px;letter-spacing:.15em">ATTENTION PHOTO</span>' : ''}</div>`;
+const now = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+let toasts = [], modals = [], seq = 0, soundOn = false, muted = false, alarmTimer = null, audio = null;
+
+function beep(pattern) {
+  if (!soundOn || !audio) return;
+  const t0 = audio.currentTime;
+  pattern.forEach(([f, s, d, type]) => { const o = audio.createOscillator(), g = audio.createGain(); o.type = type || 'sine'; o.frequency.value = f; g.gain.setValueAtTime(.0001, t0 + s); g.gain.exponentialRampToValueAtTime(type === 'square' ? .12 : .18, t0 + s + .015); g.gain.exponentialRampToValueAtTime(.0001, t0 + s + d); o.connect(g); g.connect(audio.destination); o.start(t0 + s); o.stop(t0 + s + d + .02); });
+}
+const SOUNDS = { ok: [[880, 0, .18], [1320, .1, .22]], warn: [[988, 0, .12, 'triangle'], [988, .18, .12, 'triangle']], denied: [[440, 0, .15], [330, .12, .25]], alarm: [[1046, 0, .16, 'square'], [784, .2, .16, 'square'], [1046, .4, .16, 'square'], [784, .6, .24, 'square']] };
+
+function renderSound() {
+  const b = document.getElementById('sound');
+  b.style.cssText = soundOn ? 'border-color:#16c75b;color:#16c75b;background:transparent' : 'border-color:#ff3b30;background:#ff3b30;color:#0a0a0a';
+  b.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/>${soundOn ? '<path d="M15.5 8.5a5 5 0 0 1 0 7"/>' : '<path d="M22 9l-6 6M16 9l6 6"/>'}</svg>${soundOn ? 'SOUND ON' : 'SOUND OFF — CLICK'}`;
+}
+document.getElementById('sound').onclick = () => { soundOn = !soundOn; if (soundOn && !audio) audio = new (window.AudioContext || window.webkitAudioContext)(); renderSound(); syncAlarm(); };
+
+function toast(kind, name) {
+  const id = 't' + (++seq), warn = kind === 'warn';
+  const t = { id, kind, time: now(), name: name || (warn ? 'RAJESH KUMAR A/L MUTHU' : kind === 'member' ? 'TAN WEI MING' : 'NUR AISYAH BINTI RAHMAN'), visit: name ? 12 : warn ? 22 : kind === 'member' ? 86 : 3 };
+  toasts.unshift(t); renderStack();
+  beep(SOUNDS[warn ? 'warn' : 'ok']);
+  setTimeout(() => { toasts = toasts.filter((x) => x.id !== id); renderStack(); }, warn ? 20000 : 8000);
+}
+function renderStack() {
+  const vis = toasts.slice(0, 3), more = toasts.length - vis.length;
+  document.getElementById('stack').innerHTML = vis.map((t) => {
+    const warn = t.kind === 'warn';
+    return `<div class="card ${warn ? 'warn' : ''}"><div class="chead" style="background:${warn ? '#FFD60A' : '#16c75b'}"><span>${warn ? 'WARNING 2/3 · LET IN' : t.kind === 'member' ? 'ALLOWED · MEMBER' : 'ALLOWED'}</span><span style="display:flex;align-items:center;gap:10px">${t.time}<button class="x" data-close="${t.id}" aria-label="Dismiss">×</button></span></div>
+      <div style="display:flex;gap:14px;padding:12px 16px">${warn ? PHOTO(false) : ''}<div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+        <div class="display" style="font-size:20px;line-height:1.1">${t.name}</div>
+        <div class="mono" style="font-size:11px;font-weight:700;display:flex;gap:8px">${t.kind === 'member' ? '<span style="padding:3px 7px;background:#16c75b">MEMBER</span>' : ''}<span style="padding:3px 7px;background:#f0f0f0">VISIT #${t.visit}</span></div>
+        ${warn ? '<div style="font-size:13px;line-height:1.4"><b>Last warning 29 SEP:</b> not re-racking plates. One more = ban.</div>' : ''}</div></div>
+      <div style="height:5px;background:#eee"><div class="bar" style="background:${warn ? '#0a0a0a' : '#16c75b'};animation-duration:${warn ? 20 : 8}s"></div></div></div>`;
+  }).join('') + (more > 0 ? `<a href="#" class="more">+${more} MORE CHECK-INS →</a>` : '');
+}
+function modal(kind) {
+  modals.push({ kind, time: now() });
+  modals.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'banned' ? -1 : 1));
+  if (kind === 'age') { beep(SOUNDS.denied); const m = modals.find((x) => x.kind === 'age' && !x.timer); if (m) m.timer = setTimeout(() => { modals = modals.filter((x) => x !== m); renderModal(); }, 15000); }
+  muted = false; renderModal();
+}
+function renderModal() {
+  const m = modals[0];
+  if (!m) { document.getElementById('modal').innerHTML = ''; syncAlarm(); return; }
+  const banned = m.kind === 'banned';
+  document.getElementById('modal').innerHTML = `<div class="backdrop"><div class="modal ${m.kind}" role="alertdialog" aria-label="${banned ? 'Banned customer' : 'Under 12'}">
+    <div style="background:#ff3b30;padding:18px 24px;display:flex;justify-content:space-between;align-items:center"><div class="display" style="font-size:${banned ? 48 : 30}px;line-height:1">${banned ? 'DO NOT ADMIT' : 'UNDER 12 · REFUSED'}</div><div class="mono" style="font-size:14px;font-weight:700;letter-spacing:.15em;text-align:right">${banned ? 'BANNED' : 'AGE CHECK'}<br>${m.time}</div></div>
+    <div style="padding:22px 24px;display:flex;gap:24px">${banned ? PHOTO(true) : ''}<div style="flex:1;display:flex;flex-direction:column;gap:12px">
+      <div class="display" style="font-size:30px;line-height:1.05">${banned ? 'LIM KAH HENG' : 'UNDERAGE ATTEMPT'}</div>
+      <div class="mono" style="font-size:13px;color:#4a4a4a">${banned ? '880105017713 · BANNED SINCE 15 AUG' : '140903012210 · AGE 12'}</div>
+      ${banned ? '<div style="background:#fff0ef;padding:12px 14px;font-size:16px;line-height:1.45"><b>Reason:</b> aggressive behaviour towards staff.</div><div style="font-size:18px;font-weight:700;line-height:1.4">1. Stop the person at the door.<br>2. Call the manager.</div>' : '<div style="font-size:16px;line-height:1.5">Entry refused automatically. A guardian cannot override the 12+ rule.</div>'}
+    </div></div>
+    <div style="border-top:1px solid #eee;padding:14px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+      ${banned ? `<span class="mono" style="font-size:11px;font-weight:700;letter-spacing:.12em;color:#c4221a">${muted ? 'ALARM MUTED' : 'ALARM REPEATS EVERY 5 SEC'}</span><button class="mbtn" data-mute>${muted ? 'UNMUTE' : 'MUTE'}</button>` : ''}
+      <button class="mbtn">PROFILE →</button>
+      ${modals.length > 1 ? `<span class="mono" style="font-size:11px;color:#6b6b6b">+${modals.length - 1} MORE ALERT</span>` : ''}
+      <div style="flex:1"></div><button class="ack" data-ack autofocus>${banned ? "I'VE HANDLED IT" : 'OK'}</button></div></div></div>`;
+  document.querySelector('[data-ack]').focus();
+  syncAlarm();
+}
+function syncAlarm() {
+  const want = modals[0] && modals[0].kind === 'banned' && !muted && soundOn;
+  if (want && !alarmTimer) { beep(SOUNDS.alarm); alarmTimer = setInterval(() => beep(SOUNDS.alarm), 5000); }
+  if (!want && alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; }
+  document.title = modals[0] && modals[0].kind === 'banned' ? '● BANNED — LIM KAH HENG' : 'Check-in popup v2 — demo';
+}
+document.addEventListener('click', (e) => {
+  const d = e.target.closest('[data-demo]');
+  if (d) {
+    const k = d.dataset.demo;
+    if (k === 'ok' || k === 'member' || k === 'warn') toast(k);
+    if (k === 'banned' || k === 'age') modal(k);
+    if (k === 'rush') ['CHONG JUN HAO', 'WONG MEI LING', 'MUHAMMAD HAKIM BIN ISMAIL', 'DANIEL OKAFOR', 'SITI NURHALIZA BINTI ZAINAL'].forEach((n, i) => setTimeout(() => toast('ok', n), i * 350));
+    if (k === 'all') { toast('ok'); toast('member'); toast('warn'); modal('age'); modal('banned'); }
+  }
+  const c = e.target.closest('[data-close]');
+  if (c) { toasts = toasts.filter((t) => t.id !== c.dataset.close); renderStack(); }
+  if (e.target.closest('[data-ack]')) { const m = modals.shift(); if (m && m.timer) clearTimeout(m.timer); muted = false; renderModal(); }
+  if (e.target.closest('[data-mute]')) { muted = !muted; renderModal(); }
+});
+renderSound();
+</script>
+</body>
+</html>

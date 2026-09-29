@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup B · Bento Light — TODAY</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+  :root { --ink:#0a0a0a; --bone:#f5f5f5; --accent:#FFD60A; --danger:#ff3b30; --green:#16c75b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bone); color: var(--ink); font-family: Inter, sans-serif; }
+  button { font: inherit; }
+  .display { font-family: 'Archivo Black', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .2em; color: #6b6b6b; }
+
+  header { height: 64px; background: var(--ink); color: var(--bone); display: flex; align-items: center; gap: 6px; padding: 0 24px; border-bottom: 3px solid var(--accent); position: sticky; top: 0; z-index: 5; }
+  .brand { font-family: 'Archivo Black'; font-size: 20px; margin-right: 14px; }
+  .role { font-family: 'Archivo Black'; font-size: 10px; letter-spacing: .15em; background: var(--accent); color: var(--ink); padding: 4px 8px; margin-right: 18px; }
+  nav a { position: relative; font-family: 'Archivo Black'; font-size: 11px; letter-spacing: .12em; padding: 9px 12px; color: #bdbdbd; text-decoration: none; display: inline-block; }
+  nav a:hover { color: var(--accent); }
+  nav a.on { background: var(--accent); color: var(--ink); }
+  .badge { position: absolute; top: 1px; right: 0; min-width: 15px; height: 15px; border-radius: 8px; background: var(--danger); color: var(--ink); font: 700 9px Inter; display: grid; place-items: center; }
+  .search { height: 40px; width: 300px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background: #161616; border: 1px solid #2a2a2a; color: #9a9a9a; font-size: 13px; cursor: pointer; text-align: left; }
+  .search:hover { border-color: var(--accent); }
+  .kbd { font-family: 'JetBrains Mono'; font-size: 10px; border: 1px solid #3a3a3a; padding: 2px 5px; color: #bdbdbd; }
+  .sound { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 10px; margin-left: 10px; border: 1px solid var(--green); color: var(--green); background: transparent; font: 700 10px 'JetBrains Mono'; letter-spacing: .12em; cursor: pointer; }
+
+  main { padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; max-width: 1440px; margin: 0 auto; }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+  .tile { background: #fff; border: 1px solid #e5e5e5; padding: 18px; }
+  .tile.big { grid-column: span 2; display: flex; gap: 28px; }
+  .bars { flex: 1; display: flex; align-items: flex-end; gap: 4px; min-height: 90px; }
+  .bars div { flex: 1; background: var(--ink); }
+  .bars div.peak { background: var(--accent); }
+  .alert { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #ececec; background: #fff; cursor: pointer; text-align: left; width: 100%; }
+  .alert:hover { border-color: var(--ink); }
+  .tag { font: 700 9px 'JetBrains Mono'; letter-spacing: .1em; padding: 3px 6px; color: var(--ink); white-space: nowrap; }
+
+  .feed { background: #fff; border: 1px solid #e5e5e5; }
+  .toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #e5e5e5; }
+  .seg { font-family: 'Archivo Black'; font-size: 10px; letter-spacing: .12em; padding: 9px 12px; border: 1px solid #d4d4d4; background: #fff; cursor: pointer; }
+  .seg:hover { border-color: var(--ink); }
+  .seg.on { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+  .cols, .row { display: grid; grid-template-columns: 76px minmax(0, 1fr) 170px 170px 130px; gap: 12px; align-items: center; padding: 0 16px; }
+  .cols { background: var(--ink); color: var(--accent); font: 10px 'JetBrains Mono'; letter-spacing: .18em; padding-top: 8px; padding-bottom: 8px; }
+  .row { width: 100%; height: 46px; border: 0; border-bottom: 1px solid #efefef; cursor: pointer; text-align: left; background: #fff; }
+  .row:hover { background: #fffbe0 !important; }
+  .pill { justify-self: center; font: 700 10px 'JetBrains Mono'; letter-spacing: .12em; padding: 5px 9px; }
+  .member { font: 9px 'JetBrains Mono'; letter-spacing: .12em; padding: 3px 6px; background: var(--green); }
+  .blur .row span.sens { filter: blur(6px); user-select: none; }
+
+  .scrim { position: fixed; inset: 0; background: rgba(10,10,10,.35); display: flex; justify-content: flex-end; z-index: 20; }
+  .drawer { width: 440px; height: 100%; background: #fff; box-shadow: -20px 0 60px rgba(0,0,0,.18); display: flex; flex-direction: column; animation: slide .22s ease-out; }
+  @keyframes slide { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .x { width: 36px; height: 36px; border: 2px solid var(--ink); background: transparent; font-size: 18px; cursor: pointer; }
+  .stat { border: 1px solid #e5e5e5; padding: 12px; }
+  .btn-ink { flex: 1; text-align: center; padding: 14px; background: var(--ink); color: var(--accent); font-family: 'Archivo Black'; font-size: 12px; letter-spacing: .1em; text-decoration: none; }
+  .btn-line { flex: 1; text-align: center; padding: 14px; border: 2px solid var(--ink); color: var(--ink); font-family: 'Archivo Black'; font-size: 12px; letter-spacing: .1em; text-decoration: none; }
+
+  .palette-scrim { position: fixed; inset: 0; background: rgba(10,10,10,.45); display: flex; justify-content: center; padding-top: 110px; z-index: 30; }
+  .palette { width: 620px; height: fit-content; background: #fff; border: 2px solid var(--ink); box-shadow: 0 30px 80px rgba(0,0,0,.3); }
+  .palette input { flex: 1; height: 56px; border: 0; outline: none; font-size: 17px; font-family: Inter; }
+  .result { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 18px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+  .result:hover { background: #fffbe0; }
+  .mock-note { position: fixed; bottom: 14px; left: 14px; font: 10px 'JetBrains Mono'; letter-spacing: .15em; background: var(--ink); color: var(--accent); padding: 6px 10px; z-index: 40; }
+  @media (prefers-reduced-motion: reduce) { .drawer { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="mock-note">MOCKUP · SAMPLE DATA · CTRL+K = SEARCH</div>
+
+<script>
+const VISITS = [
+  { id: 'v1', time: '18:42', name: 'TAN WEI MING', ic: '950312-01-5521', phone: '+60 12-338 4417', status: 'ok', member: true, visits: 86, warnings: 0, last: 'Yesterday 19:10', note: 'Regular evening member. No notes.' },
+  { id: 'v2', time: '18:39', name: 'NUR AISYAH BINTI RAHMAN', ic: '010822-10-6634', phone: '+60 17-902 1180', status: 'ok', member: false, visits: 3, warnings: 0, last: '26 Sep 18:05', note: 'New walk-in this month.' },
+  { id: 'v3', time: '18:31', name: 'LIM KAH HENG', ic: '880105-01-7713', phone: '+60 16-771 2093', status: 'banned', member: false, visits: 41, warnings: 3, last: '14 Aug 20:40', note: 'BANNED 15 Aug — aggressive behaviour towards staff. Do not admit; call manager.' },
+  { id: 'v4', time: '18:27', name: 'RAJESH KUMAR A/L MUTHU', ic: '920417-14-5009', phone: '+60 11-2045 7781', status: 'warn', member: false, visits: 22, warnings: 2, last: '29 Sep 18:50', note: 'Warning 2/3 — not re-racking plates (2x). One more = ban.' },
+  { id: 'v5', time: '18:20', name: 'DANIEL OKAFOR', ic: 'A09318381', phone: '+234 803 555 0192', status: 'ok', member: false, visits: 5, warnings: 0, last: '28 Sep 07:15', note: 'Foreign passport holder.' },
+  { id: 'v6', time: '18:14', name: 'UNDERAGE ATTEMPT', ic: '140903-01-2210', phone: '—', status: 'age', member: false, visits: 0, warnings: 0, last: '—', note: 'IC shows age 12. Entry refused automatically.' },
+  { id: 'v7', time: '18:09', name: 'SITI NURHALIZA BINTI ZAINAL', ic: '970630-01-4128', phone: '+60 13-667 0932', status: 'ok', member: true, visits: 124, warnings: 0, last: 'Yesterday 18:02', note: 'Member since 2025.' },
+  { id: 'v8', time: '18:02', name: 'CHONG JUN HAO', ic: '030211-01-8857', phone: '+60 12-910 6630', status: 'ok', member: false, visits: 9, warnings: 0, last: '27 Sep 17:40', note: 'No notes.' },
+  { id: 'v9', time: '17:58', name: 'MUHAMMAD HAKIM BIN ISMAIL', ic: '990915-01-6671', phone: '+60 19-455 2208', status: 'ok', member: false, visits: 17, warnings: 0, last: '29 Sep 17:30', note: 'No notes.' },
+  { id: 'v10', time: '17:51', name: 'WONG MEI LING', ic: '940728-01-3346', phone: '+60 16-220 8815', status: 'ok', member: true, visits: 58, warnings: 0, last: '28 Sep 18:10', note: 'Member. Prefers morning slots on weekends.' }
+];
+const PILL = { ok: ['ALLOWED', '#16c75b', '#fff'], banned: ['BANNED', '#ff3b30', '#fff0ef'], warn: ['WARNING 2/3', '#FFD60A', '#fffbe6'], age: ['UNDER 12', '#ff3b30', '#fff6f5'] };
+const HOURS = [2, 4, 6, 5, 3, 2, 2, 3, 2, 3, 4, 6, 9, 11, 8, 5, 3, 1];
+const state = { filter: 'all', privacy: false, selected: null, palette: false };
+const denied = (v) => v.status === 'banned' || v.status === 'age';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function view() {
+  const all = VISITS;
+  const rows = all.filter((v) => state.filter === 'all' || (state.filter === 'ok' && !denied(v)) || (state.filter === 'denied' && denied(v)) || (state.filter === 'warn' && v.status === 'warn'));
+  const segs = [['all', 'ALL', all.length], ['ok', 'ALLOWED', all.filter((v) => !denied(v)).length], ['denied', 'DENIED', all.filter(denied).length], ['warn', 'WARNINGS', all.filter((v) => v.status === 'warn').length]];
+  const max = Math.max(...HOURS);
+  const nD = all.filter(denied).length;
+  const sel = VISITS.find((v) => v.id === state.selected);
+  const navs = ['COMPLAINT', 'TODAY', 'HISTORY', 'CUSTOMERS', 'ATTENTION', 'REPORTS', 'IMPORT', 'AUDIT'];
+  return `
+  <header>
+    <span class="brand">X FITNESS</span><span class="role">ADMIN</span>
+    <nav>${navs.map((n) => `<a href="#" class="${n === 'TODAY' ? 'on' : ''}">${n}${n === 'COMPLAINT' ? '<span class="badge">2</span>' : ''}</a>`).join('')}</nav>
+    <div style="flex:1"></div>
+    <button class="search" data-act="palette"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span style="flex:1">Find customer…</span><span class="kbd">Ctrl K</span></button>
+    <button class="sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>SOUND ON</button>
+    <span class="mono" style="font-size:12px;border:1px solid #2a2a2a;padding:8px 10px;color:#bdbdbd;margin-left:8px">Ron</span>
+  </header>
+  <main>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between">
+      <div><div class="label" style="letter-spacing:.3em">// LIVE · WED 01 OCT · 18:43</div><h1 class="display" style="margin:2px 0 0;font-size:36px">TODAY</h1></div>
+    </div>
+    <section class="tiles">
+      <div class="tile big">
+        <div style="display:flex;flex-direction:column;justify-content:space-between;min-width:170px">
+          <div class="label">CHECK-INS TODAY</div>
+          <div class="display" style="font-size:64px;line-height:1">${all.length}</div>
+          <div class="mono" style="display:flex;gap:14px;font-size:12px;font-weight:700"><span style="color:#0e7a3a">${all.length - nD} ALLOWED</span><span style="color:#c4221a">${nD} DENIED</span></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+          <div class="label">BY HOUR · PEAK 18:00</div>
+          <div class="bars">${HOURS.map((n, i) => `<div class="${i === 12 ? 'peak' : ''}" style="height:${Math.round(n / max * 100)}%" title="${6 + i}:00 · ${n}"></div>`).join('')}</div>
+          <div class="mono" style="display:flex;justify-content:space-between;font-size:10px;color:#6b6b6b"><span>6AM</span><span>12PM</span><span>6PM</span><span>11PM</span></div>
+        </div>
+      </div>
+      <div class="tile" style="display:flex;flex-direction:column;gap:10px">
+        <div class="label">NEEDS ATTENTION</div>
+        ${[['v3', 'BANNED', '#ff3b30', '#fff0ef'], ['v4', 'WARN 2/3', '#FFD60A', '#fff'], ['v6', 'UNDER 12', '#ff3b30', '#fff']].map(([id, tag, bg, rowBg]) => {
+          const v = VISITS.find((x) => x.id === id);
+          return `<button class="alert" data-sel="${id}" style="background:${rowBg}"><span class="tag" style="background:${bg}">${tag}</span><span style="flex:1;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${id === 'v6' ? 'Underage attempt' : esc(v.name)}</span><span class="mono" style="font-size:11px;color:#6b6b6b">${v.time}</span></button>`;
+        }).join('')}
+      </div>
+      <div class="tile" style="background:#0a0a0a;color:#f5f5f5;border:0;display:flex;flex-direction:column;justify-content:space-between">
+        <div class="label" style="color:#9a9a9a">COMPLAINTS</div>
+        <div><div class="display" style="font-size:56px;line-height:1;color:#FFD60A">2</div><div style="font-size:14px;margin-top:6px">new, unreviewed</div></div>
+        <a href="#" class="display" style="align-self:flex-start;font-size:11px;letter-spacing:.12em;padding:10px 14px;background:#FFD60A;color:#0a0a0a;text-decoration:none">REVIEW NOW</a>
+      </div>
+    </section>
+    <section class="feed ${state.privacy ? 'blur' : ''}">
+      <div class="toolbar">
+        ${segs.map(([k, l, n]) => `<button class="seg ${state.filter === k ? 'on' : ''}" data-filter="${k}">${l} · ${n}</button>`).join('')}
+        <div style="flex:1"></div>
+        <button class="seg ${state.privacy ? 'on' : ''}" data-act="privacy" style="font-family:'JetBrains Mono';font-weight:400">${state.privacy ? 'PRIVACY ON' : 'PRIVACY'}</button>
+      </div>
+      <div class="cols"><div>TIME</div><div>NAME</div><div>IC / PASSPORT</div><div>PHONE</div><div style="text-align:center">STATUS</div></div>
+      ${rows.map((v) => {
+        const p = PILL[v.status];
+        return `<button class="row" data-sel="${v.id}" style="background:${p[2]}">
+          <span class="mono" style="font-size:13px;font-weight:700">${v.time}</span>
+          <span style="display:flex;align-items:center;gap:8px;min-width:0;font-weight:700;font-size:14px">${v.member ? '<span class="member">MEMBER</span>' : ''}<span class="sens" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.name)}</span></span>
+          <span class="mono sens" style="font-size:12px;color:#4a4a4a">${esc(v.ic)}</span>
+          <span class="mono sens" style="font-size:12px;color:#4a4a4a">${esc(v.phone)}</span>
+          <span class="pill" style="background:${p[1]}">${p[0]}</span></button>`;
+      }).join('')}
+    </section>
+  </main>
+  ${sel ? drawer(sel) : ''}
+  ${state.palette ? palette() : ''}`;
+}
+
+function drawer(v) {
+  const p = PILL[v.status];
+  const type = v.member ? 'MEMBER' : (v.ic.includes('-') ? 'WALK-IN' : 'FOREIGN');
+  return `<div class="scrim" data-act="close"><aside class="drawer">
+    <div style="padding:20px 22px;background:${p[1]};display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:11px;font-weight:700;letter-spacing:.18em">${p[0]}</span><button class="x" data-act="close" aria-label="Close">×</button></div>
+      <div class="display" style="font-size:26px;line-height:1.1">${esc(v.name)}</div>
+      <div class="mono" style="font-size:12px">${esc(v.ic)} · ${esc(v.phone)}</div>
+    </div>
+    <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px;flex:1">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div class="stat"><div class="label" style="font-size:9px">VISITS</div><div class="display" style="font-size:24px">${v.visits}</div></div>
+        <div class="stat"><div class="label" style="font-size:9px">WARNINGS</div><div class="display" style="font-size:24px">${v.warnings}/3</div></div>
+        <div class="stat"><div class="label" style="font-size:9px">TYPE</div><div class="display" style="font-size:16px;line-height:1.8">${type}</div></div>
+      </div>
+      <div style="font-size:13px;display:flex;justify-content:space-between;border-bottom:1px solid #efefef;padding-bottom:10px"><span style="color:#6b6b6b">Last visit before today</span><span style="font-weight:600">${esc(v.last)}</span></div>
+      <div><div class="label" style="margin-bottom:6px">NOTE</div><div style="font-size:14px;line-height:1.5;background:#f5f5f5;padding:12px">${esc(v.note)}</div></div>
+      <div style="flex:1"></div>
+      <div style="display:flex;gap:10px"><a href="#" class="btn-ink">FULL PROFILE</a><a href="#" class="btn-line">ADD WARNING</a></div>
+    </div></aside></div>`;
+}
+
+function palette() {
+  return `<div class="palette-scrim" data-act="closePalette"><div class="palette" role="dialog" aria-label="Find customer">
+    <div style="display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid #e5e5e5">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input id="q" placeholder="Type a name, IC or phone…" aria-label="Search customers" autocomplete="off">
+      <button class="kbd" data-act="closePalette" style="background:transparent;color:#4a4a4a;cursor:pointer">ESC</button>
+    </div>
+    <div id="results" style="padding:8px 0"></div></div></div>`;
+}
+
+function renderResults(q) {
+  q = (q || '').trim().toLowerCase();
+  const res = VISITS.filter((v) => v.status !== 'age' && (!q || v.name.toLowerCase().includes(q) || v.ic.toLowerCase().includes(q) || v.phone.replace(/\D/g, '').includes(q.replace(/\D/g, '') || '~'))).slice(0, 6);
+  document.getElementById('results').innerHTML = res.length
+    ? res.map((v) => `<button class="result" data-sel="${v.id}"><span class="tag" style="background:${PILL[v.status][1]};min-width:70px;text-align:center">${PILL[v.status][0]}</span><span style="flex:1;font-weight:600;font-size:14px">${esc(v.name)}</span><span class="mono" style="font-size:12px;color:#6b6b6b">${esc(v.ic)}</span></button>`).join('')
+    : `<div style="padding:18px;color:#6b6b6b;font-size:14px">No customer matches “${esc(q)}”.</div>`;
+}
+
+function render() {
+  document.getElementById('app').innerHTML = view();
+  if (state.palette) {
+    const q = document.getElementById('q');
+    q.focus();
+    q.addEventListener('input', () => renderResults(q.value));
+    renderResults('');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act],[data-sel],[data-filter]');
+  if (!t) return;
+  // A click inside the drawer/palette bubbles up to its backdrop — only a
+  // click on the backdrop itself should close it.
+  if ((t.classList.contains('scrim') || t.classList.contains('palette-scrim')) && e.target !== t) return;
+  if (t.dataset.filter) state.filter = t.dataset.filter;
+  if (t.dataset.sel) { state.selected = t.dataset.sel; state.palette = false; }
+  const a = t.dataset.act;
+  if (a === 'palette') state.palette = true;
+  if (a === 'closePalette') state.palette = false;
+  if (a === 'close') state.selected = null;
+  if (a === 'privacy') state.privacy = !state.privacy;
+  if (t.tagName === 'A') e.preventDefault();
+  render();
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); state.palette = true; render(); }
+  if (e.key === 'Escape') { state.palette = false; state.selected = null; render(); }
+});
+render();
+</script>
+</body>
+</html>
