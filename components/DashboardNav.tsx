@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import BrandMark from './BrandMark';
+import SoundToggle from './SoundToggle';
 
 interface DashboardNavProps {
   role: 'staff' | 'admin';
@@ -110,7 +111,11 @@ export default function DashboardNav({ role, userName }: DashboardNavProps) {
             </Link>
           ))}
 
-          <span className="hidden lg:inline-block font-mono text-xs ml-3 px-3 py-1 border border-ink-line">
+          <div className="ml-3">
+            <SoundToggle />
+          </div>
+
+          <span className="hidden lg:inline-block font-mono text-xs ml-2 px-3 py-1 border border-ink-line">
             {userName}
           </span>
 

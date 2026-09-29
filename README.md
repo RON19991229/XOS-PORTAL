@@ -5,6 +5,29 @@
 
 ---
 
+## 🔔 v2.20.0 (2026-10-01) — Check-in 弹窗 v2
+
+前台平时主要靠弹窗确认谁进来了，所以这版重做弹窗（`components/CheckinAlerts.tsx`，取代旧的 `CheckinToast`）：
+
+| 谁来了 | 弹窗 | 停留 | 声音 |
+|------|------|------|------|
+| 普通 / 会员 | 右上角大卡片：名字、MEMBER、第几次到访 | 8 秒（进度条） | 叮 |
+| 有警告 | 黄色卡片：**Attention 照片** + 最近一次警告原因 | 20 秒 | 两声短促提示 |
+| **被 ban** | **全屏中间红框 DO NOT ADMIT**：大照片、ban 日期和原因、处理步骤 | **不会自动消失**，要按 I'VE HANDLED IT | **警报每 5 秒响一次**（可 MUTE）；分页标题闪烁；Windows 通知 |
+| 未满 12 岁 | 中间红框：IC、年龄 | 15 秒或按 OK | 低音 |
+
+- **所有 admin / staff 页面都会弹**（以前只有 TODAY 页面会弹）
+- 导航栏新增 **SOUND** 按钮：浏览器还没允许声音时显示红色「SOUND OFF — CLICK」，点一下就开；也能静音。第一次点会询问是否允许 Windows 通知
+- 同时来很多人：最多显示 3 张卡片，其余显示「+N MORE CHECK-INS」
+- 「I'VE HANDLED IT」只是关弹窗，**不写入数据库**，staff 仍然只读
+- 实时推送 + 每 20 秒轮询后备 + 切回分页时补查，不会漏掉
+
+**SQL**：✅ `migration-v2.20.0-popup-fields.sql` — `todays_visits` 视图**在最后追加** 6 个字段（photo_path、visit_count、banned_at、last_warning_reason、last_warning_at、visit_ic），原字段不变。（2026-10-01 已在线上执行并验证）
+
+**改动文件**：`components/CheckinAlerts.tsx`（新）、`components/SoundToggle.tsx`（新）、`lib/chime.ts`、`app/{admin,staff}/layout.tsx`、`components/DashboardNav.tsx`、`components/TodayList.tsx`（移除旧弹窗，保留新行黄色闪烁）、`app/globals.css`；删除 `components/CheckinToast.tsx`
+
+---
+
 ## ⚡ v2.19.0 (2026-10-01) — 后台切页提速（外观不变）
 
 | 改动 | 效果 |

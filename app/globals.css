@@ -213,44 +213,86 @@ html, body {
 /* new-row highlight flash                      */
 /* ============================================ */
 
-/* Container — fixed top-right, stacks toasts vertically */
-.checkin-toast-stack {
+/* v2.20.0 — check-in popup v2 (components/CheckinAlerts.tsx). Rendered
+   from the admin/staff layout, so it shows on every dashboard page. */
+.checkin-stack {
   position: fixed;
-  top: 16px;
+  top: 76px;
   right: 16px;
-  z-index: 50;
+  z-index: 60;
+  width: 400px;
+  max-width: calc(100vw - 32px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   pointer-events: none;
-  max-width: calc(100vw - 32px);
 }
-
-.checkin-toast {
-  background: white;
-  color: #0a0a0a;
-  border: 2px solid #FFD60A;
-  border-left-width: 6px;
-  border-radius: 6px;
-  padding: 12px 16px;
-  min-width: 240px;
-  max-width: 320px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+.checkin-card {
   pointer-events: auto;
-  animation: checkin-toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 2px solid #0a0a0a;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  animation: checkin-card-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.checkin-card-warn { border-width: 3px; }
+.checkin-card-bar {
+  width: 100%;
+  animation-name: checkin-card-bar;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.checkin-more {
+  pointer-events: auto;
+  align-self: flex-end;
+  font-family: var(--font-display), sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  padding: 9px 14px;
+  background: #0a0a0a;
+  color: #FFD60A;
+}
+@keyframes checkin-card-in {
+  from { transform: translateX(60px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes checkin-card-bar {
+  from { width: 100%; }
+  to   { width: 0; }
 }
 
-.checkin-toast-leaving {
-  animation: checkin-toast-out 0.25s ease-in forwards;
+.checkin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(10, 10, 10, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 16px;
 }
-
-@keyframes checkin-toast-in {
-  from { transform: translateX(110%); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
+.checkin-modal {
+  width: 100%;
+  background: #ffffff;
+  color: #0a0a0a;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  animation: checkin-modal-in 0.22s ease-out;
 }
-@keyframes checkin-toast-out {
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(110%); opacity: 0; }
+.checkin-modal-banned {
+  max-width: 860px;
+  border: 6px solid #ff3b30;
+  animation: checkin-modal-in 0.22s ease-out, checkin-modal-flash 1s steps(1) infinite;
+}
+.checkin-modal-age {
+  max-width: 640px;
+  border: 4px solid #ff3b30;
+}
+@keyframes checkin-modal-in {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes checkin-modal-flash {
+  0%, 100% { border-color: #ff3b30; }
+  50%      { border-color: #0a0a0a; }
 }
 
 /* New-row highlight flash — overrides bg-* color for 3s with a yellow
@@ -267,8 +309,8 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .checkin-toast        { animation: none; }
-  .checkin-toast-leaving{ animation: none; opacity: 0; }
+  .checkin-card, .checkin-modal, .checkin-modal-banned { animation: none; }
+  .checkin-card-bar     { animation: none; width: 0; }
   .visit-row-new        { animation: none; }
 }
 

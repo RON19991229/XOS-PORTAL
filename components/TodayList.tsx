@@ -4,10 +4,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { formatTime } from '@/lib/utils';
-import { playChime } from '@/lib/chime';
 import { getCached, setCached } from '@/lib/client-cache';
 import GenderBadge from './GenderBadge';
-import CheckinToastStack, { ToastEvent } from './CheckinToast';
 
 interface VisitRow {
   id: string;
@@ -41,9 +39,9 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
   const [visits, setVisits] = useState<VisitRow[]>(() => getCached<VisitRow[]>(CACHE_KEY) ?? []);
   const [loading, setLoading] = useState(() => !getCached<VisitRow[]>(CACHE_KEY));
 
-  // Toast events currently shown in the top-right corner. Each event
-  // auto-removes after 6 seconds (matches CheckinToast's leave timer).
-  const [toasts, setToasts] = useState<ToastEvent[]>([]);
+  // v2.20.0: the new-check-in popup + chime moved to CheckinAlerts (mounted
+  // in the dashboard layout, so it fires on every page). This component
+  // keeps only the yellow flash on newly arrived rows.
 
   // IDs of newly arrived visit rows that should briefly flash yellow.
   // Auto-cleared after 3 seconds per row.
@@ -53,7 +51,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
   // each fetch. Use a ref so it doesn't trigger re-renders.
   const seenIdsRef = useRef<Set<string>>(new Set());
   // Suppress "new" detection on the very first fetch (otherwise opening
-  // the page would toast every existing row from earlier in the day).
+  // the page would flash every existing row from earlier in the day).
   const isInitialLoadRef = useRef(true);
 
   const isAdmin = role === 'admin';
@@ -61,7 +59,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
   // Privacy mode — blurs sensitive feed content (names, IC, phone, gender,
   // status, counts) so customers near the counter can't read the screen.
   // Persists across refresh + realtime updates via sessionStorage. The
-  // new-checkin toast pop-up is rendered outside the blur wrapper, so it
+  // new-check-in popup (CheckinAlerts, in the layout) is outside the feed, so it
   // stays readable even while privacy mode is on.
   const [privacy, setPrivacy] = useState(false);
 
@@ -106,20 +104,6 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
     if (!isInitialLoadRef.current) {
       const newRows = rows.filter((r) => !seenIdsRef.current.has(r.id));
       if (newRows.length > 0) {
-        // Push new toast events. Newest first.
-        const newEvents: ToastEvent[] = newRows.map((r) => ({
-          id: r.id,
-          name: r.name || (r.visit_status === 'denied_age' ? 'Underage attempt' : 'Unknown'),
-          time: formatTime(r.visited_at),
-          status: r.visit_status,
-        }));
-        setToasts((prev) => [...newEvents, ...prev].slice(0, 4)); // cap at 4 visible
-
-        // Play chime — different sound for OK vs denied. If multiple new
-        // events arrive at once, just play once (avoid cacophony).
-        const anyApproved = newRows.some((r) => r.visit_status === 'approved');
-        playChime(anyApproved ? 'ok' : 'denied');
-
         // Highlight new rows. Schedule per-row clear after 3s.
         setHighlightIds((prev) => {
           const next = new Set(prev);
@@ -136,13 +120,6 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
             });
           }, 3000);
         });
-
-        // Schedule toast removal — 6s from now (matches the toast's own
-        // leave animation timer).
-        const idsToRemove = new Set(newEvents.map((e) => e.id));
-        setTimeout(() => {
-          setToasts((prev) => prev.filter((t) => !idsToRemove.has(t.id)));
-        }, 6000);
       }
     }
 
@@ -196,7 +173,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
   }, [fetchVisits]);
 
   // Stable identity so memoized VisitRowItem doesn't re-render when
-  // unrelated state (toasts, privacy, highlights) changes.
+  // unrelated state (privacy, highlights) changes.
   const handleDeleteVisit = useCallback(
     async (e: React.MouseEvent, visitId: string, visitTime: string, visitName: string) => {
       e.preventDefault();
@@ -275,7 +252,7 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
       ) : (
         /* Privacy mode: ONE blur layer on the whole feed instead of a
            separate 8px blur per cell (was 400+ GPU layers on a busy day).
-           The toast stack below is outside this wrapper, so it stays
+           The check-in popup lives in the layout, outside this wrapper, so it stays
            readable while privacy is on — same behaviour as before. */
         <div className={privacy ? 'privacy-blur' : ''}>
           {visits.map((v) => (
@@ -290,9 +267,6 @@ export default function TodayList({ baseHref, role }: TodayListProps) {
           ))}
         </div>
       )}
-
-      {/* Top-right toast notifications for new check-ins */}
-      <CheckinToastStack events={toasts} />
     </div>
   );
 }
@@ -337,7 +311,7 @@ function LiveClock() {
 /**
  * One row of the live feed. Memoized: rows only re-render when their own
  * visit data, highlight state, or the (stable) delete handler changes —
- * not when toasts appear, privacy toggles, or the clock ticks.
+ * not when highlights change elsewhere, privacy toggles, or the clock ticks.
  */
 const VisitRowItem = memo(function VisitRowItem({
   visit, baseHref, isAdmin, onDelete, isHighlighted,

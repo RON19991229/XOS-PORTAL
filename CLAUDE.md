@@ -84,6 +84,7 @@ migration-v2.17.2-incident-photos-rls-hotfix.sql
 migration-v2.18.2-security-lockdown.sql         (is_app_user() RLS + lock dashboard RPCs)
 migration-v2.18.3-step1-checkin-rpcs.sql        (checkin_last_visit / checkin_visit_stats — before frontend)
 migration-v2.18.3-step2-revoke-anon-visits-read.sql (revoke anon SELECT on visits — after frontend)
+migration-v2.20.0-popup-fields.sql              (todays_visits + photo_path, visit_count, banned_at, last_warning_*, visit_ic)
 ```
 `EMERGENCY-ROLLBACK.sql` was **deleted in v2.18.4** (still in git history) — it re-granted anon SELECT on `customers`/`visits` and only served pre-v2.7.2 frontends. Never recreate anon SELECT grants on PII tables; anon reads go through exact-match RPCs (`lookup_customer_for_checkin`, `lookup_customer_by_phone`, `checkin_last_visit`, `checkin_visit_stats`).
 Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After an Instant Rollback, Vercel stops auto-assigning the production domain to new pushes until someone Promotes a deployment again** (this froze prod on v2.17.2 from Aug–Sept 2026).
@@ -134,7 +135,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.19.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.20.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`.
