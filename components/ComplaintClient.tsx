@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client';
 import { IncidentReport, IncidentStatus, IncidentNote } from '@/lib/types';
 import { StoredAnswer, QID } from '@/lib/report-config';
 import { formatDateTime } from '@/lib/utils';
+import { buildComplaintPrintHtml } from '@/lib/complaint-print';
 
 interface ComplaintClientProps {
   role: 'staff' | 'admin';
@@ -281,6 +282,7 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
               photoUrl={r.photo_path ? signedUrls[r.photo_path] : undefined}
               notes={notesByReport[r.id] ?? []}
               isAdmin={isAdmin}
+              userName={userName}
               busy={busyId === r.id}
               onStatus={(s) => setStatus(r, s)}
               onDelete={() => remove(r)}
@@ -301,6 +303,7 @@ interface CardProps {
   photoUrl?: string;
   notes: IncidentNote[];
   isAdmin: boolean;
+  userName: string;
   busy: boolean;
   onStatus: (s: IncidentStatus) => void;
   onDelete: () => void;
@@ -358,6 +361,7 @@ function ComplaintCard({
   photoUrl,
   notes,
   isAdmin,
+  userName,
   busy,
   onStatus,
   onDelete,
@@ -368,6 +372,12 @@ function ComplaintCard({
 
   const [noteInput, setNoteInput] = useState('');
   const [savingNote, setSavingNote] = useState(false);
+  // v2.18.0 — formal print view. Modal with three options; the document
+  // itself opens in a new window so dashboard CSS never leaks in.
+  const [printOpen, setPrintOpen] = useState(false);
+  const [printPhoto, setPrintPhoto] = useState(true);
+  const [printCaseLog, setPrintCaseLog] = useState(false);
+  const [printRedact, setPrintRedact] = useState(false);
   // v2.17.2 — if the evidence file is a format the browser can't render
   // inline (e.g. HEIC uploaded via the raw fallback), degrade to an
   // openable FILE tile instead of a broken <img>.
@@ -465,6 +475,28 @@ function ComplaintCard({
     const ok = await onAddNote(r.id, noteInput);
     if (ok) setNoteInput('');
     setSavingNote(false);
+  };
+
+  const isAnonReport = r.is_anonymous || (!r.reporter_name && !r.reporter_contact);
+
+  const doPrint = () => {
+    const html = buildComplaintPrintHtml(
+      r,
+      notes,
+      photoUrl ?? null,
+      {
+        includePhoto: printPhoto && !!r.photo_path,
+        includeCaseLog: printCaseLog,
+        redactReporter: printRedact,
+      },
+      userName,
+    );
+    const win = window.open('', '_blank');
+    if (!win) return; // popup blocked — user can retry after allowing
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    setPrintOpen(false);
   };
 
   return (
@@ -715,15 +747,114 @@ function ComplaintCard({
             </button>
           )}
           <button
+            onClick={() => setPrintOpen(true)}
+            disabled={busy}
+            className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-ink text-ink rounded-md hover:bg-ink hover:text-accent disabled:opacity-50 ml-auto"
+          >
+            🖨 PRINT
+          </button>
+          <button
             onClick={onDelete}
             disabled={busy}
-            className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-danger text-danger rounded-md hover:bg-danger/10 disabled:opacity-50 ml-auto"
+            className="font-display text-[10px] tracking-wider px-3.5 py-2 border-2 border-danger text-danger rounded-md hover:bg-danger/10 disabled:opacity-50"
           >
             DELETE
           </button>
         </div>
       ) : (
         <div className="pb-4" aria-hidden="true" />
+      )}
+
+      {/* ---- print options modal (v2.18.0) ---- */}
+      {printOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setPrintOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-md p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="font-display text-[12px] tracking-[0.14em] mb-1">PRINT FORMAL REPORT</div>
+            <div className="font-mono text-[10px] text-neutral-400 mb-4">
+              {r.ref_code ?? r.id.slice(0, 8).toUpperCase()} · A4 · EN/BM · opens in a new tab
+            </div>
+
+            <label className="flex items-start gap-2.5 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={printPhoto && !!r.photo_path}
+                disabled={!r.photo_path}
+                onChange={(e) => setPrintPhoto(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-ink"
+              />
+              <span className="text-[13px] leading-snug">
+                <b>Include evidence photo</b>
+                <span className="block text-[11px] text-neutral-500">
+                  {r.photo_path
+                    ? 'Prints the uploaded photograph in Section 6.'
+                    : 'No photo was submitted with this report.'}
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={printCaseLog}
+                onChange={(e) => setPrintCaseLog(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-ink"
+              />
+              <span className="text-[13px] leading-snug">
+                <b>Include internal case log</b>
+                <span className="block text-[11px] text-neutral-500">
+                  Off by default. Staff notes may contain unverified observations — review them
+                  before handing this copy to any third party.
+                </span>
+                {printCaseLog && (
+                  <span className="block text-[11px] text-[#a67c00] font-semibold mt-1">
+                    ⚠ The printed copy will contain internal staff notes.
+                  </span>
+                )}
+              </span>
+            </label>
+
+            <label
+              className={`flex items-start gap-2.5 mb-4 ${isAnonReport ? 'opacity-50' : 'cursor-pointer'}`}
+            >
+              <input
+                type="checkbox"
+                checked={isAnonReport ? false : printRedact}
+                disabled={isAnonReport}
+                onChange={(e) => setPrintRedact(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-ink"
+              />
+              <span className="text-[13px] leading-snug">
+                <b>Redact reporter identity</b>
+                <span className="block text-[11px] text-neutral-500">
+                  {isAnonReport
+                    ? 'Report was submitted anonymously — no identity on record.'
+                    : 'Replaces the reporter\u2019s name and contact with [REDACTED] for third-party copies.'}
+                </span>
+              </span>
+            </label>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setPrintOpen(false)}
+                className="font-display text-[10px] tracking-wider px-4 py-2.5 border-2 border-neutral-300 text-neutral-500 rounded-md hover:bg-neutral-100"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={doPrint}
+                className="font-display text-[10px] tracking-wider px-5 py-2.5 bg-ink text-accent rounded-md hover:opacity-90"
+              >
+                🖨 OPEN PRINT VIEW
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
