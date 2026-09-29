@@ -255,7 +255,8 @@ export default function AttentionClient({ baseHref, role, userId, userName }: At
   // Render
   // -------------------------------------------------------------------------
   return (
-    <div className="max-w-[1180px] mx-auto px-4 md:px-6 py-7 pb-24">
+    // v2.22.0: light theme to match the dashboard shell; names/IC blur in privacy mode.
+    <div className="max-w-[1180px] px-4 md:px-6 py-6 pb-24">
       {/* hidden upload input (admin only) */}
       {isAdmin && (
         <input
@@ -270,48 +271,45 @@ export default function AttentionClient({ baseHref, role, userId, userName }: At
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
         <div>
-          <h1 className="font-display text-3xl md:text-4xl leading-none tracking-tight">
-            ATTENTION <span className="text-accent">LIST</span>
-          </h1>
-          <p className="font-mono text-[11px] text-neutral-500 mt-2.5 max-w-xl leading-relaxed">
+          <p className="font-mono text-[11px] text-muted max-w-xl leading-relaxed">
             // Banned &amp; warned customers. {isAdmin ? 'Upload a photo' : 'Photos'} so any
             staff on shift can recognise who must not enter and who to keep an eye on.
           </p>
         </div>
         <div className="flex gap-3">
-          <div className="border border-ink-line bg-ink-soft px-4 py-2.5 min-w-[92px]">
+          <div className="border border-line bg-white px-4 py-2.5 min-w-[92px]">
             <div className="font-display text-2xl leading-none text-danger">{bannedTotal}</div>
-            <div className="font-mono text-[10px] tracking-widest text-neutral-500 mt-1">BANNED</div>
+            <div className="font-mono text-[10px] tracking-widest text-muted mt-1">BANNED</div>
           </div>
-          <div className="border border-ink-line bg-ink-soft px-4 py-2.5 min-w-[92px]">
-            <div className="font-display text-2xl leading-none text-accent">{warnedTotal}</div>
-            <div className="font-mono text-[10px] tracking-widest text-neutral-500 mt-1">WARNINGS</div>
+          <div className="border border-line bg-white px-4 py-2.5 min-w-[92px]">
+            <div className="font-display text-2xl leading-none text-[#8a6d00]">{warnedTotal}</div>
+            <div className="font-mono text-[10px] tracking-widest text-muted mt-1">WARNINGS</div>
           </div>
         </div>
       </div>
 
       {/* Controls */}
       <div className="flex gap-3 flex-wrap items-center mb-7">
-        <div className="flex border border-ink-line">
+        <div className="flex border border-line">
           {(['all', 'banned', 'warnings'] as Filter[]).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`font-display text-xs tracking-widest px-4 py-2.5 transition-colors ${
-                filter === f ? 'bg-bone text-ink' : 'text-neutral-400 hover:text-accent'
+                filter === f ? 'bg-ink text-accent' : 'text-muted hover:text-ink'
               }`}
             >
               {f.toUpperCase()}
             </button>
           ))}
         </div>
-        <div className="flex-1 min-w-[220px] flex items-center gap-2.5 border border-ink-line bg-ink-soft px-3.5 py-2.5">
-          <span className="font-mono text-neutral-500">⌕</span>
+        <div className="flex-1 min-w-[220px] flex items-center gap-2.5 border border-line bg-white px-3.5 py-2.5">
+          <span className="font-mono text-muted">⌕</span>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="search name / IC / phone…"
-            className="flex-1 bg-transparent outline-none text-bone font-mono text-[13px] placeholder:text-neutral-600"
+            className="flex-1 bg-transparent outline-none text-ink font-mono text-[13px] placeholder:text-muted"
           />
         </div>
       </div>
@@ -324,13 +322,13 @@ export default function AttentionClient({ baseHref, role, userId, userName }: At
 
       {/* States */}
       {loading ? (
-        <div className="font-mono text-sm text-neutral-500 py-16 text-center">Loading…</div>
+        <div className="font-mono text-sm text-muted py-16 text-center">Loading…</div>
       ) : loadError ? (
         <div className="font-mono text-sm text-danger py-16 text-center">{loadError}</div>
       ) : bannedTotal === 0 && warnedTotal === 0 ? (
-        <div className="border border-dashed border-ink-line bg-ink-soft py-16 text-center">
-          <div className="font-display text-lg text-neutral-400">ALL CLEAR</div>
-          <div className="font-mono text-xs text-neutral-600 mt-2">
+        <div className="border border-dashed border-line bg-white py-16 text-center">
+          <div className="font-display text-lg text-muted">ALL CLEAR</div>
+          <div className="font-mono text-xs text-muted mt-2">
             No banned or warned customers right now.
           </div>
         </div>
@@ -343,11 +341,11 @@ export default function AttentionClient({ baseHref, role, userId, userName }: At
                 <span className="font-display text-sm tracking-[0.18em] bg-danger text-white px-3.5 py-1.5">
                   BANNED — NO ENTRY
                 </span>
-                <span className="flex-1 h-px bg-ink-line" />
-                <span className="font-mono text-xs text-neutral-500">{banned.length} shown</span>
+                <span className="flex-1 h-px bg-line" />
+                <span className="font-mono text-xs text-muted">{banned.length} shown</span>
               </div>
               {banned.length === 0 ? (
-                <p className="font-mono text-xs text-neutral-600 py-2">No matches.</p>
+                <p className="font-mono text-xs text-muted py-2">No matches.</p>
               ) : (
                 <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
                   {banned.map((c) => (
@@ -375,11 +373,11 @@ export default function AttentionClient({ baseHref, role, userId, userName }: At
                 <span className="font-display text-sm tracking-[0.18em] bg-accent text-ink px-3.5 py-1.5">
                   WARNINGS — WATCH
                 </span>
-                <span className="flex-1 h-px bg-ink-line" />
-                <span className="font-mono text-xs text-neutral-500">{warned.length} shown</span>
+                <span className="flex-1 h-px bg-line" />
+                <span className="font-mono text-xs text-muted">{warned.length} shown</span>
               </div>
               {warned.length === 0 ? (
-                <p className="font-mono text-xs text-neutral-600 py-2">No matches.</p>
+                <p className="font-mono text-xs text-muted py-2">No matches.</p>
               ) : (
                 <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
                   {warned.map((c) => (
@@ -437,7 +435,7 @@ function AttentionCard({
   const photoColumn = (() => {
     if (hasPhoto && photoUrl) {
       return (
-        <div className="relative w-[118px] min-w-[118px] bg-[#0d0d0d] border-r border-ink-line">
+        <div className="relative w-[118px] min-w-[118px] bg-[#e9e9e4] border-r border-line">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={photoUrl} alt={c.name} className="w-full h-full object-cover" />
           {isAdmin && (
@@ -455,8 +453,8 @@ function AttentionCard({
     if (hasPhoto && !photoUrl) {
       // path set but signed URL unavailable (file missing / link error)
       return (
-        <div className="w-[118px] min-w-[118px] bg-[#0d0d0d] border-r border-ink-line flex items-center justify-center text-center px-2">
-          <span className="font-mono text-[9px] text-neutral-600">PHOTO UNAVAILABLE</span>
+        <div className="w-[118px] min-w-[118px] bg-[#e9e9e4] border-r border-line flex items-center justify-center text-center px-2">
+          <span className="font-mono text-[9px] text-muted">PHOTO UNAVAILABLE</span>
         </div>
       );
     }
@@ -465,7 +463,7 @@ function AttentionCard({
         <button
           onClick={onUpload}
           disabled={uploading}
-          className="w-[118px] min-w-[118px] border-r border-dashed border-neutral-700 bg-[#0d0d0d] flex flex-col items-center justify-center gap-1.5 text-neutral-500 hover:text-accent hover:bg-[#121212] transition-colors disabled:opacity-60"
+          className="w-[118px] min-w-[118px] border-r border-dashed border-line-strong bg-[#e9e9e4] flex flex-col items-center justify-center gap-1.5 text-muted hover:text-ink hover:bg-[#fffbe0] transition-colors disabled:opacity-60"
         >
           <span className="font-display text-2xl leading-none">{uploading ? '…' : '+'}</span>
           <span className="font-mono text-[9px] tracking-wider">
@@ -475,21 +473,21 @@ function AttentionCard({
       );
     }
     return (
-      <div className="w-[118px] min-w-[118px] border-r border-ink-line bg-[#0d0d0d] flex items-center justify-center">
-        <span className="font-mono text-[9px] text-neutral-600">NO PHOTO</span>
+      <div className="w-[118px] min-w-[118px] border-r border-line bg-[#e9e9e4] flex items-center justify-center">
+        <span className="font-mono text-[9px] text-muted">NO PHOTO</span>
       </div>
     );
   })();
 
   return (
-    <div className={`flex bg-ink-soft border border-ink-line border-l-4 ${accentBorder} overflow-hidden`}>
+    <div className={`flex bg-white border border-line border-l-4 ${accentBorder} overflow-hidden`}>
       {photoColumn}
 
       <div className="flex-1 p-4 flex flex-col min-w-0">
         <div className="flex items-start gap-2">
           <Link
             href={detailHref}
-            className="font-display text-[17px] leading-tight tracking-tight break-words hover:text-accent transition-colors"
+            className="sens font-display text-[17px] leading-tight tracking-tight break-words hover:underline"
           >
             {c.name}
           </Link>
@@ -497,7 +495,7 @@ function AttentionCard({
             <GenderBadge gender={c.gender} />
           </span>
         </div>
-        <div className="font-mono text-xs text-neutral-400 mt-1.5">{icLabel}</div>
+        <div className="sens font-mono text-xs text-muted mt-1.5">{icLabel}</div>
 
         {/* Badges */}
         <div className="flex gap-1.5 mt-2.5 flex-wrap">
@@ -510,50 +508,50 @@ function AttentionCard({
               className={`font-mono text-[10px] tracking-wider px-1.5 py-0.5 rounded-sm border ${
                 (c.warning_count ?? 0) >= 3
                   ? 'bg-danger/15 text-danger border-danger/40'
-                  : 'bg-accent/15 text-accent border-accent/40'
+                  : 'bg-accent/25 text-[#6b5500] border-accent'
               }`}
             >
               ⚠ {c.warning_count ?? 0} / 3
             </span>
           )}
           {c.membership === 'member' && (
-            <span className="font-mono text-[10px] tracking-wider px-1.5 py-0.5 rounded-sm bg-success-green/15 text-success-green border border-success-green/40">
+            <span className="font-mono text-[10px] tracking-wider px-1.5 py-0.5 rounded-sm bg-success-green/15 text-[#0e8a3f] border border-success-green/40">
               ★ MEMBER
             </span>
           )}
         </div>
 
         {/* Reason / history */}
-        <div className="mt-3 pt-3 border-t border-dashed border-ink-line">
+        <div className="mt-3 pt-3 border-t border-dashed border-line">
           {kind === 'banned' ? (
             <>
-              <div className="font-mono text-[9px] tracking-widest text-neutral-500">BAN REASON</div>
-              <div className="font-body text-[13px] text-neutral-200 mt-1 leading-snug">
+              <div className="font-mono text-[9px] tracking-widest text-muted">BAN REASON</div>
+              <div className="font-body text-[13px] text-ink mt-1 leading-snug">
                 {c.ban_reason || '—'}
               </div>
               {c.banned_at && (
-                <div className="font-mono text-[10px] text-neutral-500 mt-1.5">
+                <div className="font-mono text-[10px] text-muted mt-1.5">
                   SINCE {formatDateTime(c.banned_at)}
                 </div>
               )}
             </>
           ) : (
             <>
-              <div className="font-mono text-[9px] tracking-widest text-neutral-500">
+              <div className="font-mono text-[9px] tracking-widest text-muted">
                 WARNING HISTORY
               </div>
               {warnings.length === 0 ? (
-                <div className="font-body text-[13px] text-neutral-400 mt-1">
+                <div className="font-body text-[13px] text-muted mt-1">
                   {c.warning_count ?? 0} warning(s) on record.
                 </div>
               ) : (
                 <ul className="mt-1 space-y-0.5">
                   {warnings.map((w) => (
-                    <li key={w.id} className="font-body text-[12.5px] text-neutral-200 flex gap-2 leading-snug">
-                      <span className="text-accent font-bold">›</span>
+                    <li key={w.id} className="font-body text-[12.5px] text-ink flex gap-2 leading-snug">
+                      <span className="text-[#8a6d00] font-bold">›</span>
                       <span className="min-w-0">
                         {w.reason}
-                        <span className="text-neutral-500"> — {formatDateTime(w.created_at)}</span>
+                        <span className="text-muted"> — {formatDateTime(w.created_at)}</span>
                       </span>
                     </li>
                   ))}
@@ -567,7 +565,7 @@ function AttentionCard({
         <div className="mt-auto pt-3">
           <Link
             href={detailHref}
-            className="inline-block font-display text-[10px] tracking-wider px-2.5 py-1.5 border border-ink-line text-neutral-300 hover:border-accent hover:text-accent transition-colors"
+            className="inline-block font-display text-[10px] tracking-wider px-2.5 py-1.5 border border-line text-ink hover:border-ink hover:text-ink transition-colors"
           >
             OPEN FILE →
           </Link>

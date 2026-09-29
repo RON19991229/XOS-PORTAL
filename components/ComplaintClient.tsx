@@ -227,10 +227,7 @@ export default function ComplaintClient({ role, userId, userName }: ComplaintCli
       {/* Header */}
       <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
         <div>
-          <h1 className="font-display text-3xl md:text-4xl leading-none tracking-tight text-ink">
-            COMPLAINTS
-          </h1>
-          <p className="font-mono text-[11px] text-neutral-500 mt-2.5 max-w-xl leading-relaxed">
+          <p className="font-mono text-[11px] text-neutral-500 max-w-xl leading-relaxed">
             // Harassment / misconduct reports submitted by members. Confidential —
             {isAdmin ? ' review, update status, and remove.' : ' read-only for staff.'}
           </p>

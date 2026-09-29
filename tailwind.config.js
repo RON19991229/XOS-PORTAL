@@ -21,6 +21,11 @@ module.exports = {
         danger: '#ff3b30',
         success: '#34c759',
         'success-green': '#16c75b',
+        // v2.22.0 light dashboard (A · Control Room light)
+        paper: '#f4f4f1',
+        line: '#e4e4df',
+        'line-strong': '#d6d6d0',
+        muted: '#6b6b66',
       },
       animation: {
         'pulse-slow': 'pulse 3s ease-in-out infinite',

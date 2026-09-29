@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { formatDateTime } from '@/lib/utils';
+import { usePrivacy } from '@/lib/privacy';
 
 interface Stats {
   totalCustomers: number;
@@ -34,6 +35,7 @@ export default function ReportsClient() {
   const [hourly, setHourly] = useState<HourlyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const { privacy, togglePrivacy } = usePrivacy();
 
   const fetchAll = async () => {
     // Use 2 RPC calls instead of 10+ separate count queries.
@@ -187,15 +189,32 @@ export default function ReportsClient() {
   const maxDaily = daily.length > 0 ? Math.max(...daily.map((d) => d.approved + d.denied), 1) : 1;
   const maxHourly = hourly.length > 0 ? Math.max(...hourly.map((h) => h.count), 1) : 1;
 
+  // v2.22.0: this page is nothing but business numbers — hide it entirely
+  // while privacy mode is on (the counter screen may be visible to others).
+  if (privacy) {
+    return (
+      <div className="px-4 md:px-6 py-10 max-w-5xl">
+        <div className="bg-white border border-line p-8 text-center">
+          <p className="font-display text-xl mb-2">REPORTS HIDDEN</p>
+          <p className="text-sm text-muted mb-5">Privacy mode is on. Turn it off to view visit numbers.</p>
+          <button
+            type="button"
+            onClick={togglePrivacy}
+            className="h-10 px-5 font-mono text-[11px] font-bold tracking-[0.12em] bg-ink text-accent"
+          >
+            SHOW REPORTS
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return <div className="dashboard-light min-h-screen px-6 py-8 font-mono">Loading reports...</div>;
   }
 
   return (
     <div className="dashboard-light min-h-screen px-4 md:px-6 py-6 max-w-5xl mx-auto">
-      <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">// ANALYTICS</p>
-      <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-1">REPORTS</h1>
-      <div className="h-1 w-12 bg-accent mb-6" />
 
       {/* Top stats */}
       {stats && (

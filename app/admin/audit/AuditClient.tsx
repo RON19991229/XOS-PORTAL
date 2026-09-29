@@ -64,8 +64,6 @@ export default function AuditClient() {
   return (
     <div className="dashboard-light min-h-screen">
       <div className="bg-white border-b border-neutral-200 px-4 md:px-6 py-4">
-        <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">// AUDIT TRAIL</p>
-        <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-3">AUDIT LOG</h1>
 
         <div className="flex gap-2 flex-wrap">
           {filters.map((f) => (

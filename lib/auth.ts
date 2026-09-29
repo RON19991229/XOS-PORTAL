@@ -1,5 +1,5 @@
 // v2.19.0 — auth lookup is memoised per request with React cache(), so the
-// dashboard layout (which renders DashboardNav) and the page (which enforces
+// dashboard layout (which renders the nav shell) and the page (which enforces
 // its own role list) share ONE getUser() + ONE app_users query instead of
 // paying for both twice on every navigation.
 import { cache } from 'react';

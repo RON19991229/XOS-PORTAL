@@ -5,6 +5,27 @@
 
 ---
 
+## 🖥 v2.22.0 (2026-10-01) — 后台改版：A · Control Room 浅色版
+
+Ron 选定 mockup `mockups/dashboard-A-light.html`，Staff 和 Admin 都换成新外壳：
+
+- **左侧图标导航栏**（手机上是横向标签）取代旧的黑色顶栏；顶栏有页面标题、时钟、**Ctrl+K 搜索顾客**（名字 / IC / 护照 / 电话，↑↓ + Enter）、SOUND、PRIVACY
+- **Privacy 默认开启**（每次打开后台都是开的）：
+  - 名字、IC、电话模糊，今天的 CHECK-INS / ALLOWED / DENIED、每小时图表、顾客总数、筛选按钮上的数字都变成 •••
+  - **LAST CHECK-IN 卡不遮**，新 check-in 弹窗也照常显示
+  - 员工关掉后，**2 分钟没操作会自动重新开启**
+  - REPORTS 页在 privacy 开着时整页隐藏
+- **TODAY**：上方 5 张数据卡；中间是 live feed；右边是 **NEEDS ATTENTION**（今天来过的被 ban、未满 12 岁、有警告的人，还有新投诉）。点任何一行，右边换成**客户摘要**（照片、到访次数、警告、ban 原因、最新备注 → OPEN FULL PROFILE）。屏幕较窄时摘要改成从右边滑出
+- **CUSTOMERS**：同样的工具栏和筛选，点一下看右侧摘要，**双击直接打开完整资料**
+- **HISTORY**：日期范围和筛选压缩成几排按钮，表头和日期条会固定在顶部
+- **客户详情**：顶部彩色状态块（红 = ban、黄 = 警告、绿 = 正常），**显示 Attention 照片**，资料改成格子，警告和备注并排
+- ATTENTION 页从深色改成浅色；其他页面（COMPLAINT / IMPORT / AUDIT / NEW CUSTOMER）去掉重复的大标题，内容不变
+- 所有功能、权限不变（Staff 仍然只读，操作按钮跟以前一样）
+
+**改动文件**：新增 `components/dashboard/DashboardShell.tsx`、`CommandPalette.tsx`、`CustomerPanel.tsx`、`lib/privacy.tsx`；重写 `components/TodayList.tsx`；改版 `CustomerList.tsx`、`HistoryClient.tsx`、`CustomerDetail.tsx`、`AttentionClient.tsx`、`SoundToggle.tsx`、`DashboardSkeleton.tsx`；`app/admin/layout.tsx`、`app/staff/layout.tsx`、`app/globals.css`、`tailwind.config.js`；小改 `ComplaintClient`、`ImportClient`、`ReportsClient`、`AuditClient`、`NewCustomerClient`；删除 `components/DashboardNav.tsx`。**无 SQL。**
+
+---
+
 ## 📱 v2.21.0 (2026-10-01) — 顾客端「记住这部手机」
 
 回头客入场成功后，绿色页面下方会问 **FASTER NEXT TIME? → REMEMBER THIS PHONE**（三语）。顾客点了之后，下次扫 QR：

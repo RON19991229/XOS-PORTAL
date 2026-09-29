@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { getCached, setCached } from '@/lib/client-cache';
 import { formatTime, parseTimestamp, calcAge, parseICDob } from '@/lib/utils';
+import { PrivateNum } from '@/lib/privacy';
 import GenderBadge from './GenderBadge';
+
+// v2.22.0 — "A · Control Room (light)" restyle: compact range + chip
+// toolbar, one sticky column header with sticky day bars, names/IC/phone
+// blurred and every count hidden while privacy mode is on. Filtering,
+// pagination and CSV export are unchanged.
 
 interface HistoryVisit {
   id: string;
@@ -436,167 +442,151 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
     }).toUpperCase();
   };
 
-  const rangeLabel = `${fromKey} — ${toKey}`;
+  const gridCols = '80px minmax(0,1fr) 180px 170px 112px';
 
   return (
-    <div className="dashboard-light min-h-screen">
-      <div className="bg-white border-b border-neutral-200 px-4 md:px-6 py-4">
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-          <div>
-            <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">
-              // {rangeLabel}
-            </p>
-            <h1 className="font-display text-3xl md:text-4xl tracking-tight">HISTORY</h1>
-          </div>
+    <div>
+      <div className="bg-white border-b border-line px-4 md:px-6 py-3.5 flex flex-col gap-2.5">
+        {/* ---- Range row ---- */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-mono text-[10px] tracking-[0.18em] text-muted w-[60px] flex-shrink-0">RANGE</span>
+          {QUICK_RANGES.map((r) => (
+            <Chip key={r.key} active={activeQuick === r.key} onClick={() => applyQuick(r.key, r.days)}>
+              {r.label}
+            </Chip>
+          ))}
+          <span className="w-2" />
+          <input
+            type="date"
+            value={fromKey}
+            max={toKey}
+            onChange={(e) => onFromChange(e.target.value)}
+            aria-label="From"
+            className="h-[30px] border border-line-strong bg-white px-2 font-mono text-xs outline-none focus:border-ink"
+          />
+          <span className="font-mono text-muted">→</span>
+          <input
+            type="date"
+            value={toKey}
+            min={fromKey}
+            max={today}
+            onChange={(e) => onToChange(e.target.value)}
+            aria-label="To"
+            className="h-[30px] border border-line-strong bg-white px-2 font-mono text-xs outline-none focus:border-ink"
+          />
+          <div className="flex-1" />
+          <span className="flex items-baseline gap-1.5">
+            <span className="font-mono text-[10px] tracking-[0.2em] text-muted">SHOWING</span>
+            <PrivateNum value={totalCount} className="font-display text-xl" />
+            <span className="font-mono text-[10px] tracking-[0.2em] text-muted">VISITS</span>
+          </span>
           {isAdmin && (
             <button
               onClick={handleExportCsv}
               disabled={exporting || totalCount === 0}
-              className="font-display text-sm tracking-wider px-4 py-2.5 bg-ink text-bone disabled:opacity-50"
+              className="h-[30px] ml-2 font-mono text-[10px] font-bold tracking-[0.1em] px-3 bg-ink text-accent disabled:opacity-50"
             >
               {exporting ? 'EXPORTING...' : '⬇ EXPORT CSV'}
             </button>
           )}
         </div>
 
-        {/* ---- Date range card ---- */}
-        <div className="bg-ink p-3 md:p-4 mb-3">
-          <p className="font-mono text-[9px] tracking-[0.2em] text-accent mb-2.5">📅 DATE RANGE</p>
-          <div className="flex gap-2.5 items-end">
-            <div className="flex-1">
-              <label className="block font-mono text-[9px] tracking-wider text-neutral-400 mb-1">FROM</label>
-              <input
-                type="date"
-                value={fromKey}
-                max={toKey}
-                onChange={(e) => onFromChange(e.target.value)}
-                className="w-full bg-ink-soft border border-ink-line text-bone px-2.5 py-2 font-mono text-sm focus:outline-none focus:border-accent"
-              />
-            </div>
-            <span className="text-neutral-500 pb-2">→</span>
-            <div className="flex-1">
-              <label className="block font-mono text-[9px] tracking-wider text-neutral-400 mb-1">TO</label>
-              <input
-                type="date"
-                value={toKey}
-                min={fromKey}
-                max={today}
-                onChange={(e) => onToChange(e.target.value)}
-                className="w-full bg-ink-soft border border-ink-line text-bone px-2.5 py-2 font-mono text-sm focus:outline-none focus:border-accent"
-              />
-            </div>
-          </div>
-          <div className="flex gap-1.5 flex-wrap mt-2.5">
-            {QUICK_RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => applyQuick(r.key, r.days)}
-                className={`font-display text-[9px] tracking-wider px-2.5 py-1.5 border ${
-                  activeQuick === r.key
-                    ? 'bg-accent text-ink border-accent'
-                    : 'bg-ink-soft text-neutral-400 border-ink-line hover:border-accent'
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* ---- Filter rows ---- */}
-        <div className="space-y-2.5 mb-3">
-          <FilterRow label="GENDER">
-            <Chip active={genderF === 'all'} onClick={() => setGenderF('all')}>ALL</Chip>
-            <Chip active={genderF === 'male'} onClick={() => setGenderF('male')}>
-              ♂ MALE <Count active={genderF === 'male'}>{genderCounts.male}</Count>
+        <FilterRow label="GENDER">
+          <Chip active={genderF === 'all'} onClick={() => setGenderF('all')}>ALL</Chip>
+          <Chip active={genderF === 'male'} onClick={() => setGenderF('male')}>
+            ♂ MALE <Count>{genderCounts.male}</Count>
+          </Chip>
+          <Chip active={genderF === 'female'} onClick={() => setGenderF('female')}>
+            ♀ FEMALE <Count>{genderCounts.female}</Count>
+          </Chip>
+        </FilterRow>
+
+        <FilterRow label="AGE">
+          {AGE_OPTIONS.map((o) => (
+            <Chip key={o.key} active={ageF === o.key} onClick={() => setAgeF(o.key)}>
+              {o.label}
+              {o.key !== 'all' && <Count>{ageCounts[o.key] || 0}</Count>}
             </Chip>
-            <Chip active={genderF === 'female'} onClick={() => setGenderF('female')}>
-              ♀ FEMALE <Count active={genderF === 'female'}>{genderCounts.female}</Count>
+          ))}
+        </FilterRow>
+
+        <FilterRow label="TIME">
+          {TIME_OPTIONS.map((o) => (
+            <Chip key={o.key} active={timeF === o.key} onClick={() => setTimeF(o.key)}>
+              {o.label}
+              {o.key !== 'all' && <Count>{timeCounts[o.key] || 0}</Count>}
             </Chip>
-          </FilterRow>
+          ))}
+        </FilterRow>
 
-          <FilterRow label="AGE">
-            {AGE_OPTIONS.map((o) => (
-              <Chip key={o.key} active={ageF === o.key} onClick={() => setAgeF(o.key)}>
-                {o.label}
-                {o.key !== 'all' && (
-                  <Count active={ageF === o.key}>{ageCounts[o.key] || 0}</Count>
-                )}
-              </Chip>
-            ))}
-          </FilterRow>
-
-          <FilterRow label="TIME">
-            {TIME_OPTIONS.map((o) => (
-              <Chip key={o.key} active={timeF === o.key} onClick={() => setTimeF(o.key)}>
-                {o.label}
-                {o.key !== 'all' && (
-                  <Count active={timeF === o.key}>{timeCounts[o.key] || 0}</Count>
-                )}
-              </Chip>
-            ))}
-          </FilterRow>
-
-          <FilterRow label="FREQ">
-            {FREQ_OPTIONS.map((o) => (
-              <Chip key={o.key} active={freqF === o.key} onClick={() => setFreqF(o.key)}>
-                {o.label}
-                {o.key !== 'all' && (
-                  <Count active={freqF === o.key}>{freqCounts[o.key] || 0}</Count>
-                )}
-              </Chip>
-            ))}
-          </FilterRow>
-        </div>
+        <FilterRow label="FREQ">
+          {FREQ_OPTIONS.map((o) => (
+            <Chip key={o.key} active={freqF === o.key} onClick={() => setFreqF(o.key)}>
+              {o.label}
+              {o.key !== 'all' && <Count>{freqCounts[o.key] || 0}</Count>}
+            </Chip>
+          ))}
+        </FilterRow>
 
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="SEARCH BY NAME, IC, OR PHONE..."
-          className="input-field font-mono text-sm"
+          placeholder="Search name, IC or phone…"
+          className="h-10 w-full max-w-[460px] border border-line-strong bg-white px-3 text-sm outline-none focus:border-ink"
         />
       </div>
 
       {/* ---- Active filter summary ---- */}
       {anyFilterActive && !loading && (
-        <div className="bg-yellow-50 border-b border-yellow-200 px-4 md:px-6 py-2 flex justify-between items-center">
-          <span className="font-mono text-[11px] text-yellow-800">
-            showing <b>{totalCount}</b> visit{totalCount !== 1 ? 's' : ''}
+        <div className="bg-[#fffbe6] border-b border-line px-4 md:px-6 py-2 flex justify-between items-center">
+          <span className="font-mono text-[11px] text-[#6b5500]">
+            showing <b><PrivateNum value={totalCount} /></b> visit{totalCount !== 1 ? 's' : ''}
             {genderF !== 'all' && ` · ${genderF === 'male' ? '♂ MALE' : '♀ FEMALE'}`}
             {ageF !== 'all' && ` · AGE ${AGE_OPTIONS.find((o) => o.key === ageF)?.label}`}
             {timeF !== 'all' && ` · ${TIME_OPTIONS.find((o) => o.key === timeF)?.label}`}
             {freqF !== 'all' && ` · ${FREQ_OPTIONS.find((o) => o.key === freqF)?.label}`}
             {search.trim() && ` · "${search.trim()}"`}
           </span>
-          <button
-            onClick={clearAll}
-            className="font-display text-[9px] tracking-wider text-danger flex-shrink-0 ml-2"
-          >
+          <button onClick={clearAll} className="font-mono text-[10px] font-bold tracking-wider text-danger flex-shrink-0 ml-2">
             ✕ CLEAR ALL
           </button>
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-16 font-mono text-neutral-500">Loading...</div>
-      ) : filteredHistory.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="font-display text-2xl mb-2 text-neutral-700">NO VISITS FOUND</p>
-          <p className="font-mono text-xs text-neutral-500">
-            {anyFilterActive ? 'Try adjusting your filters or date range' : 'No check-ins in this date range'}
-          </p>
+      <div className="bg-white min-h-[calc(100vh-16rem)]">
+        <div
+          className="hidden md:grid gap-3 bg-ink text-accent px-6 py-2.5 font-mono text-[10px] font-bold tracking-[0.18em] sticky top-16 z-10"
+          style={{ gridTemplateColumns: gridCols }}
+        >
+          <div>TIME</div>
+          <div>NAME</div>
+          <div>IC / PASSPORT</div>
+          <div>PHONE</div>
+          <div className="text-center">STATUS</div>
         </div>
-      ) : (
-        <div>
-          {filteredHistory.map((day) => (
-            <DayGroup key={day.day_key} day={day} baseHref={baseHref} formatDayHeader={formatDayHeader} />
-          ))}
-          <div className="text-center font-mono text-xs text-neutral-500 py-6">
-            {totalCount} visit{totalCount !== 1 ? 's' : ''} shown
+
+        {loading ? (
+          <div className="text-center py-16 font-mono text-muted">Loading...</div>
+        ) : filteredHistory.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="font-display text-2xl mb-2 text-neutral-700">NO VISITS FOUND</p>
+            <p className="font-mono text-xs text-muted">
+              {anyFilterActive ? 'Try adjusting your filters or date range' : 'No check-ins in this date range'}
+            </p>
           </div>
-        </div>
-      )}
+        ) : (
+          <div>
+            {filteredHistory.map((day) => (
+              <DayGroup key={day.day_key} day={day} baseHref={baseHref} gridCols={gridCols} formatDayHeader={formatDayHeader} />
+            ))}
+            <div className="text-center font-mono text-xs text-muted py-6">
+              <PrivateNum value={totalCount} /> visit{totalCount !== 1 ? 's' : ''} shown
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -604,10 +594,8 @@ export default function HistoryClient({ baseHref, role }: HistoryClientProps) {
 // ---- Small presentational helpers ----
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 flex-wrap items-center">
-      <span className="font-mono text-[9px] tracking-[0.15em] text-neutral-500 font-bold w-[52px] flex-shrink-0">
-        {label}
-      </span>
+    <div className="flex gap-1.5 flex-wrap items-center">
+      <span className="font-mono text-[10px] tracking-[0.18em] text-muted w-[60px] flex-shrink-0">{label}</span>
       {children}
     </div>
   );
@@ -623,10 +611,8 @@ function Chip({
   return (
     <button
       onClick={onClick}
-      className={`font-display text-[10px] tracking-wider px-2.5 py-1.5 border whitespace-nowrap ${
-        active
-          ? 'bg-ink text-bone border-ink'
-          : 'bg-white text-ink border-neutral-300 hover:border-accent'
+      className={`h-[30px] px-2.5 font-mono text-[10px] font-bold tracking-[0.1em] border whitespace-nowrap transition-colors ${
+        active ? 'bg-ink text-accent border-ink' : 'bg-white text-muted border-line-strong hover:border-ink hover:text-ink'
       }`}
     >
       {children}
@@ -634,43 +620,29 @@ function Chip({
   );
 }
 
-function Count({ children, active }: { children: React.ReactNode; active: boolean }) {
-  return (
-    <span className={`ml-1 font-mono font-normal ${active ? 'text-accent' : 'text-accent'}`}>
-      {children}
-    </span>
-  );
+function Count({ children }: { children: React.ReactNode }) {
+  return <PrivateNum value={children} className="ml-1 font-normal opacity-80" />;
 }
 
 function DayGroup({
-  day, baseHref, formatDayHeader,
+  day, baseHref, gridCols, formatDayHeader,
 }: {
   day: HistoryDay;
   baseHref: string;
+  gridCols: string;
   formatDayHeader: (k: string) => string;
 }) {
   return (
     <div>
-      <div className="bg-accent text-ink px-4 md:px-6 py-2 flex justify-between items-center font-display text-xs tracking-widest">
+      <div className="sticky top-16 md:top-[100px] z-[5] bg-paper border-b border-line px-4 md:px-6 py-2 flex justify-between items-center font-mono text-[11px] font-bold tracking-[0.15em]">
         <span>{formatDayHeader(day.day_key)}</span>
-        <span className="font-mono text-[11px]">
-          {day.total} visit{day.total !== 1 ? 's' : ''} · {day.approved} ok · {day.denied} denied
+        <span className="text-muted font-normal">
+          <PrivateNum value={`${day.total} visit${day.total !== 1 ? 's' : ''} · ${day.approved} ok · ${day.denied} denied`} />
         </span>
       </div>
 
-      <div
-        className="hidden md:grid bg-ink text-accent px-6 py-2 font-mono text-[10px] tracking-[0.15em]"
-        style={{ gridTemplateColumns: '90px 1fr 200px 180px 110px' }}
-      >
-        <div>TIME</div>
-        <div>NAME</div>
-        <div>IC / PASSPORT</div>
-        <div>PHONE</div>
-        <div className="text-center">STATUS</div>
-      </div>
-
       {day.visits.map((v) => (
-        <HistoryRow key={v.id} visit={v} baseHref={baseHref} />
+        <HistoryRow key={v.id} visit={v} baseHref={baseHref} gridCols={gridCols} />
       ))}
     </div>
   );
@@ -678,79 +650,73 @@ function DayGroup({
 
 // Memoized: visit objects keep identity across filter recomputes, so
 // unchanged rows skip re-rendering.
-const HistoryRow = memo(function HistoryRow({ visit: v, baseHref }: { visit: HistoryVisit; baseHref: string }) {
+const HistoryRow = memo(function HistoryRow({
+  visit: v, baseHref, gridCols,
+}: {
+  visit: HistoryVisit;
+  baseHref: string;
+  gridCols: string;
+}) {
   const time = formatTime(v.visited_at);
   const isBanned = v.visit_status === 'denied_banned' || v.customer_status === 'banned';
   const isDeniedAge = v.visit_status === 'denied_age';
-
-  let bgClass = 'bg-white hover:bg-yellow-50';
-  let statusLabel = '✓ OK';
-  let statusClass = 'bg-success text-white';
   const nameDisplay = v.name?.toUpperCase() || (isDeniedAge ? 'UNDERAGE ATTEMPT' : 'UNKNOWN');
 
-  if (isBanned) {
-    bgClass = 'bg-red-50 hover:bg-red-100';
-    statusLabel = '✕ BANNED';
-    statusClass = 'bg-danger text-white';
-  } else if (isDeniedAge) {
-    bgClass = 'bg-red-50 hover:bg-red-100';
-    statusLabel = '✕ AGE';
-    statusClass = 'bg-danger text-white';
-  }
+  const conf = isBanned
+    ? { bg: 'bg-[#fff1f0]', label: 'BANNED', cls: 'bg-danger text-white' }
+    : isDeniedAge
+    ? { bg: 'bg-[#fff6f5]', label: 'UNDER 12', cls: 'bg-danger text-white' }
+    : { bg: 'bg-white', label: 'ALLOWED', cls: 'bg-success-green text-ink' };
 
   const hasLink = !!v.customer_id;
   const linkProps = hasLink ? { href: `${baseHref}/${v.customer_id}` } : null;
   const RowEl = hasLink ? Link : 'div';
+  const pill = (
+    <span className={`inline-block font-mono text-[10px] font-bold tracking-[0.12em] px-2 py-1 ${conf.cls}`}>{conf.label}</span>
+  );
+  const member = v.membership === 'member' && (
+    <span className="font-mono text-[9px] font-bold tracking-[0.12em] px-1.5 py-0.5 bg-success-green text-ink flex-shrink-0">MEMBER</span>
+  );
 
   return (
     <RowEl
       {...(linkProps as any)} // eslint-disable-line @typescript-eslint/no-explicit-any
-      className={`md:grid flex flex-col gap-1 items-center px-4 md:px-6 py-2.5 border-b border-neutral-200 ${bgClass} ${hasLink ? 'cursor-pointer' : ''}`}
-      style={{ gridTemplateColumns: '90px 1fr 200px 180px 110px' }}
+      className={`md:grid flex flex-col gap-1 md:gap-3 items-center px-4 md:px-6 py-2.5 min-h-[52px] border-b border-line ${conf.bg} ${
+        hasLink ? 'cursor-pointer hover:bg-[#fffbe0]' : ''
+      }`}
+      style={{ gridTemplateColumns: gridCols }}
     >
       {/* Mobile stacked */}
       <div className="md:hidden w-full">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm font-bold">{time}</span>
-            <span className={`font-display text-[10px] tracking-widest px-2 py-0.5 ${statusClass}`}>
-              {statusLabel}
-            </span>
-          </div>
+        <div className="flex items-center gap-2 mb-1">
+          <span className="font-mono text-sm font-bold">{time}</span>
+          {pill}
         </div>
         <div className="font-bold text-sm truncate flex items-center gap-1.5">
-          {v.membership === 'member' && (
-            <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
-          )}
+          {member}
           <GenderBadge gender={v.gender} />
-          {nameDisplay}
+          <span className="sens truncate">{nameDisplay}</span>
         </div>
-        <div className="font-mono text-[11px] text-neutral-600 truncate">
+        <div className="sens font-mono text-[11px] text-muted truncate">
           {v.ic} · {v.phone || '—'}
         </div>
       </div>
 
       {/* Desktop table */}
       <div className="hidden md:block font-mono text-sm font-bold">{time}</div>
-      <div className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
-        {v.membership === 'member' && (
-          <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
-        )}
+      <div className="hidden md:flex items-center gap-2 font-bold text-sm min-w-0">
+        {member}
         <GenderBadge gender={v.gender} />
-        <span className="truncate">{nameDisplay}</span>
+        <span className="sens truncate">{nameDisplay}</span>
       </div>
-      <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">
-        {v.nationality === 'foreigner' && <span className="text-accent mr-1">🌍</span>}
-        {v.ic}
+      <div className="hidden md:block font-mono text-xs text-muted truncate">
+        {v.nationality === 'foreigner' && <span className="mr-1">🌍</span>}
+        <span className="sens">{v.ic}</span>
       </div>
-      <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">
-        {v.phone || '—'}
+      <div className="hidden md:block font-mono text-xs text-muted truncate">
+        <span className="sens">{v.phone || '—'}</span>
       </div>
-      <div className="hidden md:block text-center">
-        <span className={`font-display text-[10px] tracking-widest px-2 py-1 ${statusClass}`}>
-          {statusLabel}
-        </span>
-      </div>
+      <div className="hidden md:block text-center">{pill}</div>
     </RowEl>
   );
 });

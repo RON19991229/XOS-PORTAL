@@ -1,10 +1,17 @@
 'use client';
 
-import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
+// v2.22.0 — "A · Control Room (light)" restyle: toolbar + chip filters,
+// side panel on click (CustomerPanel), names/IC/phone blurred and counts
+// hidden while privacy mode is on. Data loading/filtering unchanged.
+
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { getCached, setCached } from '@/lib/client-cache';
 import { Customer } from '@/lib/types';
+import { PrivateNum } from '@/lib/privacy';
+import { CustomerPanel, PanelSeed, SideColumn } from './dashboard/CustomerPanel';
 import GenderBadge from './GenderBadge';
 
 interface CustomerListProps {
@@ -50,6 +57,8 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
   const [sortKey, setSortKey] = useState<SortKey>('recent');
   const [loading, setLoading] = useState(() => !getCached<Customer[]>(CACHE_KEY));
   const [renderLimit, setRenderLimit] = useState(RENDER_CHUNK);
+  const [selected, setSelected] = useState<PanelSeed | null>(null);
+  const router = useRouter();
 
   // Deferred search: the input itself stays instantly responsive while the
   // expensive filter+sort over 1,600+ rows runs at lower priority. React
@@ -251,55 +260,74 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
     { key: 'banned', label: 'BANNED' },
   ];
 
+  // v2.22.0: desktop click opens the side panel (double-click = full
+  // profile); on a phone the row goes straight to the profile.
+  const handleOpen = useCallback(
+    (c: Customer) => {
+      if (window.matchMedia('(min-width: 768px)').matches) {
+        setSelected((cur) => (cur?.id === c.id ? null : { ...c }));
+      } else {
+        router.push(`${baseHref}/${c.id}`);
+      }
+    },
+    [baseHref, router],
+  );
+  const handleOpenProfile = useCallback((c: Customer) => router.push(`${baseHref}/${c.id}`), [baseHref, router]);
+
   // Grid columns: NAME · VISITS · LAST SEEN · IC · PHONE · STATUS
-  const gridCols = '1fr 110px 120px 180px 160px 110px';
+  const gridCols = 'minmax(0,1fr) 90px 120px 170px 160px 104px';
 
   return (
-    <div className="dashboard-light min-h-screen">
-      <div className="bg-white border-b border-neutral-200 px-4 md:px-6 py-4">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-          <div>
-            <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">// DATABASE</p>
-            <h1 className="font-display text-3xl md:text-4xl tracking-tight">CUSTOMERS</h1>
-          </div>
+    <div>
+      <div className="bg-white border-b border-line px-4 md:px-6 py-3.5 flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, IC or phone…"
+            className="h-10 flex-1 min-w-[200px] max-w-[460px] border border-line-strong bg-white px-3 text-sm outline-none focus:border-ink"
+          />
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            aria-label="Sort"
+            className="h-10 font-mono text-[11px] tracking-wider px-2.5 border border-line-strong bg-white text-ink hover:border-ink cursor-pointer"
+          >
+            <option value="recent">RECENT (newest first)</option>
+            <option value="visits_desc">VISITS · MOST FIRST</option>
+            <option value="visits_asc">VISITS · LEAST FIRST</option>
+            <option value="last_visit_desc">LAST VISIT · RECENT FIRST</option>
+            <option value="last_visit_asc">LAST VISIT · OLDEST FIRST</option>
+            <option value="name_asc">NAME · A → Z</option>
+          </select>
+          <div className="flex-1" />
+          <span className="flex items-baseline gap-1.5">
+            <PrivateNum value={customers.length.toLocaleString('en-MY')} className="font-display text-xl" />
+            <span className="font-mono text-[10px] tracking-[0.2em] text-muted">CUSTOMERS</span>
+          </span>
           {isAdmin && (
             <Link
               href="/admin/customers/new"
-              className="font-display text-sm tracking-wider px-4 py-2.5 bg-accent text-ink hover:translate-y-0.5 transition-transform"
+              className="h-10 flex items-center font-display text-[12px] tracking-wider px-4 bg-accent text-ink hover:bg-accent-dark transition-colors"
             >
               + NEW CUSTOMER
             </Link>
           )}
         </div>
 
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="SEARCH BY NAME, IC, OR PHONE..."
-          className="input-field font-mono text-sm mb-3"
-        />
-
-        {/* STATUS row */}
         <FilterRow label="STATUS">
           {statusFilters.map((f) => (
-            <FilterChip
-              key={f.key}
-              active={statusFilter === f.key}
-              onClick={() => setStatusFilter(f.key)}
-            >
+            <FilterChip key={f.key} active={statusFilter === f.key} onClick={() => setStatusFilter(f.key)}>
               {f.label}
             </FilterChip>
           ))}
         </FilterRow>
 
-        {/* TYPE row */}
         <FilterRow label="TYPE">
-          <FilterChip active={typeFilter === 'all'} onClick={() => setTypeFilter('all')}>
-            ALL
-          </FilterChip>
+          <FilterChip active={typeFilter === 'all'} onClick={() => setTypeFilter('all')}>ALL</FilterChip>
           <FilterChip active={typeFilter === 'member'} onClick={() => setTypeFilter('member')}>
-            ⭐ MEMBER <Count n={counts.member} />
+            MEMBER <Count n={counts.member} />
           </FilterChip>
           <FilterChip active={typeFilter === 'walkin'} onClick={() => setTypeFilter('walkin')}>
             WALK-IN <Count n={counts.walkin} />
@@ -312,77 +340,80 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
           </FilterChip>
         </FilterRow>
 
-        {/* ACTIVITY row */}
         <FilterRow label="ACTIVITY">
-          <FilterChip active={activityFilter === 'all'} onClick={() => setActivityFilter('all')}>
-            ALL
-          </FilterChip>
+          <FilterChip active={activityFilter === 'all'} onClick={() => setActivityFilter('all')}>ALL</FilterChip>
           <FilterChip active={activityFilter === 'frequent'} onClick={() => setActivityFilter('frequent')}>
-            🔥 FREQUENT (10+) <Count n={counts.frequent} />
+            FREQUENT (10+) <Count n={counts.frequent} />
           </FilterChip>
           <FilterChip active={activityFilter === 'inactive'} onClick={() => setActivityFilter('inactive')}>
-            💤 INACTIVE (30d+) <Count n={counts.inactive} />
+            INACTIVE (30D+) <Count n={counts.inactive} />
           </FilterChip>
           <FilterChip active={activityFilter === 'new'} onClick={() => setActivityFilter('new')}>
-            ✨ NEW (this week) <Count n={counts.new} />
+            NEW (THIS WEEK) <Count n={counts.new} />
           </FilterChip>
         </FilterRow>
+      </div>
 
-        {/* SORT row */}
-        <FilterRow label="SORT BY">
-          <select
-            value={sortKey}
-            onChange={(e) => setSortKey(e.target.value as SortKey)}
-            className="font-mono text-[11px] tracking-wider px-3 py-1.5 border border-neutral-300 bg-white text-ink hover:border-accent cursor-pointer"
+      <div className="flex items-start">
+        <section className="flex-1 min-w-0 bg-white min-h-[calc(100vh-12rem)]">
+          {/* Desktop table header */}
+          <div
+            className="hidden md:grid gap-3 bg-ink text-accent px-6 py-2.5 font-mono text-[10px] font-bold tracking-[0.18em] sticky top-16 z-10"
+            style={{ gridTemplateColumns: gridCols }}
           >
-            <option value="recent">RECENT (newest first)</option>
-            <option value="visits_desc">VISITS · MOST FIRST 🔥</option>
-            <option value="visits_asc">VISITS · LEAST FIRST</option>
-            <option value="last_visit_desc">LAST VISIT · RECENT FIRST</option>
-            <option value="last_visit_asc">LAST VISIT · OLDEST FIRST 💤</option>
-            <option value="name_asc">NAME · A → Z</option>
-          </select>
-        </FilterRow>
-      </div>
-
-      {/* Desktop table header */}
-      <div
-        className="hidden md:grid bg-ink text-accent px-6 py-2 font-mono text-[10px] tracking-[0.15em] sticky top-0 z-10"
-        style={{ gridTemplateColumns: gridCols }}
-      >
-        <div>NAME</div>
-        <div>VISITS</div>
-        <div>LAST SEEN</div>
-        <div>IC / PASSPORT</div>
-        <div>PHONE</div>
-        <div className="text-center">STATUS</div>
-      </div>
-
-      {loading ? (
-        <div className="text-center py-16 font-mono text-neutral-500">Loading...</div>
-      ) : visible.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="font-display text-2xl text-neutral-700">NO CUSTOMERS FOUND</p>
-          <p className="font-mono text-xs text-neutral-500 mt-2">Try clearing some filters</p>
-        </div>
-      ) : (
-        <>
-          {visible.slice(0, renderLimit).map((c) => (
-            <CustomerRow key={c.id} c={c} baseHref={baseHref} gridCols={gridCols} />
-          ))}
-          {visible.length > renderLimit && (
-            <button
-              onClick={() => setRenderLimit((l) => l + RENDER_CHUNK)}
-              className="block w-full text-center font-display text-xs tracking-widest py-4 bg-white border-b border-neutral-200 hover:bg-yellow-50 transition-colors"
-            >
-              ▼ LOAD MORE · {visible.length - renderLimit} REMAINING
-            </button>
-          )}
-          <div className="text-center font-mono text-xs text-neutral-500 py-4">
-            {visible.length} of {customers.length} shown
+            <div>NAME</div>
+            <div>VISITS</div>
+            <div>LAST SEEN</div>
+            <div>IC / PASSPORT</div>
+            <div>PHONE</div>
+            <div className="text-center">STATUS</div>
           </div>
-        </>
-      )}
+
+          {loading ? (
+            <div className="text-center py-16 font-mono text-muted">Loading...</div>
+          ) : visible.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="font-display text-2xl text-neutral-700">NO CUSTOMERS FOUND</p>
+              <p className="font-mono text-xs text-muted mt-2">Try clearing some filters</p>
+            </div>
+          ) : (
+            <>
+              {visible.slice(0, renderLimit).map((c) => (
+                <CustomerRow
+                  key={c.id}
+                  c={c}
+                  gridCols={gridCols}
+                  selected={selected?.id === c.id}
+                  onOpen={handleOpen}
+                  onOpenProfile={handleOpenProfile}
+                />
+              ))}
+              {visible.length > renderLimit && (
+                <button
+                  onClick={() => setRenderLimit((l) => l + RENDER_CHUNK)}
+                  className="block w-full text-center font-display text-xs tracking-widest py-4 bg-white border-b border-line hover:bg-[#fffbe0] transition-colors"
+                >
+                  ▼ LOAD MORE · <PrivateNum value={visible.length - renderLimit} /> REMAINING
+                </button>
+              )}
+              <div className="text-center font-mono text-xs text-muted py-4">
+                <PrivateNum value={visible.length} /> of <PrivateNum value={customers.length} /> shown
+              </div>
+            </>
+          )}
+        </section>
+
+        <SideColumn open={!!selected} onClose={() => setSelected(null)}>
+          {selected ? (
+            <CustomerPanel seed={selected} baseHref={baseHref} onClose={() => setSelected(null)} />
+          ) : (
+            <div className="p-6 text-[13px] text-muted leading-relaxed">
+              <p className="font-mono text-[10px] tracking-[0.25em] mb-2.5">CUSTOMER</p>
+              Click a customer to see their summary here without leaving the list. Double-click opens the full profile.
+            </div>
+          )}
+        </SideColumn>
+      </div>
     </div>
   );
 }
@@ -391,10 +422,8 @@ export default function CustomerList({ baseHref, role }: CustomerListProps) {
 
 function FilterRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-2 flex-wrap items-center mb-2">
-      <span className="font-mono text-[9px] tracking-[0.2em] text-neutral-500 font-bold min-w-[64px]">
-        {label}
-      </span>
+    <div className="flex gap-1.5 flex-wrap items-center">
+      <span className="font-mono text-[10px] tracking-[0.18em] text-muted w-[76px] flex-shrink-0">{label}</span>
       {children}
     </div>
   );
@@ -410,10 +439,8 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`font-display text-[10px] tracking-widest px-3 py-1.5 border transition-colors ${
-        active
-          ? 'bg-ink text-bone border-ink'
-          : 'bg-white text-ink border-neutral-300 hover:border-accent'
+      className={`h-[30px] px-3 font-mono text-[10px] font-bold tracking-[0.1em] border whitespace-nowrap transition-colors ${
+        active ? 'bg-ink text-accent border-ink' : 'bg-white text-muted border-line-strong hover:border-ink hover:text-ink'
       }`}
     >
       {children}
@@ -422,98 +449,95 @@ function FilterChip({
 }
 
 function Count({ n }: { n: number }) {
-  return <span className="text-accent font-normal ml-1">{n}</span>;
+  return <PrivateNum value={n} className="ml-1 font-normal opacity-80" />;
 }
 
 // Memoized: customer objects keep their identity across filter/sort
 // recomputes, so unchanged rows skip re-rendering entirely.
 const CustomerRow = memo(function CustomerRow({
-  c, baseHref, gridCols,
+  c, gridCols, selected, onOpen, onOpenProfile,
 }: {
   c: Customer;
-  baseHref: string;
   gridCols: string;
+  selected: boolean;
+  onOpen: (c: Customer) => void;
+  onOpenProfile: (c: Customer) => void;
 }) {
   const visits = c.visit_count ?? 0;
   const lastSeen = formatLastSeen(c.last_visit_at ?? null);
+  const bg = c.status === 'banned' ? 'bg-[#fff1f0]' : c.warning_count > 0 ? 'bg-[#fffbe6]' : 'bg-white';
 
   return (
-    <Link href={`${baseHref}/${c.id}`}>
-      <div
-        className={`md:grid flex flex-col gap-1 items-center px-4 md:px-6 py-2.5 border-b border-neutral-200 cursor-pointer transition-colors ${
-          c.status === 'banned'
-            ? 'bg-red-50 hover:bg-red-100'
-            : c.warning_count > 0
-            ? 'bg-yellow-50 hover:bg-yellow-100'
-            : 'bg-white hover:bg-yellow-50'
-        }`}
-        style={{ gridTemplateColumns: gridCols }}
-      >
-        {/* Mobile: stacked */}
-        <div className="md:hidden w-full">
-          <div className="flex items-center justify-between mb-1">
-            <span className="font-bold text-sm truncate flex-1 flex items-center gap-1.5">
-              {c.membership === 'member' && (
-                <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐</span>
-              )}
-              <GenderBadge gender={c.gender} />
-              <span className="truncate">{c.name.toUpperCase()}</span>
-            </span>
-            <StatusBadge customer={c} />
-          </div>
-          <div className="font-mono text-[11px] text-neutral-600 truncate">
-            {c.ic} · {c.phone}
-          </div>
-          <div className="font-mono text-[10px] text-neutral-500 mt-0.5">
-            <span className="text-ink font-bold">{visits}</span> visit{visits === 1 ? '' : 's'}
-            {lastSeen && <> · {lastSeen}</>}
-          </div>
-        </div>
-
-        {/* Desktop: table cells */}
-        <div className="hidden md:flex items-center gap-1.5 font-bold text-sm truncate">
-          {c.nationality === 'foreigner' && <span className="text-accent">🌍</span>}
-          {c.membership === 'member' && (
-            <span className="font-display text-[9px] tracking-widest px-1.5 py-0.5 bg-success-green text-white flex-shrink-0">⭐ MEMBER</span>
-          )}
-          <GenderBadge gender={c.gender} />
-          <span className="truncate">{c.name.toUpperCase()}</span>
-        </div>
-        <div className="hidden md:block font-mono text-sm">
-          <span className="font-bold">{visits}</span>
-          <span className="text-neutral-400 text-xs ml-1">{visits === 1 ? 'visit' : 'visits'}</span>
-        </div>
-        <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">
-          {lastSeen || <span className="text-neutral-400">—</span>}
-        </div>
-        <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{c.ic}</div>
-        <div className="hidden md:block font-mono text-xs text-neutral-600 truncate">{c.phone}</div>
-        <div className="hidden md:block text-center">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(c)}
+      onDoubleClick={() => onOpenProfile(c)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onOpenProfile(c);
+      }}
+      className={`md:grid flex flex-col gap-1 md:gap-3 items-center px-4 md:px-6 py-2.5 min-h-[52px] border-b border-line cursor-pointer transition-colors hover:bg-[#fffbe0] ${bg} ${
+        selected ? 'shadow-[inset_4px_0_0_#0a0a0a]' : ''
+      }`}
+      style={{ gridTemplateColumns: gridCols }}
+    >
+      {/* Mobile: stacked */}
+      <div className="md:hidden w-full">
+        <div className="flex items-center justify-between mb-1 gap-2">
+          <span className="font-bold text-sm truncate flex-1 flex items-center gap-1.5 min-w-0">
+            {c.membership === 'member' && <MemberTag />}
+            <GenderBadge gender={c.gender} />
+            <span className="sens truncate">{c.name.toUpperCase()}</span>
+          </span>
           <StatusBadge customer={c} />
         </div>
+        <div className="sens font-mono text-[11px] text-muted truncate">
+          {c.ic} · {c.phone}
+        </div>
+        <div className="font-mono text-[10px] text-muted mt-0.5">
+          <span className="text-ink font-bold">{visits}</span> visit{visits === 1 ? '' : 's'}
+          {lastSeen && <> · {lastSeen}</>}
+        </div>
       </div>
-    </Link>
+
+      {/* Desktop: table cells */}
+      <div className="hidden md:flex items-center gap-2 font-bold text-sm min-w-0">
+        {c.nationality === 'foreigner' && <span>🌍</span>}
+        {c.membership === 'member' && <MemberTag />}
+        <GenderBadge gender={c.gender} />
+        <span className="sens truncate">{c.name.toUpperCase()}</span>
+      </div>
+      <div className="hidden md:block font-display text-base">{visits}</div>
+      <div className="hidden md:block font-mono text-xs text-muted truncate">
+        {lastSeen || <span className="text-neutral-400">—</span>}
+      </div>
+      <div className="hidden md:block font-mono text-xs text-muted truncate"><span className="sens">{c.ic}</span></div>
+      <div className="hidden md:block font-mono text-xs text-muted truncate"><span className="sens">{c.phone}</span></div>
+      <div className="hidden md:block text-center">
+        <StatusBadge customer={c} />
+      </div>
+    </div>
   );
 });
 
-function StatusBadge({ customer }: { customer: Customer }) {
-  if (customer.status === 'banned') {
-    return (
-      <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-danger text-white">
-        ✕ BANNED
-      </span>
-    );
-  }
-  if (customer.warning_count > 0) {
-    return (
-      <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-accent text-ink">
-        ⚠ {customer.warning_count}/3
-      </span>
-    );
-  }
+function MemberTag() {
   return (
-    <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-success text-white">
-      ✓ OK
+    <span className="font-mono text-[9px] font-bold tracking-[0.12em] px-1.5 py-0.5 bg-success-green text-ink flex-shrink-0">
+      MEMBER
+    </span>
+  );
+}
+
+function StatusBadge({ customer }: { customer: Customer }) {
+  const conf =
+    customer.status === 'banned'
+      ? { label: 'BANNED', cls: 'bg-danger text-white' }
+      : customer.warning_count > 0
+      ? { label: `WARN ${customer.warning_count}/3`, cls: 'bg-accent text-ink' }
+      : { label: 'ACTIVE', cls: 'bg-success-green text-ink' };
+  return (
+    <span className={`inline-block font-mono text-[10px] font-bold tracking-[0.12em] px-2 py-1 ${conf.cls}`}>
+      {conf.label}
     </span>
   );
 }

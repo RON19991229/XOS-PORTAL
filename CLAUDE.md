@@ -51,6 +51,8 @@ Three frontends:
 - Anon lookups go through RPCs (`lookup_customer_for_checkin`, `lookup_customer_by_phone`), **not** direct `select` on `customers`.
 - Admin nav: TODAY · HISTORY · CUSTOMERS · ATTENTION · COMPLAINT · REPORTS · IMPORT · AUDIT · EXIT
 - Staff nav: TODAY · HISTORY · CUSTOMERS · ATTENTION · COMPLAINT
+- **Dashboard shell (v2.22.0, "A · Control Room light", Ron-approved mockup `mockups/dashboard-A-light.html`):** `components/dashboard/DashboardShell.tsx` in both layouts — white left icon rail, top bar (title, clock, Ctrl+K search `CommandPalette`, SOUND, PRIVACY). Side summary panel = `components/dashboard/CustomerPanel.tsx` (TODAY + CUSTOMERS).
+- **Privacy mode (`lib/privacy.tsx`) is ON by default on every load and re-locks after 2 min idle.** Mark names/IC/phone with `className="sens"` (blurred via `.privacy-on .sens`); wrap any count that reveals business volume (today's check-ins, totals, chip counts) in `<PrivateNum>`. The LAST CHECK-IN card and the check-in popup must stay readable. REPORTS is hidden entirely while privacy is on.
 - Dashboards (`/staff`, `/admin`) are **English-only hardcoded**; `lib/i18n.ts` (`Lang` = en/zh/ms) is used by `/checkin/*` and `/report/*`.
 - **`lib/report-config.ts`** drives the whole `/report/form`: questions live in `reportFields`; answers are stored self-describing in `incident_reports.answers` JSONB (`{qid,label,type,value}`). Adding/removing a question = edit this file only, **no SQL, no dashboard change**. Option `value` is canonical English. Location labels deliberately stay English for `en` and `ms`.
 - **`lib/complaint-print.ts`** builds the printable A4 bilingual (EN/BM) incident report (admin COMPLAINT → 🖨 PRINT). It is an *internal record, not a police report*; section 4 is "AS ALLEGED BY REPORTING PARTY"; case log is OFF by default; reporter can be redacted; all user content is escaped. Keep these legal safeguards.
@@ -136,7 +138,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.21.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.22.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`.

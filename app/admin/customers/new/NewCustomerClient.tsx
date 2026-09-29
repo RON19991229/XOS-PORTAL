@@ -151,9 +151,6 @@ export default function NewCustomerClient({ userId, userName }: NewCustomerClien
         ← BACK TO LIST
       </button>
 
-      <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">// MANUAL ENTRY</p>
-      <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-1">NEW CUSTOMER</h1>
-      <div className="h-1 w-12 bg-accent mb-6" />
 
       <form onSubmit={handleSubmit} className="bg-white border border-neutral-200 p-5 space-y-4">
         <div>

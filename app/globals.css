@@ -421,7 +421,7 @@ html, body {
 
 /* Light mode for staff dashboard */
 .dashboard-light {
-  background: #f5f5f5;
+  background: #f4f4f1; /* v2.22.0: matches the shell's paper tone */
   color: #0a0a0a;
 }
 
@@ -458,18 +458,27 @@ html, body {
 }
 
 /* ============================================================
-   Privacy mode — blur sensitive Today live-feed content so
-   customers near the counter can't read names / IC / phone.
-   Toggled by the eye button (left of TOTAL). The new-checkin
-   toast pop-up is rendered outside this wrapper and is never
-   blurred. select-none + the blur make text unreadable.
+   Privacy mode (v2.22.0) — every /admin and /staff page.
+   DashboardShell puts .privacy-on on its root while privacy is
+   ON (default). Anything marked .sens (names, IC, phone …) is
+   blurred with a text-shadow — unreadable, and unlike
+   filter:blur it creates no GPU layer per cell. Numbers that
+   reveal sales use <PrivateNum> (renders ••• instead). The
+   check-in popup is outside the shell and never blurred.
    ============================================================ */
-.privacy-blur {
-  filter: blur(8px);
-  -webkit-filter: blur(8px);
+.privacy-on .sens,
+.privacy-on .sens * {
+  color: transparent !important;
+  text-shadow: 0 0 9px rgba(10, 10, 10, 0.55);
   user-select: none;
   -webkit-user-select: none;
-  transition: filter 0.25s ease;
+}
+.privacy-on .sens img {
+  filter: blur(14px);
+}
+.privacy-dots {
+  color: #c9c9c2;
+  letter-spacing: 0.12em;
 }
 
 /* ============================================================

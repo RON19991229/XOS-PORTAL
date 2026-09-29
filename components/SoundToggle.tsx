@@ -1,6 +1,6 @@
 'use client';
 
-// v2.20.0 — sound status button in DashboardNav. Browsers block audio until
+// v2.20.0 — sound status button in the dashboard top bar (DashboardShell since v2.22.0). Browsers block audio until
 // the page is clicked once; before v2.20.0 the check-in chime just stayed
 // silent with no hint. Now staff see a red "SOUND OFF — CLICK TO ENABLE".
 // Clicking also asks (once) for Windows notification permission, so a
@@ -37,12 +37,13 @@ export default function SoundToggle() {
     }
   };
 
+  // v2.22.0: restyled for the white dashboard top bar.
   const look =
     state === 'ready'
-      ? { cls: 'border-success text-success', label: 'SOUND ON', title: 'Check-in sounds on — click to mute' }
+      ? { cls: 'bg-white border-line-strong text-ink hover:border-ink', label: 'SOUND ON', title: 'Check-in sounds on — click to mute' }
       : state === 'muted'
-      ? { cls: 'border-ink-line text-neutral-400', label: 'MUTED', title: 'Check-in sounds muted — click to turn on' }
-      : { cls: 'border-danger bg-danger text-ink', label: 'SOUND OFF — CLICK', title: 'Browser blocked sound — click to enable check-in alerts' };
+      ? { cls: 'bg-white border-line-strong text-muted hover:border-ink', label: 'MUTED', title: 'Check-in sounds muted — click to turn on' }
+      : { cls: 'border-danger bg-danger text-white', label: 'SOUND OFF — CLICK', title: 'Browser blocked sound — click to enable check-in alerts' };
 
   return (
     <button
@@ -50,7 +51,7 @@ export default function SoundToggle() {
       onClick={onClick}
       title={look.title}
       aria-label={look.title}
-      className={`flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-widest px-2.5 py-2 border ${look.cls}`}
+      className={`h-10 flex items-center gap-1.5 font-mono text-[10px] font-bold tracking-widest px-3 border whitespace-nowrap transition-colors ${look.cls}`}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M11 5L6 9H2v6h4l5 4V5z" />

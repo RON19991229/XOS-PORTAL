@@ -453,8 +453,6 @@ export default function ImportClient({ userName }: ImportClientProps) {
 
   return (
     <div className="dashboard-light min-h-screen px-4 md:px-6 py-6 max-w-5xl mx-auto">
-      <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">// ADMIN ONLY</p>
-      <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-6">IMPORT CUSTOMERS</h1>
 
       {/* Step 1 — download template */}
       <div className="bg-white border border-neutral-200 p-5 mb-4">

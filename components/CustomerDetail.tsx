@@ -1,5 +1,9 @@
 'use client';
 
+// v2.22.0 — "A · Control Room (light)" restyle: status block with photo,
+// field grid, warnings/notes side by side. IC/phone/emergency/guardian
+// details blur while privacy mode is on. All actions + modals unchanged.
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
@@ -103,6 +107,26 @@ export default function CustomerDetail({
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId]);
+
+  // v2.22.0: show the Attention List photo (private bucket, signed URL).
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const photoPath = customer?.photo_path ?? null;
+  useEffect(() => {
+    let active = true;
+    setPhotoUrl(null);
+    if (photoPath) {
+      supabase.storage
+        .from('attention-photos')
+        .createSignedUrl(photoPath, 60 * 60 * 6)
+        .then(({ data }) => {
+          if (active && data?.signedUrl) setPhotoUrl(data.signedUrl);
+        });
+    }
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoPath]);
 
   const logAudit = async (action: string, details: Record<string, unknown> = {}) => {
     await supabase.from('audit_log').insert({
@@ -424,12 +448,12 @@ export default function CustomerDetail({
   };
 
   if (loading) {
-    return <div className="dashboard-light min-h-screen px-6 py-8 font-mono">Loading...</div>;
+    return <div className="px-6 py-8 font-mono text-muted">Loading...</div>;
   }
 
   if (!customer) {
     return (
-      <div className="dashboard-light min-h-screen px-6 py-8">
+      <div className="px-6 py-8">
         <p className="font-display text-2xl">CUSTOMER NOT FOUND</p>
       </div>
     );
@@ -440,45 +464,61 @@ export default function CustomerDetail({
   const age = customer.dob ? calcAge(new Date(customer.dob)) : null;
   const approvedVisits = visits.filter((v) => v.status === 'approved').length;
 
+  const block = isBanned
+    ? { cls: 'bg-danger text-white', tag: 'BANNED · DO NOT ADMIT' }
+    : customer.warning_count > 0
+    ? { cls: 'bg-accent text-ink', tag: `WARNINGS ${customer.warning_count}/3` }
+    : { cls: 'bg-success-green text-ink', tag: 'ACTIVE' };
+
+  const btn = 'h-10 px-4 font-display text-[12px] tracking-[0.08em] transition-colors disabled:opacity-50';
+
   return (
-    <div className="dashboard-light min-h-screen px-4 md:px-6 py-6 max-w-4xl mx-auto">
+    <div className="px-4 md:px-6 py-5 max-w-6xl flex flex-col gap-4">
       <button
         onClick={() => router.push(baseHref)}
-        className="font-mono text-xs underline underline-offset-4 mb-4 text-neutral-600"
+        className="self-start font-mono text-[11px] tracking-[0.12em] text-muted hover:text-ink"
       >
         ← BACK TO LIST
       </button>
 
-      {isBanned && (
-        <div className="bg-danger text-white p-5 mb-6">
-          <p className="font-display text-3xl tracking-tight mb-1">✕ BANNED</p>
-          {customer.ban_reason && (
-            <p className="font-mono text-sm opacity-90">REASON: {customer.ban_reason}</p>
+      {/* ---- Header: photo + status block ---- */}
+      <div className="flex flex-col sm:flex-row gap-4 items-stretch">
+        <div className="sens w-full sm:w-[132px] h-[132px] flex-shrink-0 bg-[#e9e9e4] grid place-items-center overflow-hidden">
+          {photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoUrl} alt="Attention photo" className="w-full h-full object-cover" />
+          ) : (
+            <span className="font-mono text-[10px] tracking-[0.15em] text-[#9a9a94]">NO PHOTO</span>
           )}
-          {customer.banned_at && (
-            <p className="font-mono text-xs opacity-75 mt-1">
-              SINCE: {formatDateTime(customer.banned_at)}
+        </div>
+        <div className={`flex-1 min-w-0 px-5 py-4 flex flex-col justify-center ${block.cls}`}>
+          <p className="font-mono text-[11px] font-bold tracking-[0.15em]">
+            {block.tag}
+            {customer.membership === 'member' ? ' · MEMBER' : ''}
+            {customer.gender === 'male' ? ' · ♂ MALE' : customer.gender === 'female' ? ' · ♀ FEMALE' : ''}
+          </p>
+          <h2 className="sens font-display text-[28px] md:text-[34px] leading-[1.08] mt-1.5 break-words">
+            {customer.name.toUpperCase()}
+          </h2>
+          {isBanned && customer.ban_reason && (
+            <p className="font-mono text-[12px] mt-2 opacity-95">REASON: {customer.ban_reason}</p>
+          )}
+          {isBanned && customer.banned_at && (
+            <p className="font-mono text-[11px] mt-0.5 opacity-80">SINCE: {formatDateTime(customer.banned_at)}</p>
+          )}
+          {!isBanned && customer.warning_count > 0 && (
+            <p className="font-mono text-[11px] mt-2">
+              {customer.warning_count >= 3
+                ? 'MAXIMUM WARNINGS REACHED — ADMIN REVIEW REQUIRED'
+                : 'Continued violations may result in a ban'}
             </p>
           )}
         </div>
-      )}
-
-      {!isBanned && customer.warning_count > 0 && (
-        <div className="bg-accent text-ink p-5 mb-6">
-          <p className="font-display text-2xl tracking-tight">
-            ⚠ {customer.warning_count} OF 3 WARNINGS
-          </p>
-          <p className="font-mono text-xs mt-1">
-            {customer.warning_count >= 3
-              ? 'MAXIMUM WARNINGS REACHED — ADMIN REVIEW REQUIRED'
-              : 'Continued violations may result in a ban'}
-          </p>
-        </div>
-      )}
+      </div>
 
       {!isBanned && emergencySuspicious && (
-        <div className="bg-yellow-100 border-2 border-yellow-500 text-ink p-4 mb-6">
-          <p className="font-display text-sm tracking-widest mb-1">⚠ EMERGENCY CONTACT FLAGGED</p>
+        <div className="bg-[#fffbe6] border border-accent border-l-4 text-ink p-4">
+          <p className="font-mono text-[11px] font-bold tracking-[0.15em] mb-1">⚠ EMERGENCY CONTACT FLAGGED</p>
           <p className="text-sm">
             This customer&apos;s emergency contact phone matches a banned customer.
             Please verify identity before allowing entry.
@@ -486,93 +526,42 @@ export default function CustomerDetail({
         </div>
       )}
 
-      <div className="bg-white border border-neutral-200 p-5 mb-6">
-        <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mb-1">// PROFILE</p>
-        <h1 className="font-display text-3xl md:text-4xl tracking-tight mb-3 break-words">
-          {customer.name.toUpperCase()}
-        </h1>
-        <div className="flex items-center gap-2 flex-wrap mb-3">
-          {isBanned ? (
-            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-danger text-white">✕ BANNED</span>
-          ) : (
-            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-success text-white">✓ ACTIVE</span>
-          )}
-          {customer.membership === 'member' && (
-            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-success-green text-white">⭐ MEMBER</span>
-          )}
-          {customer.gender === 'male' && (
-            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-sky-500 text-white">♂ MALE</span>
-          )}
-          {customer.gender === 'female' && (
-            <span className="font-display text-[10px] tracking-widest px-2 py-1 bg-pink-500 text-white">♀ FEMALE</span>
-          )}
-        </div>
-        <div className="h-1 w-12 bg-accent mb-5" />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <Field label="NATIONALITY" value={customer.nationality === 'malaysian' ? '🇲🇾 Malaysian' : '🌍 Foreigner'} />
-          <Field label={customer.nationality === 'malaysian' ? 'IC' : 'PASSPORT'} value={customer.ic} mono />
-          <Field
-            label="GENDER"
-            value={
-              customer.gender === 'male'
-                ? '♂ Male'
-                : customer.gender === 'female'
-                ? '♀ Female'
-                : '—'
-            }
-          />
-          <Field label="AGE" value={age !== null ? `${age} years` : '—'} />
-          <Field label="PHONE" value={customer.phone} mono />
-          <Field label="EMERGENCY RELATIONSHIP" value={customer.emergency_relationship || '—'} />
-          <Field label="EMERGENCY PHONE" value={customer.emergency_phone || '—'} mono />
-          {customer.guardian_ic && (
-            <>
-              <Field label="GUARDIAN IC" value={customer.guardian_ic} mono />
-              <Field label="GUARDIAN PHONE" value={customer.guardian_phone || '—'} mono />
-            </>
-          )}
-          <Field label="MEMBER SINCE" value={new Date(customer.created_at).toLocaleDateString('en-MY', {
-            day: '2-digit', month: 'short', year: 'numeric',
-          })} />
-          <Field label="TOTAL VISITS" value={String(approvedVisits)} />
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex flex-wrap gap-2 mb-8">
+      {/* ---- Actions ---- */}
+      <div className="flex flex-wrap gap-2">
+        {!isBanned && customer.warning_count < 3 && (
+          <button onClick={() => setShowWarningModal(true)} className={`${btn} bg-accent text-ink hover:bg-accent-dark`}>
+            + WARNING
+          </button>
+        )}
+        <button onClick={() => setShowNoteModal(true)} className={`${btn} bg-white border border-ink text-ink hover:bg-paper`}>
+          + NOTE
+        </button>
         {isAdmin && (
-          <button onClick={openEditModal} className="font-display text-sm tracking-wider px-4 py-2.5 bg-ink text-bone">
+          <button onClick={openEditModal} className={`${btn} bg-ink text-bone`}>
             ✎ EDIT
           </button>
         )}
-
         {isAdmin && (
           <button
             onClick={handleToggleMembership}
             disabled={actionLoading}
-            className={`font-display text-sm tracking-wider px-4 py-2.5 ${
+            className={`${btn} ${
               customer.membership === 'member'
-                ? 'bg-white border-2 border-success-green text-success-green'
-                : 'bg-success-green text-white'
+                ? 'bg-white border border-success-green text-[#0e8a3f]'
+                : 'bg-success-green text-ink'
             }`}
           >
             {customer.membership === 'member' ? '— REMOVE MEMBER TAG' : '⭐ MARK AS MEMBER'}
           </button>
         )}
-
         {/* Gender — admin can override. Mainly used for foreigners since
             Malaysian gender is auto-derived from IC. */}
         {isAdmin && (
-          <div className="inline-flex border-2 border-neutral-300 overflow-hidden">
+          <div className="inline-flex border border-line-strong bg-white">
             <button
               onClick={() => handleSetGender('male')}
               disabled={actionLoading}
-              className={`font-display text-sm tracking-wider px-3 py-2.5 transition-colors ${
-                customer.gender === 'male'
-                  ? 'bg-sky-500 text-white'
-                  : 'bg-white text-neutral-600 hover:bg-sky-50'
-              }`}
+              className={`${btn} px-3 ${customer.gender === 'male' ? 'bg-sky-500 text-white' : 'text-muted hover:bg-sky-50'}`}
               title="Set as male"
             >
               ♂ MALE
@@ -580,11 +569,7 @@ export default function CustomerDetail({
             <button
               onClick={() => handleSetGender('female')}
               disabled={actionLoading}
-              className={`font-display text-sm tracking-wider px-3 py-2.5 border-l-2 border-neutral-300 transition-colors ${
-                customer.gender === 'female'
-                  ? 'bg-pink-500 text-white'
-                  : 'bg-white text-neutral-600 hover:bg-pink-50'
-              }`}
+              className={`${btn} px-3 border-l border-line-strong ${customer.gender === 'female' ? 'bg-pink-500 text-white' : 'text-muted hover:bg-pink-50'}`}
               title="Set as female"
             >
               ♀ FEMALE
@@ -593,7 +578,7 @@ export default function CustomerDetail({
               <button
                 onClick={() => handleSetGender(null)}
                 disabled={actionLoading}
-                className="font-display text-sm tracking-wider px-3 py-2.5 border-l-2 border-neutral-300 bg-white text-neutral-500 hover:bg-neutral-100"
+                className={`${btn} px-3 border-l border-line-strong text-muted hover:bg-paper`}
                 title="Clear gender"
               >
                 ✕
@@ -601,83 +586,100 @@ export default function CustomerDetail({
             )}
           </div>
         )}
-
-        {!isBanned && customer.warning_count < 3 && (
-          <button onClick={() => setShowWarningModal(true)} className="font-display text-sm tracking-wider px-4 py-2.5 bg-accent text-ink">
-            + WARNING
-          </button>
-        )}
-
         {isAdmin && customer.warning_count > 0 && (
-          <button onClick={handleResetWarnings} className="font-display text-sm tracking-wider px-4 py-2.5 bg-white border-2 border-ink text-ink">
+          <button onClick={handleResetWarnings} className={`${btn} bg-white border border-ink text-ink hover:bg-paper`}>
             RESET WARNINGS
           </button>
         )}
-
-        <button onClick={() => setShowNoteModal(true)} className="font-display text-sm tracking-wider px-4 py-2.5 bg-white border-2 border-ink text-ink">
-          + NOTE
-        </button>
-
+        <div className="flex-1" />
         {isAdmin && !isBanned && (
-          <button onClick={() => setShowBanModal(true)} className="font-display text-sm tracking-wider px-4 py-2.5 bg-danger text-white">
+          <button onClick={() => setShowBanModal(true)} className={`${btn} bg-danger text-white`}>
             BAN
           </button>
         )}
-
         {isAdmin && isBanned && (
-          <button onClick={() => setShowUnbanModal(true)} className="font-display text-sm tracking-wider px-4 py-2.5 bg-success text-white">
+          <button onClick={() => setShowUnbanModal(true)} className={`${btn} bg-success-green text-ink`}>
             UNBAN
           </button>
         )}
-
         {isAdmin && (
-          <button onClick={() => setShowDeleteCustomerModal(true)} className="font-display text-sm tracking-wider px-4 py-2.5 bg-white border-2 border-danger text-danger">
+          <button onClick={() => setShowDeleteCustomerModal(true)} className={`${btn} bg-white border border-danger text-danger`}>
             🗑 DELETE
           </button>
         )}
       </div>
 
-      {warnings.length > 0 && (
-        <Section title="WARNINGS HISTORY">
-          {warnings.map((w) => (
-            <div key={w.id} className="border-l-4 border-accent bg-yellow-50 p-3 mb-2 text-sm">
-              <p className="mb-1">{w.reason}</p>
-              <p className="font-mono text-xs text-neutral-600">
-                {formatDateTime(w.created_at)} · {w.added_by_name}
-              </p>
-            </div>
-          ))}
-        </Section>
-      )}
+      {/* ---- Profile fields ---- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-line border border-line">
+        <Field label="NATIONALITY" value={customer.nationality === 'malaysian' ? '🇲🇾 Malaysian' : '🌍 Foreigner'} />
+        <Field label={customer.nationality === 'malaysian' ? 'IC' : 'PASSPORT'} value={customer.ic} mono sensitive />
+        <Field label="AGE" value={age !== null ? `${age} years` : '—'} />
+        <Field label="PHONE" value={customer.phone} mono sensitive />
+        <Field label="EMERGENCY RELATIONSHIP" value={customer.emergency_relationship || '—'} />
+        <Field label="EMERGENCY PHONE" value={customer.emergency_phone || '—'} mono sensitive />
+        {customer.guardian_ic && (
+          <>
+            <Field label="GUARDIAN IC" value={customer.guardian_ic} mono sensitive />
+            <Field label="GUARDIAN PHONE" value={customer.guardian_phone || '—'} mono sensitive />
+          </>
+        )}
+        <Field label="MEMBER SINCE" value={new Date(customer.created_at).toLocaleDateString('en-MY', {
+          day: '2-digit', month: 'short', year: 'numeric',
+        })} />
+        <Field label="TOTAL VISITS" value={String(approvedVisits)} big />
+      </div>
 
-      {notes.length > 0 && (
-        <Section title="STAFF NOTES">
-          {notes.map((n) => (
-            <div key={n.id} className="border-l-4 border-ink bg-white p-3 mb-2 text-sm">
-              <p className="mb-1 whitespace-pre-wrap">{n.note}</p>
-              <p className="font-mono text-xs text-neutral-600">
-                {formatDateTime(n.created_at)} · {n.added_by_name}
-              </p>
-            </div>
-          ))}
+      {/* ---- Warnings + notes ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="WARNINGS">
+          {warnings.length === 0 ? (
+            <p className="text-sm text-muted">No warnings.</p>
+          ) : (
+            warnings.map((w) => (
+              <div key={w.id} className="border-t border-line py-2.5 text-sm first:border-t-0 first:pt-0">
+                <p className="mb-1">⚠ {w.reason}</p>
+                <p className="font-mono text-[11px] text-muted">
+                  {formatDateTime(w.created_at)} · {w.added_by_name}
+                </p>
+              </div>
+            ))
+          )}
         </Section>
-      )}
+        <Section title="STAFF NOTES">
+          {notes.length === 0 ? (
+            <p className="text-sm text-muted">No notes.</p>
+          ) : (
+            notes.map((n) => (
+              <div key={n.id} className="border-t border-line py-2.5 text-sm first:border-t-0 first:pt-0">
+                <p className="mb-1 whitespace-pre-wrap">{n.note}</p>
+                <p className="font-mono text-[11px] text-muted">
+                  {formatDateTime(n.created_at)} · {n.added_by_name}
+                </p>
+              </div>
+            ))
+          )}
+        </Section>
+      </div>
 
       <Section title="VISIT HISTORY">
         {visits.length === 0 ? (
-          <p className="font-mono text-xs text-neutral-500">No visits yet</p>
+          <p className="font-mono text-xs text-muted">No visits yet</p>
         ) : (
-          <div className="space-y-1">
+          <div>
             {visits.map((v) => (
               <div
                 key={v.id}
-                className={`flex items-center justify-between p-2.5 text-sm gap-2 ${
-                  v.status === 'approved' ? 'bg-white border border-neutral-200' : 'bg-red-100 border border-danger'
+                className={`flex items-center justify-between gap-2 py-2.5 px-2 border-t border-line text-sm first:border-t-0 ${
+                  v.status === 'approved' ? '' : 'bg-[#fff1f0]'
                 }`}
               >
                 <span className="font-mono flex-1 truncate">{formatDateTime(v.visited_at)}</span>
-                <span className="font-display text-[10px] tracking-widest flex-shrink-0">
-                  {v.status === 'approved' ? '✓ APPROVED' : v.status === 'denied_age' ? '✕ AGE' : '✕ BANNED'}
+                <span
+                  className={`font-mono text-[10px] font-bold tracking-[0.12em] flex-shrink-0 ${
+                    v.status === 'approved' ? 'text-[#0e8a3f]' : 'text-danger'
+                  }`}
+                >
+                  {v.status === 'approved' ? 'ALLOWED' : v.status === 'denied_age' ? 'UNDER 12' : 'BANNED'}
                 </span>
                 {isAdmin && (
                   <button
@@ -936,21 +938,29 @@ export default function CustomerDetail({
   );
 }
 
-function Field({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Field({
+  label, value, mono, sensitive, big,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  sensitive?: boolean;
+  big?: boolean;
+}) {
   return (
-    <div>
-      <p className="font-mono text-[10px] tracking-widest text-neutral-500 mb-1">{label}</p>
-      <p className={`break-words ${mono ? 'font-mono' : ''}`}>{value}</p>
+    <div className="bg-white px-4 py-3">
+      <p className="font-mono text-[10px] tracking-[0.2em] text-muted mb-1">{label}</p>
+      <p className={`break-words ${mono ? 'font-mono text-sm' : 'text-sm'} ${big ? 'font-display text-xl' : ''} ${sensitive ? 'sens' : ''}`}>
+        {value}
+      </p>
     </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-6">
-      <h2 className="font-display text-sm tracking-widest mb-2 inline-block bg-ink text-bone px-3 py-1">
-        {title}
-      </h2>
+    <div className="bg-white border border-line p-4">
+      <h3 className="font-mono text-[10px] tracking-[0.2em] text-muted mb-3">{title}</h3>
       {children}
     </div>
   );

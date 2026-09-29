@@ -2,8 +2,9 @@
 // read-only; each page still enforces requireAuth(['staff', 'admin']).
 // v2.20.0 — CheckinAlerts popup on every staff page. Acknowledging an alert
 // is local UI only (no DB write), so staff remain read-only.
+// v2.22.0 — DashboardShell (light left-rail shell + privacy mode).
 import { requireAuth } from '@/lib/auth';
-import DashboardNav from '@/components/DashboardNav';
+import DashboardShell from '@/components/dashboard/DashboardShell';
 import CheckinAlerts from '@/components/CheckinAlerts';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const auth = await requireAuth(['staff', 'admin']);
   return (
     <>
-      <DashboardNav role={auth.role} userName={auth.displayName} />
-      {children}
+      <DashboardShell role={auth.role} userName={auth.displayName}>
+        {children}
+      </DashboardShell>
       <CheckinAlerts todayHref="/staff" customersHref="/staff/customers" />
     </>
   );
