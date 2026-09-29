@@ -9,10 +9,11 @@ Replaces the old Google Form. Core job: recognise returning walk-ins, and **stop
 ## Stack
 
 - **Next.js 14 App Router** (14.2.15) + **TypeScript** + **Tailwind CSS**
-- **Supabase**: PostgreSQL 16 + Auth + Storage — project `ugfwxftzhxnukcmbaztm`, region ap-southeast-1 (Singapore), free tier
-- **Vercel** hosting, auto-deploy from GitHub `RON19991229/XOS-WALKIN` branch `main`
-  - Vercel project `xos-portal` → `xos-portal.vercel.app`
-  - **`xos-walkin.vercel.app` must stay alive** — printed QR codes point there
+- **Supabase**: PostgreSQL 17 + Auth + Storage — project `ugfwxftzhxnukcmbaztm`, region ap-southeast-1 (Singapore), free tier
+- **Vercel** hosting, auto-deploy from GitHub `RON19991229/XOS-PORTAL` (renamed from XOS-WALKIN) branch `main`
+  - Vercel project is named `xos-walkin` (id `prj_XrHkP6nLpwgDq6L9UmBGaX94eW3B`), only domain `xos-portal.vercel.app`
+  - **Printed QR codes point to `xos-portal.vercel.app`** — that domain must stay alive. (`xos-walkin.vercel.app` is no longer attached; Ron confirmed it's not needed.)
+  - Functions pinned to **`sin1`** via `vercel.json` (same region as Supabase). Default `iad1` added ~0.5–1s per page navigation — don't remove.
   - No domain is hardcoded; all routes are relative. Keep it that way.
 - Fonts self-hosted via `@fontsource`: Archivo Black (display), Inter (body), JetBrains Mono (labels/codes), Noto Sans SC (Chinese, `/report` pages)
 - Fonts: `@fontsource/archivo` (800, `/report` headlines) is also used
@@ -128,8 +129,8 @@ migration-v2.17.2-incident-photos-rls-hotfix.sql
 ## Ways of working
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
-- **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 16 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.18.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed). Note: README's top entry is stale (still v2.7) — v2.8 → v2.18 history was never written there.
+- **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.18.1**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed). Note: README's top entry is stale (still v2.7) — v2.8 → v2.18 history was never written there.
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`.

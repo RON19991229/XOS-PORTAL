@@ -1,7 +1,30 @@
-# X FITNESS Walk-in 系统 v2.7
+# X FITNESS Walk-in 系统 v2.18
 
 > 替代 Google Form 的健身房 walk-in 入场系统  
 > Next.js 14 + Supabase + Tailwind + Vercel
+
+---
+
+## ⚡ v2.18.1 (2026-09-30)
+
+**服务器搬到新加坡 — 前台切页变快**
+
+| 改动 | 详情 |
+|------|------|
+| 🌏 **Vercel region `iad1` → `sin1`** | 之前服务器默认在美国华盛顿，数据库在新加坡。每次打开 admin/staff 页面都要跨太平洋来回好几趟（约 0.5–1 秒）。现在服务器和数据库都在新加坡。 |
+| 🧹 **repo 卫生** | 新增 `.gitignore`（防止 `node_modules`、`.env.local` 被误传上 GitHub）；`CLAUDE.md` 入库 |
+
+**改动文件**：新增 `vercel.json`、`.gitignore`、`CLAUDE.md`；`package.json` 版本号
+
+**部署**：push → Vercel 自动 deploy。**无 SQL 改动。**
+
+---
+
+## 🖨 v2.18.0
+
+**投诉正式打印版** — Admin COMPLAINT → 🖨 PRINT，生成 A4 双语（EN/BM）内部事件报告。可选：附证据照片、附 case log（默认关）、隐藏举报人资料。所有用户内容都有转义。
+
+**改动文件**：新增 `lib/complaint-print.ts`、`public/print-logo.png`；`components/ComplaintClient.tsx`；图标压缩。**无 SQL 改动。**
 
 ---
 
