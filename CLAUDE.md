@@ -2,7 +2,7 @@
 
 Walk-in check-in + real-time entry-control system for **X FITNESS CENTRE** (Iskandar Puteri, Johor, Malaysia · SSM 202503023755).
 Replaces the old Google Form. Core job: recognise returning walk-ins, and **stop banned customers from entering**.
-~80 walk-ins/day, 1,600+ customers. Owner/product lead: **Ron** (solo owner-operator, not a full-time dev).
+~80 walk-ins/day, ~4,200 customers (Sept 2026). Owner/product lead: **Ron** (solo owner-operator, not a full-time dev).
 
 ---
 
