@@ -16,6 +16,21 @@ import CheckinHeader from '@/components/CheckinHeader';
 import PhoneInput from '@/components/PhoneInput';
 import TermsContent from '@/components/TermsContent';
 import ScrollHint from '@/components/ScrollHint';
+import { Atmo, StepRail } from '@/components/CheckinFX';
+
+/**
+ * v2.23.0 redesign (Ron-approved mockup `mockups/register-redesign.html`):
+ *   - green "WELCOME TO X FITNESS" box removed (green = allowed-in elsewhere);
+ *     one-line intro in the current language instead
+ *   - Atmo + StepRail like the other /checkin pages
+ *   - IC shown as a card with CHANGE (back to /checkin/id-input)
+ *   - 3 sections (about you / emergency / terms) with a mark when complete
+ *   - relationship = tap chips instead of a <select>
+ *   - emergency phone may not equal the customer's own phone
+ *   - submit button shows "N MORE TO FILL" until complete; it stays
+ *     clickable so tapping it still shows which field is wrong
+ * Data written to `customers` and all validation rules are unchanged.
+ */
 
 const RELATIONSHIPS = [
   'rel_friend',
@@ -80,6 +95,28 @@ export default function RegisterPage() {
   // Guardian fields ONLY for Malaysian 12-15 (foreigners skip even if they're young)
   const isMinor = nationality === 'malaysian' && ageCategory === '12-15';
 
+  // Live completeness (drives the section marks and the button label only —
+  // the authoritative checks are still in handleSubmit).
+  const nameOk = name.trim().length > 0;
+  const phoneOk = phone.digits.length > 0 && validatePhone(phone.code, phone.digits) === null;
+  const samePhone =
+    phone.digits.length > 0 &&
+    emergencyPhone.digits.length > 0 &&
+    buildPhone(emergencyPhone.code, emergencyPhone.digits) === buildPhone(phone.code, phone.digits);
+  const emergencyOk =
+    emergencyPhone.digits.length > 0 &&
+    validatePhone(emergencyPhone.code, emergencyPhone.digits) === null &&
+    !samePhone;
+  const guardianIcOk = !isMinor || validateMyIC(guardianIc) === null;
+  const guardianPhoneOk =
+    !isMinor || (guardianPhone.digits.length > 0 && validatePhone(guardianPhone.code, guardianPhone.digits) === null);
+  const remaining = [nameOk, phoneOk, !!relationship, emergencyOk, guardianIcOk, guardianPhoneOk, agreed]
+    .filter((ok) => !ok).length;
+  const displayId =
+    nationality === 'malaysian' && ic.length === 12
+      ? `${ic.slice(0, 6)}-${ic.slice(6, 8)}-${ic.slice(8)}`
+      : ic;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -108,6 +145,10 @@ export default function RegisterPage() {
     const empPhoneError = validatePhone(emergencyPhone.code, emergencyPhone.digits);
     if (empPhoneError) {
       setError('Emergency: ' + empPhoneError);
+      return;
+    }
+    if (buildPhone(emergencyPhone.code, emergencyPhone.digits) === buildPhone(phone.code, phone.digits)) {
+      setError(t(lang, 'regSamePhone'));
       return;
     }
 
@@ -228,8 +269,11 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col bg-ink">
+    <main className="min-h-screen flex flex-col bg-ink relative">
+      <Atmo />
+
       <CheckinHeader
+        className="xd-rise xd-d1"
         rightSlot={
           <button
             onClick={() => router.push('/checkin')}
@@ -240,94 +284,115 @@ export default function RegisterPage() {
         }
       />
 
-      <section className="flex-1 px-5 py-8 max-w-md mx-auto w-full">
+      <StepRail step={1} fillNext className="xd-rise xd-d2" />
+
+      <section className="flex-1 px-5 pt-7 pb-8 max-w-md mx-auto w-full relative z-[2]">
         <div className="mb-6">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3 xd-rise xd-d2">
             // {t(lang, 'firstTime')}
           </p>
-          <h1 className="font-display text-4xl md:text-5xl leading-[0.85] mb-3">
+          <h1 className="font-display text-5xl leading-[0.85] xd-rise xd-d3">
             {t(lang, 'register')}
           </h1>
-          <div className="h-1 w-16 bg-accent mb-4" />
-
-          {/* Welcome card explaining "register once" */}
-          <div className="border-2 border-success-green bg-gradient-to-br from-ink-soft to-ink p-4 text-center">
-            <p className="font-mono text-[10px] tracking-[0.3em] text-success-green mb-2">
-              {t(lang, 'welcomeToXFitness')}
-            </p>
-            <p className="font-display text-2xl text-success-green leading-none mb-3">
-              X FITNESS
-            </p>
-            <p className="font-display text-sm text-bone leading-snug">
-              {t(lang, 'taglinePrimary')}
-            </p>
-            <p className="font-mono text-[10px] text-neutral-400 mt-1">
-              {t(lang, 'taglineSecondary')}
-            </p>
-          </div>
+          <div className="xd-ubar" />
+          <p className="text-sm leading-relaxed text-neutral-400 mt-4 xd-rise xd-d4">
+            {t(lang, nationality === 'malaysian' ? 'regIntroIc' : 'regIntroPassport')}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="field-label">
-              {nationality === 'malaysian' ? 'IC NUMBER' : 'PASSPORT'}
-            </label>
-            <input value={ic} disabled className="input-field" />
+        {/* Verified ID card */}
+        <div className="reg-idcard mb-7 xd-rise xd-d4">
+          <span className="text-[22px] leading-none" aria-hidden="true">
+            {nationality === 'malaysian' ? '🇲🇾' : '🌍'}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="font-mono text-[9px] tracking-[0.2em] text-neutral-500 mb-0.5">
+              {t(lang, nationality === 'malaysian' ? 'regIcLabel' : 'regPassportLabel')}
+            </div>
+            <div className="font-mono text-[17px] tracking-[0.06em] text-bone truncate">{displayId}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/checkin/id-input')}
+            className="border border-[#3a3a3a] text-neutral-300 font-mono text-[10px] tracking-[0.12em] px-2.5 py-2"
+          >
+            {t(lang, 'regChange')}
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="xd-rise xd-d5">
+          {/* ABOUT YOU */}
+          <div className="mb-7">
+            <SectionHead title={t(lang, 'regAboutYou')} done={nameOk && phoneOk} doneLabel={t(lang, 'regDone')} />
+            <div className="mb-3.5">
+              <label className="field-label">
+                {t(lang, 'fullName')} <span className="text-danger">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value.toUpperCase())}
+                placeholder={t(lang, nationality === 'malaysian' ? 'regNameIc' : 'regNamePassport')}
+                className="input-field"
+                required
+                autoCapitalize="characters"
+              />
+            </div>
+            <div>
+              <label className="field-label">
+                {t(lang, 'phone')} <span className="text-danger">*</span>
+              </label>
+              <PhoneInput value={phone} onChange={setPhone} placeholder="123456789" />
+            </div>
           </div>
 
-          <div>
-            <label className="field-label">
-              {t(lang, 'fullName')} <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value.toUpperCase())}
-              placeholder={t(lang, 'namePlaceholder')}
-              className="input-field"
-              required
-              autoCapitalize="characters"
+          {/* EMERGENCY CONTACT */}
+          <div className="mb-7">
+            <SectionHead
+              title={t(lang, 'regEmergency')}
+              done={!!relationship && emergencyOk}
+              doneLabel={t(lang, 'regDone')}
             />
-          </div>
-
-          <div>
-            <label className="field-label">
-              {t(lang, 'phone')} <span className="text-danger">*</span>
-            </label>
-            <PhoneInput value={phone} onChange={setPhone} placeholder="123456789" />
-          </div>
-
-          <div>
-            <label className="field-label">
-              {t(lang, 'relationship')} <span className="text-danger">*</span>
-            </label>
-            <select
-              value={relationship}
-              onChange={(e) => setRelationship(e.target.value)}
-              className="input-field"
-              required
-            >
-              <option value="">{t(lang, 'relationshipChoose')}</option>
-              {RELATIONSHIPS.map((r) => (
-                <option key={r} value={r}>{t(lang, r)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="field-label">
-              {t(lang, 'emergencyPhone')} <span className="text-danger">*</span>
-            </label>
-            <PhoneInput
-              value={emergencyPhone}
-              onChange={setEmergencyPhone}
-              placeholder="123456789"
-            />
+            <p className="text-[13px] leading-snug text-neutral-500 -mt-1 mb-3.5">
+              {t(lang, 'regEmergencyHint')}
+            </p>
+            <div className="mb-3.5">
+              <label className="field-label">
+                {t(lang, 'regRelationship')} <span className="text-danger">*</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup">
+                {RELATIONSHIPS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    role="radio"
+                    aria-checked={relationship === r}
+                    onClick={() => setRelationship(r)}
+                    className={`reg-chip ${relationship === r ? 'on' : ''}`}
+                  >
+                    {t(lang, r)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="field-label">
+                {t(lang, 'regTheirPhone')} <span className="text-danger">*</span>
+              </label>
+              <PhoneInput
+                value={emergencyPhone}
+                onChange={setEmergencyPhone}
+                placeholder="123456789"
+              />
+              {samePhone && (
+                <p className="text-xs text-[#ffb4ae] mt-2">{t(lang, 'regSamePhone')}</p>
+              )}
+            </div>
           </div>
 
           {/* Guardian fields - only for Malaysian minors 12-15 */}
           {isMinor && (
-            <div className="bg-accent/10 border-2 border-accent p-4 space-y-4">
+            <div className="bg-accent/10 border-2 border-accent p-4 space-y-4 mb-7">
               <div>
                 <p className="font-display text-sm tracking-widest text-accent mb-1">
                   ⚠ {t(lang, 'guardianRequired')}
@@ -359,27 +424,30 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <div className="pt-2">
-            <label className="field-label">
-              TERMS & CONDITIONS <span className="text-danger">*</span>
+          {/* TERMS */}
+          <div className="mb-6">
+            <SectionHead title={t(lang, 'regTerms')} done={agreed} doneLabel={t(lang, 'regDone')} />
+            <TermsContent scrollLabel={t(lang, 'regScrollToRead')} readLabel={t(lang, 'regReadDone')} />
+            <label className={`reg-agree mt-2.5 ${agreed ? 'on' : ''}`}>
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="sr-only"
+              />
+              <span className="reg-agree-box" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 16 16">
+                  <path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="#0a0a0a" strokeWidth="2.6" strokeLinecap="square" />
+                </svg>
+              </span>
+              <span className="text-sm leading-relaxed text-neutral-200">
+                {t(lang, 'agreeTerms')}
+              </span>
             </label>
-            <TermsContent />
           </div>
 
-          <label className="flex items-start gap-3 cursor-pointer bg-accent/10 border-2 border-accent p-4">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="w-5 h-5 mt-0.5 accent-accent flex-shrink-0"
-            />
-            <span className="text-sm leading-relaxed">
-              {t(lang, 'agreeTerms')}
-            </span>
-          </label>
-
           {error && (
-            <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider animate-shake">
+            <div className="bg-danger text-bone px-4 py-3 mb-4 font-display text-sm tracking-wider animate-shake">
               {error}
             </div>
           )}
@@ -387,7 +455,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary"
+            className={`btn-primary ${remaining > 0 && !loading ? 'reg-incomplete' : ''}`}
           >
             {loading ? (
               <span className="flex gap-1.5 justify-center">
@@ -395,10 +463,16 @@ export default function RegisterPage() {
                 <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
                 <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
               </span>
+            ) : remaining > 0 ? (
+              t(lang, 'regMoreToFill').replace('{n}', String(remaining))
             ) : (
               <>{t(lang, 'submit')} →</>
             )}
           </button>
+
+          <p className="text-[11.5px] text-neutral-500 text-center mt-3.5 leading-normal">
+            🔒 {t(lang, 'regPdpaNote')}
+          </p>
         </form>
 
         {/* Bottom spacer — see /checkin/page.tsx for rationale */}
@@ -408,5 +482,20 @@ export default function RegisterPage() {
       {/* ScrollHint — auto-hides if the page already fits in the viewport */}
       <ScrollHint />
     </main>
+  );
+}
+
+function SectionHead({ title, done, doneLabel }: { title: string; done: boolean; doneLabel: string }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3.5">
+      <span className="w-2 h-2 bg-accent flex-none" aria-hidden="true" />
+      <h2 className="font-display text-[15px] tracking-[0.06em]">{title}</h2>
+      <span className="flex-1 h-px bg-ink-line" aria-hidden="true" />
+      <span
+        className={`font-mono text-[10px] tracking-[0.1em] text-success-green transition-opacity ${done ? 'opacity-100' : 'opacity-0'}`}
+      >
+        {doneLabel}
+      </span>
+    </div>
   );
 }

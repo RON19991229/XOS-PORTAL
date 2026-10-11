@@ -1026,3 +1026,34 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
   .xd-ck path { stroke-dashoffset: 0 !important; }
   .xd-ckbox { opacity: 1 !important; transform: rotate(-3deg) !important; }
 }
+
+/* ============================================ */
+/* v2.23.0 — /checkin/register redesign         */
+/* ============================================ */
+.reg-idcard {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid #2a2a2a; border-left: 3px solid #FFD60A;
+  background: linear-gradient(160deg, #181818 0%, #111 100%);
+  padding: 13px 14px;
+}
+.reg-chip {
+  background: #161616; border: 2px solid #2a2a2a; color: #d0d0d0;
+  padding: 12px 6px; font-size: 13px; font-weight: 600; text-align: center;
+  transition: border-color .12s, background-color .12s, color .12s;
+}
+.reg-chip.on { border-color: #FFD60A; background: rgba(255, 214, 10, .12); color: #FFD60A; }
+.reg-agree {
+  display: flex; align-items: flex-start; gap: 14px; padding: 16px;
+  border: 2px solid #3a3a3a; background: #111; cursor: pointer; user-select: none;
+  transition: border-color .15s, background-color .15s;
+}
+.reg-agree.on { border-color: #FFD60A; background: rgba(255, 214, 10, .08); }
+.reg-agree:has(input:focus-visible) { outline: 2px solid #FFD60A; outline-offset: 2px; }
+.reg-agree-box {
+  width: 26px; height: 26px; border: 2px solid #6a6a6a; flex: none;
+  display: grid; place-items: center; transition: background-color .15s, border-color .15s;
+}
+.reg-agree-box svg { opacity: 0; }
+.reg-agree.on .reg-agree-box { background: #FFD60A; border-color: #FFD60A; }
+.reg-agree.on .reg-agree-box svg { opacity: 1; }
+.btn-primary.reg-incomplete { background: #262626; color: #8a8a8a; }
