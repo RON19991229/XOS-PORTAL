@@ -906,26 +906,13 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
   animation: xdSweep .5s .55s cubic-bezier(.3, .9, .2, 1) both;
 }
 
-/* ---- step rail ---- */
-.xd-rail {
-  display: flex; align-items: center; gap: 8px; padding: 16px 20px 0;
-  position: relative; z-index: 2;
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: .18em;
-}
-.xd-rl { display: flex; align-items: center; gap: 6px; color: #555; }
-.xd-rl b {
-  font-weight: 400; width: 18px; height: 18px; border: 1px solid #333;
-  display: flex; align-items: center; justify-content: center; font-size: 8px;
-}
-.xd-rl.on { color: #FFD60A; }
-.xd-rl.on b { border-color: #FFD60A; background: rgba(255, 214, 10, .1); }
-.xd-rl.done { color: #4d4d4d; }
-.xd-rl.done b { border-color: #4d4d4d; background: #141414; }
-.xd-rline { flex: 1; height: 1px; background: #2a2a2a; position: relative; overflow: hidden; }
-.xd-rline.fill::after {
+/* ---- step rail (v2.24.0: label-less 3-segment bar) ---- */
+.xd-rail { display: flex; gap: 4px; padding: 10px 20px 0; position: relative; z-index: 2; }
+.xd-rseg { flex: 1; height: 3px; background: #262626; position: relative; overflow: hidden; }
+.xd-rseg.fill::after {
   content: ''; position: absolute; inset: 0; background: #FFD60A;
   transform-origin: left;
-  animation: xdFill .8s .5s cubic-bezier(.2, .9, .2, 1) both;
+  animation: xdFill .8s .3s cubic-bezier(.2, .9, .2, 1) both;
 }
 @keyframes xdFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
@@ -1017,7 +1004,7 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 
 /* ---- reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  .xd-rise, .xd-sweep::before, .xd-ubar, .xd-rline.fill::after,
+  .xd-rise, .xd-sweep::before, .xd-ubar, .xd-rseg.fill::after,
   .xd-reveal, .xd-ckbox, .xd-ckring, .xd-ck path, .xd-countbar {
     animation: none !important; transition: none !important;
   }
@@ -1030,12 +1017,6 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 /* ============================================ */
 /* v2.23.0 — /checkin/register redesign         */
 /* ============================================ */
-.reg-idcard {
-  display: flex; align-items: center; gap: 12px;
-  border: 1px solid #2a2a2a; border-left: 3px solid #FFD60A;
-  background: linear-gradient(160deg, #181818 0%, #111 100%);
-  padding: 13px 14px;
-}
 .reg-chip {
   background: #161616; border: 2px solid #2a2a2a; color: #d0d0d0;
   padding: 12px 6px; font-size: 13px; font-weight: 600; text-align: center;
@@ -1143,14 +1124,6 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 .ck-moon { animation: ckBob 4s ease-in-out infinite; }
 @keyframes ckBob { 50% { transform: translateY(-3px); } }
 
-.ck-ft { border: 1px dashed #3a3a3a; }
-.ck-ft summary { list-style: none; cursor: pointer; padding: 13px 14px; display: flex; justify-content: space-between; align-items: center; }
-.ck-ft summary::-webkit-details-marker { display: none; }
-.ck-ft .chev { transition: transform .2s; color: #FFD60A; }
-.ck-ft[open] .chev { transform: rotate(180deg); }
-.ck-ft li { animation: xdRise .4s both; }
-.ck-ft li:nth-child(2) { animation-delay: .06s; }
-.ck-ft li:nth-child(3) { animation-delay: .12s; }
 
 /* confetti (birthday / milestones) */
 .ck-confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 50; }
@@ -1181,10 +1154,10 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 @media (prefers-reduced-motion: reduce) {
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after,
   .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-wave, .ck-sun-rays, .ck-sun-core, .ck-star, .ck-moon,
-  .ck-ft li, .ck-cake, .ck-stamp, .ck-halo, .ck-fx .reg-chip.on, .ck-fx .reg-agree.on .reg-agree-box {
+  .ck-cake, .ck-stamp, .ck-halo, .ck-fx .reg-chip.on, .ck-fx .reg-agree.on .reg-agree-box {
     animation: none !important;
   }
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after, .ck-confetti { display: none !important; }
-  .ck-orb, .ck-ch, .ck-ft li { opacity: 1 !important; }
+  .ck-orb, .ck-ch { opacity: 1 !important; }
   .ck-stamp { transform: rotate(-2deg); }
 }

@@ -15,6 +15,9 @@
  * Gender comes from the read-back customer row (`customers.gender`):
  * Malaysians via the IC trigger, foreigners from the register form.
  * Links open in a new tab so the check-in itself is never lost.
+ *
+ * v2.24.0: shorter copy — no kicker, one-line body (confidentiality folded
+ * in), no sub-lines under the three options, no separate promise box.
  */
 
 import { useEffect, useState } from 'react';
@@ -66,44 +69,27 @@ export default function CarePage() {
       >
         <Shield color={female ? PINK : '#FFD60A'} />
 
-        <p
-          className="font-mono text-[10px] tracking-[0.3em] text-center mt-5 xd-rise xd-d3"
-          style={{ color: female ? PINK : '#FFD60A' }}
-        >
-          // {t(lang, 'careKicker')}
-        </p>
-
         {female ? (
           <>
-            <p className={`${heavy} text-center text-[26px] leading-none mt-3 xd-rise xd-d3`} style={{ color: PINK }}>
+            <p className={`${heavy} text-center text-[26px] leading-none mt-5 xd-rise xd-d3`} style={{ color: PINK }}>
               {t(lang, 'careHeyGirls')}
             </p>
             <h1 className={`${heavy} text-center text-[34px] leading-[0.98] mt-2 xd-rise xd-d4`}>
               {t(lang, 'careTitleF')}
             </h1>
             <p className="text-center text-[15px] leading-relaxed text-neutral-300 mt-4 px-1 xd-rise xd-d4">
-              {t(lang, 'careBodyF')} <b className="text-bone">{t(lang, 'careAskF')}</b>
+              {t(lang, 'careBodyF')}
             </p>
 
             <div className="grid gap-2.5 mt-6 xd-rise xd-d5">
               <div className="ck-opt">
                 <span className="ck-opt-ic" aria-hidden="true">🙋‍♀️</span>
-                <span className="flex-1">
-                  <span className={`block ${heavy} text-sm`}>{t(lang, 'careFrontDesk')}</span>
-                  <span className="block text-[12.5px] text-neutral-400 mt-0.5 leading-snug">
-                    {t(lang, 'careFrontDeskSub')}
-                  </span>
-                </span>
+                <span className={`flex-1 ${heavy} text-sm`}>{t(lang, 'careFrontDesk')}</span>
               </div>
 
               <a className="ck-opt ck-press ck-press-dark" href="/report" target="_blank" rel="noopener">
                 <span className="ck-opt-ic" aria-hidden="true">📝</span>
-                <span className="flex-1">
-                  <span className={`block ${heavy} text-sm`}>{t(lang, 'careReport')}</span>
-                  <span className="block text-[12.5px] text-neutral-400 mt-0.5 leading-snug">
-                    {t(lang, 'careReportSub')}
-                  </span>
-                </span>
+                <span className={`flex-1 ${heavy} text-sm`}>{t(lang, 'careReport')}</span>
                 <span className="font-display text-neutral-500" aria-hidden="true">→</span>
               </a>
 
@@ -114,12 +100,7 @@ export default function CarePage() {
                 >
                   <WhatsAppIcon />
                 </span>
-                <span className="flex-1">
-                  <span className={`block ${heavy} text-sm`}>{t(lang, 'careWhatsApp')}</span>
-                  <span className="block text-[12.5px] text-neutral-400 mt-0.5 leading-snug">
-                    {t(lang, 'careWhatsAppSub')}
-                  </span>
-                </span>
+                <span className={`flex-1 ${heavy} text-sm`}>{t(lang, 'careWhatsApp')}</span>
                 <span className="font-display text-neutral-500" aria-hidden="true">→</span>
               </a>
             </div>
@@ -135,14 +116,10 @@ export default function CarePage() {
               <p className="text-[12.5px] leading-snug text-neutral-300">{t(lang, 'carePosterNote')}</p>
             </div>
 
-            <div className="flex gap-2.5 items-start mt-4 px-3.5 py-3 bg-success-green/[0.07] border border-success-green/30 text-[12.5px] leading-snug text-[#a8e6c0] xd-rise xd-d6">
-              <span aria-hidden="true">🔒</span>
-              <span>{t(lang, 'carePromise')}</span>
-            </div>
           </>
         ) : (
           <>
-            <h1 className={`${heavy} text-center text-[36px] leading-[0.98] mt-3 xd-rise xd-d4`}>
+            <h1 className={`${heavy} text-center text-[36px] leading-[0.98] mt-6 xd-rise xd-d4`}>
               {t(lang, 'careTitleM')}
             </h1>
             <p className="text-center text-[15px] leading-relaxed text-neutral-300 mt-4 px-1 xd-rise xd-d5">

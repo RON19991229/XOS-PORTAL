@@ -26,6 +26,9 @@ import {
  *   - v2.21.0: black "FASTER NEXT TIME?" box offers to remember this phone.
  *     Only shown when the phone doesn't remember anyone yet (so a friend
  *     using "NOT X?" can't overwrite the owner) and hasn't said "No thanks".
+ *   - v2.24.0: "// STATUS: ACTIVE" removed; one big localized APPROVED word;
+ *     PAY AT THE COUNTER in an outlined box; the remember box asks one
+ *     question. The timestamp stays — front desk uses it to spot screenshots.
  */
 export default function ApprovedPage() {
   const router = useRouter();
@@ -80,16 +83,10 @@ export default function ApprovedPage() {
           </div>
         </div>
 
-        <p className="font-mono text-xs tracking-[0.3em] text-ink mb-3 xd-rise xd-d3">
-          {t(lang, 'statusActive')}
-        </p>
-
-        <h1 className="font-display text-4xl md:text-5xl leading-[0.9] tracking-tighter mb-6 max-w-md text-ink xd-rise xd-d4">
-          WALK-IN
-          <br />
-          ACCESS
-          <br />
-          APPROVED
+        <h1
+          className={`${lang === 'zh' ? 'font-sans font-black' : 'font-display'} text-[clamp(40px,13.5vw,56px)] leading-[0.9] tracking-tighter mb-6 max-w-md text-ink xd-rise xd-d4`}
+        >
+          {t(lang, 'approvedTitle')}
         </h1>
 
         <div className="bg-ink text-bone px-6 py-3 mb-8 inline-block xd-rise xd-d5">
@@ -111,7 +108,9 @@ export default function ApprovedPage() {
             <p className="font-mono text-xs tracking-[0.2em] text-ink/70 -mt-4 mb-6 xd-rise xd-d6">{visitLabel(lang, visitNo)}</p>
           ))}
 
-        <p className="font-display text-sm md:text-base tracking-wider max-w-md text-ink xd-rise xd-d6 mb-2">
+        <p
+          className={`${lang === 'zh' ? 'font-sans font-black' : 'font-display'} text-base tracking-wider max-w-md text-ink border-[3px] border-ink px-5 py-3 xd-rise xd-d6`}
+        >
           {t(lang, 'approvedSub')}
         </p>
 
@@ -123,10 +122,7 @@ export default function ApprovedPage() {
           <div className="bg-ink text-bone p-5 flex flex-col gap-3">
             {offerState === 'ask' && (
               <>
-                <p className="font-mono text-[10px] tracking-[0.25em] text-accent">
-                  // {t(lang, 'rememberTitle')}
-                </p>
-                <p className="font-display text-lg leading-tight">{t(lang, 'rememberBody')}</p>
+                <p className={`${lang === 'zh' ? 'font-sans font-black' : 'font-display'} text-lg leading-tight`}>{t(lang, 'rememberAsk')}</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -137,19 +133,16 @@ export default function ApprovedPage() {
                 >
                   {t(lang, 'rememberBtn')}
                 </button>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[11px] text-neutral-400 leading-snug">{t(lang, 'rememberNote')}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      declineRemember();
-                      setOfferState('declined');
-                    }}
-                    className="flex-shrink-0 text-xs text-neutral-300 underline underline-offset-4 px-1 py-2"
-                  >
-                    {t(lang, 'rememberNo')}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    declineRemember();
+                    setOfferState('declined');
+                  }}
+                  className="self-center text-xs text-neutral-400 underline underline-offset-4 px-1 py-1"
+                >
+                  {t(lang, 'rememberNo')}
+                </button>
               </>
             )}
             {offerState === 'saved' && (

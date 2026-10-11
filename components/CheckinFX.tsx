@@ -8,9 +8,8 @@
  *                  black-on-transparent (made for the warm-white /report
  *                  pages), so on the dark check-in pages we invert it to
  *                  white via CSS filter — zero new assets needed.
- *   StepRail     — 01 ID → 02 RULES → 03 TRAIN progress rail. Labels are
- *                  intentionally English-only (stylistic mono labels, same
- *                  treatment as hardcoded design labels elsewhere).
+ *   StepRail     — 3-segment progress bar (ID → RULES → TRAIN), no labels
+ *                  since v2.24.0.
  *   Atmo         — single restrained background gradient (subtle yellow
  *                  glow at top). Parent must be position:relative.
  *   XdReveal     — scroll-to-reveal wrapper (IntersectionObserver, falls
@@ -50,40 +49,20 @@ export function Atmo() {
 interface StepRailProps {
   /** Current step: 1 = ID, 2 = RULES, 3 = TRAIN */
   step: 1 | 2 | 3;
-  /** Also animate-fill the line after the current step (signals "in progress") */
+  /** Also fill the segment of the current step (signals "in progress") */
   fillNext?: boolean;
   /** Extra classes (e.g. xd-rise xd-d2 for entrance stagger) */
   className?: string;
 }
 
+// v2.24.0: label-less 3-segment bar (Ron: less text on every page).
 export function StepRail({ step, fillNext = false, className = '' }: StepRailProps) {
-  const steps = [
-    { n: '01', label: 'ID' },
-    { n: '02', label: 'RULES' },
-    { n: '03', label: 'TRAIN' },
-  ];
-
+  const filled = step - 1 + (fillNext ? 1 : 0);
   return (
     <div className={`xd-rail ${className}`} aria-hidden="true">
-      {steps.map((s, i) => {
-        const idx = i + 1;
-        const state = idx < step ? 'done' : idx === step ? 'on' : '';
-        return (
-          <span key={s.n} className="contents">
-            <span className={`xd-rl ${state}`}>
-              <b>{idx < step ? '✓' : s.n}</b> {s.label}
-            </span>
-            {i < steps.length - 1 && (
-              // the connecting line fills (animated) once the step to its
-              // left is completed, or while it is active-and-progressing
-              // (fillNext)
-              <span
-                className={`xd-rline ${idx < step || (fillNext && idx === step) ? 'fill' : ''}`}
-              />
-            )}
-          </span>
-        );
-      })}
+      {[1, 2, 3].map((i) => (
+        <span key={i} className={`xd-rseg ${i <= filled ? 'fill' : ''}`} />
+      ))}
     </div>
   );
 }

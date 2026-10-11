@@ -8,15 +8,7 @@ import { safeSession, safeLocal } from '@/lib/safe-storage';
 import { validateMyIC, validatePassport } from '@/lib/utils';
 import { RememberedCustomer, getRemembered, forgetRemembered } from '@/lib/remember-me';
 import { runCheckinLookup } from '@/lib/checkin-lookup';
-import {
-  FIRST_TIME_TIPS,
-  SOCIAL_LINKS,
-  TimeOfDay,
-  dailyLine,
-  detectLang,
-  isBirthdayToday,
-  timeOfDay,
-} from '@/lib/checkin-content';
+import { TimeOfDay, detectLang, isBirthdayToday, timeOfDay } from '@/lib/checkin-content';
 import CheckinHeader from '@/components/CheckinHeader';
 import Confetti from '@/components/Confetti';
 import { StepRail } from '@/components/CheckinFX';
@@ -31,8 +23,8 @@ import { StepRail } from '@/components/CheckinFX';
  *   - OPEN NOW pill from the fixed hours 6:00 AM – 1:00 AM daily.
  *   - Tagline in the current language only (the old trilingual marquee
  *     showed BM while EN was selected and pushed the cards below the fold).
- *   - Below the nationality cards: FIRST TIME HERE? tips, a daily line,
- *     Instagram / Facebook / playlist.
+ *   - v2.24.0 (Ron: "首页太多字"): sub-line, tagline, FIRST TIME HERE? tips,
+ *     daily line and Instagram / Facebook / playlist removed; greeting smaller.
  *   - Remembered phone: time greeting + first name; on a Malaysian IC's
  *     birthday (IC digits 3–6) → 🎂 + confetti.
  *   - Never shows live head counts (business volume stays private).
@@ -46,12 +38,6 @@ const GREET: Record<TimeOfDay, Parameters<typeof t>[1]> = {
   afternoon: 'greetAfternoon',
   evening: 'greetEvening',
   closed: 'greetNight',
-};
-const SUB: Record<TimeOfDay, Parameters<typeof t>[1]> = {
-  morning: 'subMorning',
-  afternoon: 'subTrain',
-  evening: 'subTrain',
-  closed: 'subNight',
 };
 
 export default function CheckinPage() {
@@ -156,12 +142,9 @@ export default function CheckinPage() {
             <p className="font-display text-[52px] leading-[0.92] text-accent mt-1.5 break-words">
               <Letters text={remembered.firstName} start={0.7} step={0.05} />
             </p>
-            <p className="text-[15px] text-neutral-300 mt-4 xd-rise xd-d6">
-              {birthday ? `${t(lang, 'birthdaySub')} 🎉` : t(lang, 'greatToSeeYou')}
-            </p>
-            <p className="font-mono text-[10px] tracking-[0.18em] text-neutral-400 mt-3 xd-rise xd-d6">
-              ✓ {t(lang, 'rememberedNote')}
-            </p>
+            {birthday && (
+              <p className="text-[15px] text-neutral-300 mt-4 xd-rise xd-d6">{t(lang, 'birthdaySub')} 🎉</p>
+            )}
           </div>
 
           {error && (
@@ -191,21 +174,20 @@ export default function CheckinPage() {
             type="button"
             onClick={() => { setUseOther(true); setError(''); }}
             disabled={loading}
-            className="btn-secondary mt-4 xd-rise xd-d7"
+            className="mt-5 self-center text-[12.5px] text-neutral-400 hover:text-accent underline underline-offset-4 transition-colors xd-rise xd-d7"
           >
-            {t(lang, 'notYouPrefix')} {remembered.firstName}? {t(lang, 'useAnotherId')}
+            {t(lang, 'notYouLink').replace('{name}', remembered.firstName)}
           </button>
 
           <button
             type="button"
             onClick={forget}
             disabled={loading}
-            className="mt-6 self-center text-[11px] text-neutral-400 hover:text-accent underline underline-offset-4 transition-colors xd-rise xd-d7"
+            className="mt-3 self-center text-[11px] text-neutral-500 hover:text-accent underline underline-offset-4 transition-colors xd-rise xd-d7"
           >
             {t(lang, 'forgetMe')}
           </button>
 
-          <DailyLine lang={lang} heavy={heavy} />
           <div className="h-16" aria-hidden="true" />
         </section>
       ) : (
@@ -216,10 +198,10 @@ export default function CheckinPage() {
             </p>
           )}
 
-          <div className="relative min-h-[170px]">
+          <div className="relative min-h-[110px]">
             {tod && <OpenPill tod={tod} lang={lang} />}
             {tod && <TodIcon tod={tod} />}
-            <h1 className={`${heavy} text-[46px] leading-[0.95] mt-5 pr-2`}>
+            <h1 className={`${heavy} text-[30px] leading-[1.02] mt-4 pr-14`}>
               {tod && (
                 <Letters
                   text={t(lang, GREET[tod])}
@@ -227,14 +209,6 @@ export default function CheckinPage() {
                 />
               )}
             </h1>
-            {tod && (
-              <p className={`${heavy} text-2xl leading-none mt-2.5 xd-rise xd-d5`}>
-                <span className="xd-sweep">{t(lang, SUB[tod])}</span>
-              </p>
-            )}
-            <p className="text-[14.5px] leading-relaxed text-neutral-400 mt-4 xd-rise xd-d6">
-              {t(lang, 'landingTagline')}
-            </p>
           </div>
 
           <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mt-7 mb-3 xd-rise xd-d6">
@@ -266,24 +240,6 @@ export default function CheckinPage() {
               <span className="xd-nat-arrow">→</span>
             </div>
           </button>
-
-          <details className="ck-ft mt-5 xd-rise xd-d7">
-            <summary className="font-display text-xs tracking-[0.06em] text-neutral-300">
-              <span>👋 {t(lang, 'firstTimeTitle')}</span>
-              <span className="chev" aria-hidden="true">▾</span>
-            </summary>
-            <ul className="px-3.5 pb-3.5 grid gap-2.5">
-              {FIRST_TIME_TIPS[lang].map(([icon, text]) => (
-                <li key={text} className="flex gap-2.5 text-[13.5px] leading-snug text-neutral-300">
-                  <span className="text-lg leading-none" aria-hidden="true">{icon}</span>
-                  <span>{text}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-
-          <DailyLine lang={lang} heavy={heavy} />
-          <Socials lang={lang} />
 
           <div className="h-12" aria-hidden="true" />
         </section>
@@ -368,54 +324,5 @@ function TodIcon({ tod }: { tod: TimeOfDay }) {
         </>
       )}
     </svg>
-  );
-}
-
-function DailyLine({ lang, heavy }: { lang: Lang; heavy: string }) {
-  const [line, setLine] = useState('');
-  // Computed after mount so the server-rendered HTML never disagrees with the phone's date.
-  useEffect(() => setLine(dailyLine(lang)), [lang]);
-  if (!line) return null;
-  return (
-    <div className="mt-7 border-l-[3px] border-accent pl-3.5 py-1 xd-rise xd-d7">
-      <p className="font-mono text-[9px] tracking-[0.25em] text-neutral-500 mb-1.5">{t(lang, 'dailyLineLabel')}</p>
-      <p className={`${heavy} text-base leading-snug text-neutral-200`}>“{line}”</p>
-    </div>
-  );
-}
-
-function Socials({ lang }: { lang: Lang }) {
-  const cls =
-    'ck-press ck-press-dark flex-1 flex items-center justify-center gap-1.5 border border-[#2e2e2e] bg-[#121212] text-neutral-300 py-3 px-1.5 font-mono text-[10px] tracking-[0.1em]';
-  return (
-    <div className="flex gap-2 mt-6 xd-rise xd-d7">
-      <a className={cls} href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <rect x="3" y="3" width="18" height="18" rx="5" />
-          <circle cx="12" cy="12" r="4" />
-          <circle cx="17.5" cy="6.5" r="1" fill="currentColor" />
-        </svg>
-        INSTAGRAM
-      </a>
-      <a className={cls} href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M14 8h3V4h-3c-2.8 0-4 1.7-4 4.3V10H7v4h3v8h4v-8h3l1-4h-4V8.6c0-.4.2-.6.6-.6z" />
-        </svg>
-        FACEBOOK
-      </a>
-      <a className={cls} href={SOCIAL_LINKS.playlist} target="_blank" rel="noopener noreferrer">
-        <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" fill="currentColor" />
-          <path
-            d="M7 9.5c3.5-1 7.3-.6 10 1M7.6 12.5c3-.8 6-.4 8.3 1M8.2 15.3c2.4-.6 4.6-.3 6.4.8"
-            stroke="#121212"
-            strokeWidth="1.6"
-            fill="none"
-            strokeLinecap="round"
-          />
-        </svg>
-        {t(lang, 'playlist')}
-      </a>
-    </div>
   );
 }

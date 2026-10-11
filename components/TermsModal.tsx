@@ -6,12 +6,17 @@ import { termsIntro, termsSections } from '@/lib/terms';
 interface TermsModalProps {
   open: boolean;
   onClose: () => void;
+  /** v2.24.0 (register): show CLOSE + I AGREE instead of CLOSE & CONTINUE. */
+  onAgree?: () => void;
+  closeLabel?: string;
+  agreeLabel?: string;
 }
 
 /**
  * TermsModal — Modal popup that displays the full T&C in a scrollable container.
  * Used on the Reminders page (returning customers) so they can review the
- * gym rules without leaving the check-in flow.
+ * gym rules without leaving the check-in flow, and (v2.24.0) on Register,
+ * where it replaces the inline scroll box and offers I AGREE.
  *
  * Re-uses the same termsIntro / termsSections data shown during initial registration.
  *
@@ -21,7 +26,7 @@ interface TermsModalProps {
  *   - Yellow header bar with × close button
  *   - Bottom "CLOSE" button as alternative
  */
-export default function TermsModal({ open, onClose }: TermsModalProps) {
+export default function TermsModal({ open, onClose, onAgree, closeLabel = 'CLOSE', agreeLabel = 'I AGREE' }: TermsModalProps) {
   // ESC key to close + lock body scroll
   useEffect(() => {
     if (!open) return;
@@ -92,19 +97,41 @@ export default function TermsModal({ open, onClose }: TermsModalProps) {
             ))}
           </ol>
 
-          <p className="text-xs text-neutral-500 mt-6 font-mono">
-            By proceeding to check-in, you confirm your continued agreement.
-          </p>
+          {!onAgree && (
+            <p className="text-xs text-neutral-500 mt-6 font-mono">
+              By proceeding to check-in, you confirm your continued agreement.
+            </p>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-ink-line p-3 flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="w-full bg-accent text-ink py-3 font-display text-xs tracking-widest"
-          >
-            CLOSE & CONTINUE
-          </button>
+        <div className="border-t border-ink-line p-3 flex-shrink-0 flex gap-2.5">
+          {onAgree ? (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-[#262626] text-neutral-300 py-3.5 font-display text-xs tracking-widest"
+              >
+                {closeLabel}
+              </button>
+              <button
+                type="button"
+                onClick={onAgree}
+                className="flex-1 bg-accent text-ink py-3.5 font-display text-xs tracking-widest"
+              >
+                {agreeLabel}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full bg-accent text-ink py-3 font-display text-xs tracking-widest"
+            >
+              CLOSE & CONTINUE
+            </button>
+          )}
         </div>
       </div>
     </div>

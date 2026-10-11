@@ -15,8 +15,7 @@ import { safeSession } from '@/lib/safe-storage';
 import { prefetchRulesVideo, RULES_VIDEO_FLAG } from '@/lib/rules-video';
 import CheckinHeader from '@/components/CheckinHeader';
 import PhoneInput from '@/components/PhoneInput';
-import TermsContent from '@/components/TermsContent';
-import ScrollHint from '@/components/ScrollHint';
+import TermsModal from '@/components/TermsModal';
 import { Atmo, StepRail } from '@/components/CheckinFX';
 
 /**
@@ -31,29 +30,26 @@ import { Atmo, StepRail } from '@/components/CheckinFX';
  *   - submit button shows "N MORE TO FILL" until complete; it stays
  *     clickable so tapping it still shows which field is wrong
  * Data written to `customers` and all validation rules are unchanged.
+ *
+ * v2.24.0 (Ron: "看起来很多字，分类很怪"; mockup `mockups/checkin-simplify.html`):
+ *   - three numbered blocks: 1 YOU (IC + name + gender + phone),
+ *     2 EMERGENCY CONTACT, then one agree line
+ *   - relationship chips 9 → 6 (Spouse → Partner, Relative / Guardian →
+ *     Other); all 6 values are already allowed by the DB CHECK, no SQL
+ *   - inline T&C scroll box → agree line + full text in TermsModal
+ *     (with I AGREE); the PDPA note is folded into that line
+ *   - no red *, no intro paragraph; submit button sticks to the bottom
  */
 
-const RELATIONSHIPS = [
-  'rel_friend',
-  'rel_partner',
-  'rel_father',
-  'rel_mother',
-  'rel_relative',
-  'rel_guardian',
-  'rel_sibling',
-  'rel_spouse',
-  'rel_other',
-] as const;
+const RELATIONSHIPS = ['rel_father', 'rel_mother', 'rel_partner', 'rel_sibling', 'rel_friend', 'rel_other'] as const;
 
+// Stored in customers.emergency_relationship — must stay inside the DB CHECK list.
 const RELATIONSHIP_VALUES: Record<typeof RELATIONSHIPS[number], string> = {
-  rel_friend: 'Friend',
-  rel_partner: 'Partner',
   rel_father: 'Father',
   rel_mother: 'Mother',
-  rel_relative: 'Relative',
-  rel_guardian: 'Guardian',
+  rel_partner: 'Partner',
   rel_sibling: 'Sibling',
-  rel_spouse: 'Spouse',
+  rel_friend: 'Friend',
   rel_other: 'Other',
 };
 
@@ -76,6 +72,7 @@ export default function RegisterPage() {
   // Foreigners pick gender here; Malaysians get it from the IC (DB trigger customers_autofill_gender).
   const [gender, setGender] = useState<'' | 'male' | 'female'>('');
   const [agreed, setAgreed] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -284,6 +281,9 @@ export default function RegisterPage() {
     router.push('/checkin/care');
   };
 
+  const youOk = nameOk && genderOk && phoneOk;
+  const emergencyDone = !!relationship && emergencyOk;
+
   return (
     <main className="min-h-screen flex flex-col bg-ink relative">
       <Atmo />
@@ -302,48 +302,31 @@ export default function RegisterPage() {
 
       <StepRail step={1} fillNext className="xd-rise xd-d2" />
 
-      <section className="flex-1 px-5 pt-7 pb-8 max-w-md mx-auto w-full relative z-[2]">
-        <div className="mb-6">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3 xd-rise xd-d2">
-            // {t(lang, 'firstTime')}
-          </p>
-          <h1 className="font-display text-5xl leading-[0.85] xd-rise xd-d3">
-            {t(lang, 'register')}
-          </h1>
-          <div className="xd-ubar" />
-          <p className="text-sm leading-relaxed text-neutral-400 mt-4 xd-rise xd-d4">
-            {t(lang, nationality === 'malaysian' ? 'regIntroIc' : 'regIntroPassport')}
-          </p>
-        </div>
+      <section className="flex-1 flex flex-col px-5 pt-6 max-w-md mx-auto w-full relative z-[2]">
+        <h1 className="font-display text-[34px] leading-[0.95] xd-rise xd-d2">{t(lang, 'register')}</h1>
+        <p className="font-mono text-[11px] tracking-[0.12em] text-neutral-400 mt-2 mb-5 xd-rise xd-d3">
+          {t(lang, 'regSub')}
+        </p>
 
-        {/* Verified ID card */}
-        <div className="reg-idcard mb-7 xd-rise xd-d4">
-          <span className="text-[22px] leading-none" aria-hidden="true">
-            {nationality === 'malaysian' ? '🇲🇾' : '🌍'}
-          </span>
-          <div className="flex-1 min-w-0">
-            <div className="font-mono text-[9px] tracking-[0.2em] text-neutral-500 mb-0.5">
-              {t(lang, nationality === 'malaysian' ? 'regIcLabel' : 'regPassportLabel')}
-            </div>
-            <div className="font-mono text-[17px] tracking-[0.06em] text-bone truncate">{displayId}</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push('/checkin/id-input')}
-            className="border border-[#3a3a3a] text-neutral-300 font-mono text-[10px] tracking-[0.12em] px-2.5 py-2"
-          >
-            {t(lang, 'regChange')}
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="xd-rise xd-d5">
-          {/* ABOUT YOU */}
-          <div className="mb-7">
-            <SectionHead title={t(lang, 'regAboutYou')} done={nameOk && genderOk && phoneOk} doneLabel={t(lang, 'regDone')} />
-            <div className="mb-3.5">
-              <label className="field-label">
-                {t(lang, 'fullName')} <span className="text-danger">*</span>
-              </label>
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col xd-rise xd-d4">
+          {/* 1 · YOU */}
+          <RegBlock n={1} title={t(lang, 'regYou')} done={youOk}>
+            <Field label={t(lang, nationality === 'malaysian' ? 'regIcLabel' : 'regPassportLabel')}>
+              <div className="flex items-center gap-2.5 bg-ink-soft border-2 border-[#222] px-3 py-2.5">
+                <span className="text-lg leading-none" aria-hidden="true">
+                  {nationality === 'malaysian' ? '🇲🇾' : '🌍'}
+                </span>
+                <span className="flex-1 min-w-0 font-mono text-base tracking-[0.05em] text-bone truncate">{displayId}</span>
+                <button
+                  type="button"
+                  onClick={() => router.push('/checkin/id-input')}
+                  className="font-mono text-[11px] text-neutral-400 underline underline-offset-[3px] px-1 py-1"
+                >
+                  {t(lang, 'regChange')}
+                </button>
+              </div>
+            </Field>
+            <Field label={t(lang, 'fullName')}>
               <input
                 type="text"
                 value={name}
@@ -353,12 +336,9 @@ export default function RegisterPage() {
                 required
                 autoCapitalize="characters"
               />
-            </div>
+            </Field>
             {nationality === 'foreigner' && (
-              <div className="mb-3.5">
-                <label className="field-label">
-                  {t(lang, 'gender')} <span className="text-danger">*</span>
-                </label>
+              <Field label={t(lang, 'gender')}>
                 <div className="grid grid-cols-2 gap-2" role="radiogroup">
                   {(['male', 'female'] as const).map((g) => (
                     <button
@@ -367,37 +347,24 @@ export default function RegisterPage() {
                       role="radio"
                       aria-checked={gender === g}
                       onClick={() => setGender(g)}
-                      className={`reg-chip gender-${g === 'male' ? 'm' : 'f'} ${gender === g ? 'on' : ''} !py-3.5 font-display !text-sm tracking-wider`}
+                      className={`reg-chip gender-${g === 'male' ? 'm' : 'f'} ${gender === g ? 'on' : ''} !py-3 font-display !text-sm tracking-wider`}
                     >
                       <span className="text-lg mr-2" aria-hidden="true">{g === 'male' ? '♂' : '♀'}</span>
                       {t(lang, g)}
                     </button>
                   ))}
                 </div>
-              </div>
+              </Field>
             )}
-            <div>
-              <label className="field-label">
-                {t(lang, 'phone')} <span className="text-danger">*</span>
-              </label>
+            <Field label={t(lang, 'phone')}>
               <PhoneInput value={phone} onChange={setPhone} placeholder="123456789" />
-            </div>
-          </div>
+            </Field>
+          </RegBlock>
 
-          {/* EMERGENCY CONTACT */}
-          <div className="mb-7">
-            <SectionHead
-              title={t(lang, 'regEmergency')}
-              done={!!relationship && emergencyOk}
-              doneLabel={t(lang, 'regDone')}
-            />
-            <p className="text-[13px] leading-snug text-neutral-500 -mt-1 mb-3.5">
-              {t(lang, 'regEmergencyHint')}
-            </p>
-            <div className="mb-3.5">
-              <label className="field-label">
-                {t(lang, 'regRelationship')} <span className="text-danger">*</span>
-              </label>
+          {/* 2 · EMERGENCY CONTACT */}
+          <RegBlock n={2} title={t(lang, 'regEmergency')} done={emergencyDone}>
+            <p className="text-xs text-neutral-500 -mt-2 mb-3">{t(lang, 'regEmergencyHint')}</p>
+            <Field label={t(lang, 'regWho')}>
               <div className="grid grid-cols-3 gap-2" role="radiogroup">
                 {RELATIONSHIPS.map((r) => (
                   <button
@@ -412,25 +379,16 @@ export default function RegisterPage() {
                   </button>
                 ))}
               </div>
-            </div>
-            <div>
-              <label className="field-label">
-                {t(lang, 'regTheirPhone')} <span className="text-danger">*</span>
-              </label>
-              <PhoneInput
-                value={emergencyPhone}
-                onChange={setEmergencyPhone}
-                placeholder="123456789"
-              />
-              {samePhone && (
-                <p className="text-xs text-[#ffb4ae] mt-2">{t(lang, 'regSamePhone')}</p>
-              )}
-            </div>
-          </div>
+            </Field>
+            <Field label={t(lang, 'regTheirPhone')}>
+              <PhoneInput value={emergencyPhone} onChange={setEmergencyPhone} placeholder="123456789" />
+              {samePhone && <p className="text-xs text-[#ffb4ae] mt-2">{t(lang, 'regSamePhone')}</p>}
+            </Field>
+          </RegBlock>
 
           {/* Guardian fields - only for Malaysian minors 12-15 */}
           {isMinor && (
-            <div className="bg-accent/10 border-2 border-accent p-4 space-y-4 mb-7">
+            <div className="bg-accent/10 border-2 border-accent p-4 space-y-4 mb-3.5">
               <div>
                 <p className="font-display text-sm tracking-widest text-accent mb-1">
                   ⚠ {t(lang, 'guardianRequired')}
@@ -439,9 +397,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="field-label">
-                  {t(lang, 'guardianIc')} <span className="text-danger">*</span>
-                </label>
+                <label className="field-label">{t(lang, 'guardianIc')}</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -454,86 +410,106 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="field-label">
-                  {t(lang, 'guardianPhone')} <span className="text-danger">*</span>
-                </label>
+                <label className="field-label">{t(lang, 'guardianPhone')}</label>
                 <PhoneInput value={guardianPhone} onChange={setGuardianPhone} />
               </div>
             </div>
           )}
 
-          {/* TERMS */}
-          <div className="mb-6">
-            <SectionHead title={t(lang, 'regTerms')} done={agreed} doneLabel={t(lang, 'regDone')} />
-            <TermsContent scrollLabel={t(lang, 'regScrollToRead')} readLabel={t(lang, 'regReadDone')} />
-            <label className={`reg-agree mt-2.5 ${agreed ? 'on' : ''}`}>
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => setAgreed(e.target.checked)}
-                className="sr-only"
-              />
-              <span className="reg-agree-box" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 16 16">
-                  <path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="#0a0a0a" strokeWidth="2.6" strokeLinecap="square" />
-                </svg>
-              </span>
-              <span className="text-sm leading-relaxed text-neutral-200">
-                {t(lang, 'agreeTerms')}
-              </span>
-            </label>
-          </div>
+          {/* 3 · AGREE — the full text opens in TermsModal */}
+          <label className={`reg-agree ${agreed ? 'on' : ''}`}>
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="sr-only"
+            />
+            <span className="reg-agree-box" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16">
+                <path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke="#0a0a0a" strokeWidth="2.6" strokeLinecap="square" />
+              </svg>
+            </span>
+            <span className="text-sm leading-relaxed text-neutral-200">
+              {t(lang, 'regAgreeA')}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowTerms(true);
+                }}
+                className="text-accent underline underline-offset-[3px]"
+              >
+                {t(lang, 'regAgreeLink')}
+              </button>
+              {t(lang, 'regAgreeB')}
+            </span>
+          </label>
 
-          {error && (
-            <div className="bg-danger text-bone px-4 py-3 mb-4 font-display text-sm tracking-wider animate-shake">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className={`btn-primary ${remaining > 0 && !loading ? 'reg-incomplete' : ''}`}
-          >
-            {loading ? (
-              <span className="flex gap-1.5 justify-center">
-                <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-                <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-                <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
-              </span>
-            ) : remaining > 0 ? (
-              t(lang, 'regMoreToFill').replace('{n}', String(remaining))
-            ) : (
-              <>{t(lang, 'submit')} →</>
+          {/* Submit — sticks to the bottom of the screen while scrolling */}
+          <div className="sticky bottom-0 mt-auto -mx-5 px-5 pt-6 pb-[max(18px,env(safe-area-inset-bottom))] bg-gradient-to-b from-transparent via-ink/95 to-ink z-10">
+            {error && (
+              <div className="bg-danger text-bone px-4 py-3 mb-3 font-display text-sm tracking-wider animate-shake">
+                {error}
+              </div>
             )}
-          </button>
-
-          <p className="text-[11.5px] text-neutral-500 text-center mt-3.5 leading-normal">
-            🔒 {t(lang, 'regPdpaNote')}
-          </p>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`btn-primary ${remaining > 0 && !loading ? 'reg-incomplete' : ''}`}
+            >
+              {loading ? (
+                <span className="flex gap-1.5 justify-center">
+                  <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
+                  <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
+                  <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
+                </span>
+              ) : remaining > 0 ? (
+                t(lang, 'regMoreToFill').replace('{n}', String(remaining))
+              ) : (
+                <>{t(lang, 'submit')} →</>
+              )}
+            </button>
+          </div>
         </form>
-
-        {/* Bottom spacer — see /checkin/page.tsx for rationale */}
-        <div className="h-20" aria-hidden="true" />
       </section>
 
-      {/* ScrollHint — auto-hides if the page already fits in the viewport */}
-      <ScrollHint />
+      <TermsModal
+        open={showTerms}
+        onClose={() => setShowTerms(false)}
+        onAgree={() => {
+          setAgreed(true);
+          setShowTerms(false);
+        }}
+        closeLabel={t(lang, 'close')}
+        agreeLabel={t(lang, 'iAgree')}
+      />
     </main>
   );
 }
 
-function SectionHead({ title, done, doneLabel }: { title: string; done: boolean; doneLabel: string }) {
+function RegBlock({ n, title, done, children }: { n: number; title: string; done: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 mb-3.5">
-      <span className="w-2 h-2 bg-accent flex-none" aria-hidden="true" />
-      <h2 className="font-display text-[15px] tracking-[0.06em]">{title}</h2>
-      <span className="flex-1 h-px bg-ink-line" aria-hidden="true" />
-      <span
-        className={`font-mono text-[10px] tracking-[0.1em] text-success-green transition-opacity ${done ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {doneLabel}
-      </span>
+    <div className={`border bg-[#111] px-3.5 py-4 mb-3.5 transition-colors ${done ? 'border-success-green/45' : 'border-[#262626]'}`}>
+      <div className="flex items-center gap-2.5 mb-3.5">
+        <span
+          className={`w-6 h-6 grid place-items-center flex-none font-display text-[13px] text-ink transition-colors ${done ? 'bg-success-green' : 'bg-accent'}`}
+          aria-hidden="true"
+        >
+          {done ? '✓' : n}
+        </span>
+        <h2 className="font-display text-[15px] tracking-[0.03em]">{title}</h2>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-3 last:mb-0">
+      <p className="font-mono text-[10px] tracking-[0.16em] text-neutral-400 mb-1.5">{label}</p>
+      {children}
     </div>
   );
 }

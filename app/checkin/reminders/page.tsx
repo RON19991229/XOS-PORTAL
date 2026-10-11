@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
 import { Customer } from '@/lib/types';
-import { parseTimestamp } from '@/lib/utils';
+import { visitLabel } from '@/lib/checkin-content';
 import { safeSession, safeJsonParse } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
 import { Atmo, StepRail, XdReveal } from '@/components/CheckinFX';
@@ -145,74 +145,37 @@ export default function RemindersPage() {
     );
   }
 
-  // Format last-visit date in user's language
-  const formatLastVisit = (iso: string) => {
-    const d = parseTimestamp(iso);
-    if (!d) return '';
-    const datePart = d.toLocaleDateString(
-      lang === 'zh' ? 'zh-CN' : lang === 'ms' ? 'ms-MY' : 'en-MY',
-      { year: 'numeric', month: 'short', day: '2-digit', timeZone: 'Asia/Kuala_Lumpur' }
-    );
-    const timePart = d.toLocaleTimeString('en-MY', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'Asia/Kuala_Lumpur',
-    });
-    return `${datePart} · ${timePart}`;
-  };
-
   return (
     <main className="min-h-screen flex flex-col bg-ink relative">
       <Atmo />
 
       <CheckinHeader className="xd-rise xd-d1" />
 
-      <StepRail step={2} className="xd-rise xd-d1" />
+      <StepRail step={2} fillNext className="xd-rise xd-d1" />
 
       <section className="flex-1 px-5 py-6 max-w-md mx-auto w-full relative z-[2]">
-        {/* HELLO, RON — compact stack (replaces the v2.5 yellow-bordered
-            card). HELLO line stays bold/big to keep the personalized feel,
-            but ditching the box saves ~110px and lets the user see the
-            CTA much sooner. visit-stats sits inline as a single mono line. */}
-        <div className="xd-hello mb-6 xd-rise xd-d2">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-1">
-            // {t(lang, 'welcomeBack')}
-          </p>
-          <h2 className="font-display text-2xl leading-none mb-2">
-            {t(lang, 'welcomeBackHello')}{' '}
-            <span className="text-accent">{customer.name.toUpperCase().split(' ')[0]}</span>
-          </h2>
-          {stats && stats.lastVisitAt && (
-            <p className="font-mono text-[10px] text-neutral-400 leading-relaxed">
-              {t(lang, 'lastVisit')}: {formatLastVisit(stats.lastVisitAt)}
-              {' · '}
-              {t(lang, 'totalVisits')}: <span className="text-accent">{stats.totalVisits}</span>
-            </p>
+        {/* v2.24.0: one hello line + this visit's number, one title. The
+            "// WELCOME BACK", last-visit timestamp, "// GYM RULES REMINDER",
+            IMPORTANT RULES tag and "// DO & DON'T" heading are gone (the
+            DO / DON'T images carry their own headers). All 4 images stay —
+            Ron wants the full rules on every visit. */}
+        <p className="font-display text-xl leading-none xd-rise xd-d2">
+          {t(lang, 'welcomeBackHello')}{' '}
+          <span className="text-accent">{customer.name.toUpperCase().split(' ')[0]}</span>{' '}
+          <span aria-hidden="true">👋</span>
+          {stats && (
+            <span className="font-mono text-[10px] tracking-[0.15em] text-neutral-400 ml-2 align-middle">
+              {visitLabel(lang, stats.totalVisits + 1)}
+            </span>
           )}
-        </div>
-
-        <div className="mb-4 xd-rise xd-d3">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-2">
-            // {t(lang, 'gymRulesReminder')}
-          </p>
-          <h1 className="font-display text-3xl md:text-4xl leading-[0.9] mb-2">
-            {t(lang, 'beforeYouTrain')}
-          </h1>
-          <div className="xd-ubar" />
-        </div>
-
-        {/* IMPORTANT RULES — section label grouping the two core rules
-            (RE-RACK + NO SLIPPERS). Added v2.8.1. */}
-        <div className="inline-block bg-accent/10 border border-accent text-accent font-mono text-[10px] tracking-[0.25em] px-2.5 py-1 mb-1 xd-rise xd-d4">
-          ▎ {t(lang, 'importantRules')}
-        </div>
+        </p>
+        <h1 className="font-display text-3xl leading-[0.95] mt-4 xd-rise xd-d3">{t(lang, 'beforeYouTrain')}</h1>
 
         {/* Rule 1: RE-RACK — v2.13: big solid-yellow number heads each rule;
             the number replaces the old in-card yellow bar (which duplicated
             the rule title). Cards reveal on scroll. Images untouched. */}
         <XdReveal>
-          <div className="flex items-baseline gap-3 mt-4 mb-2.5">
+          <div className="flex items-baseline gap-3 mt-5 mb-2.5">
             <span className="font-display text-[28px] leading-none text-accent">01</span>
             <span className="font-display text-[15px] tracking-wide">{ruleTitle(t(lang, 'rule1'))}</span>
           </div>
@@ -236,7 +199,7 @@ export default function RemindersPage() {
             <span className="font-display text-[28px] leading-none text-accent">02</span>
             <span className="font-display text-[15px] tracking-wide">{ruleTitle(t(lang, 'rule2'))}</span>
           </div>
-          <div className="border border-ink-line mb-5 overflow-hidden">
+          <div className="border border-ink-line mb-4 overflow-hidden">
             <div className="bg-black">
               <Image
                 src="/no-slippers.webp"
@@ -248,24 +211,6 @@ export default function RemindersPage() {
               />
             </div>
           </div>
-        </XdReveal>
-
-        {/* DO & DON'T — full visual etiquette guide (1080×1080 graphics).
-            Added v2.8.1. The images are self-contained (green DO / red
-            DON'T headers baked in), so no yellow rule-bar is added; they
-            sit in the same bordered frame as the rules above for visual
-            consistency. Not marked `priority` (below the fold). */}
-        <XdReveal>
-        <div className="mt-3 mb-3">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-1.5">
-            // {t(lang, 'doAndDont')}
-          </p>
-          <h2 className="font-display text-2xl leading-none">
-            <span className="text-success-green">DO</span>
-            <span className="text-neutral-500"> &amp; </span>
-            <span className="text-danger">DON&apos;T</span>
-          </h2>
-        </div>
         </XdReveal>
 
         {/* DO */}
@@ -340,12 +285,9 @@ export default function RemindersPage() {
         <button
           type="button"
           onClick={() => setShowTerms(true)}
-          className="w-full mt-4 text-center text-[11px] text-neutral-400 hover:text-accent transition-colors"
+          className="w-full mt-4 text-center text-[12.5px] hover:opacity-80 transition-opacity"
         >
-          {t(lang, 'viewTermsSub')}{' · '}
-          <span className="text-accent underline underline-offset-4 font-mono tracking-wider">
-            {t(lang, 'viewTerms')}
-          </span>
+          <span className="text-accent underline underline-offset-4">{t(lang, 'viewTerms')}</span>
         </button>
 
         {/* Bottom spacer — gives users a visual cue that page has ended,

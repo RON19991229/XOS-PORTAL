@@ -5,8 +5,8 @@
  * Source: User-provided official document.
  *
  * Used by:
- *   - components/TermsContent.tsx — shown inline on /checkin/register
- *   - components/TermsModal.tsx   — popup on /checkin/reminders
+ *   - components/TermsModal.tsx — popup on /checkin/register (with
+ *     I AGREE, since v2.24.0) and /checkin/reminders
  *
  * IMPORTANT: This is the legal-grade text. Do NOT casually edit
  * wording. If updates are needed, they should come from management

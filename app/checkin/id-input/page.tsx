@@ -86,8 +86,6 @@ export default function IdInputPage() {
     ? t(lang, 'enterIc')
     : t(lang, 'enterPassport');
 
-  const flag = nationality === 'malaysian' ? '🇲🇾 MY' : '🌍 INTL';
-
   return (
     <main className="min-h-screen flex flex-col bg-ink relative">
       <Atmo />
@@ -101,15 +99,8 @@ export default function IdInputPage() {
       <StepRail step={1} fillNext className="xd-rise xd-d2" />
 
       <section className="flex-1 flex flex-col justify-center px-5 py-10 max-w-md mx-auto w-full relative z-[2]">
-        <div className="mb-8">
-          <p className="font-mono text-[10px] tracking-[0.3em] text-accent mb-3 xd-rise xd-d2">
-            // {flag}
-          </p>
-          <h1 className="font-display text-5xl md:text-6xl leading-[0.85] xd-rise xd-d3">
-            {title}
-          </h1>
-          <div className="xd-ubar" />
-        </div>
+        {/* v2.24.0: "// MY" kicker, underline bar and "12 DIGITS" label removed */}
+        <h1 className="font-display text-[40px] leading-[0.9] mb-6 xd-rise xd-d3">{title}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="xd-rise xd-d4">
@@ -133,10 +124,7 @@ export default function IdInputPage() {
                     <div key={i} className={`xd-seg ${i < id.length ? 'f' : ''}`} />
                   ))}
                 </div>
-                <div className="flex justify-between text-xs font-mono text-neutral-500 mt-2">
-                  <span className="text-[10px] tracking-[0.18em]">12 DIGITS</span>
-                  <span>{id.length}/12</span>
-                </div>
+                <div className="text-right text-xs font-mono text-neutral-500 mt-2">{id.length}/12</div>
               </>
             )}
           </div>
@@ -166,9 +154,9 @@ export default function IdInputPage() {
           <button
             type="button"
             onClick={() => router.push('/checkin')}
-            className="btn-secondary xd-rise xd-d6"
+            className="block mx-auto mt-1 py-2 text-[12.5px] text-neutral-400 hover:text-accent underline underline-offset-4 transition-colors xd-rise xd-d6"
           >
-            ← {t(lang, 'changeNationality')}
+            ← {t(lang, 'back')}
           </button>
         </form>
 
