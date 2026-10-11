@@ -1111,17 +1111,6 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 
 .ck-ch { display: inline-block; opacity: 0; animation: ckCh .55s cubic-bezier(.2, 1.2, .3, 1) both; }
 @keyframes ckCh { from { opacity: 0; transform: translateY(.45em) rotate(6deg); } to { opacity: 1; transform: none; } }
-.ck-wave { display: inline-block; transform-origin: 70% 75%; animation: ckWave 2.2s 1.1s ease-in-out 2; margin-left: 6px; font-size: .9em; }
-@keyframes ckWave { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(16deg); } 20%, 40% { transform: rotate(-8deg); } }
-.ck-sun-rays { animation: ckSpin 18s linear infinite; transform-origin: 27px 27px; }
-.ck-sun-core { animation: ckSunPulse 3.5s ease-in-out infinite; transform-origin: 27px 27px; }
-@keyframes ckSpin { to { transform: rotate(360deg); } }
-@keyframes ckSunPulse { 50% { transform: scale(1.06); } }
-.ck-star { animation: ckTwinkle 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
-.ck-star:nth-of-type(2) { animation-delay: .8s; }
-.ck-star:nth-of-type(3) { animation-delay: 1.6s; }
-@keyframes ckTwinkle { 0%, 100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1); } }
-.ck-moon { animation: ckBob 4s ease-in-out infinite; }
 @keyframes ckBob { 50% { transform: translateY(-3px); } }
 
 
@@ -1153,7 +1142,7 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 
 @media (prefers-reduced-motion: reduce) {
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after,
-  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-wave, .ck-sun-rays, .ck-sun-core, .ck-star, .ck-moon,
+  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch,
   .ck-cake, .ck-stamp, .ck-halo, .ck-fx .reg-chip.on, .ck-fx .reg-agree.on .reg-agree-box {
     animation: none !important;
   }

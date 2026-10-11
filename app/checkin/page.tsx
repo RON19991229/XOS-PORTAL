@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
@@ -19,7 +20,8 @@ import { StepRail } from '@/components/CheckinFX';
  *   - Language: the customer's own pick (localStorage) wins; otherwise the
  *     phone's system language (zh → 中文, ms/id → BM, else EN).
  *   - Greeting by Kuala Lumpur time (GOOD MORNING / AFTERNOON / EVENING,
- *     "night owl" while closed 1–6 AM) with sun/moon icon and 👋 wave.
+ *     "night owl" while closed 1–6 AM) — remembered phone only since v2.24.0;
+ *     new visitors see WELCOME TO + the X FITNESS wordmark.
  *   - OPEN NOW pill from the fixed hours 6:00 AM – 1:00 AM daily.
  *   - Tagline in the current language only (the old trilingual marquee
  *     showed BM while EN was selected and pushed the cards below the fold).
@@ -198,20 +200,26 @@ export default function CheckinPage() {
             </p>
           )}
 
-          <div className="relative min-h-[110px]">
+          {/* v2.24.0 (Ron): plain "WELCOME TO" + the X FITNESS wordmark
+              instead of the time-of-day greeting. */}
+          <div>
             {tod && <OpenPill tod={tod} lang={lang} />}
-            {tod && <TodIcon tod={tod} />}
-            <h1 className={`${heavy} text-[30px] leading-[1.02] mt-4 pr-14`}>
-              {tod && (
-                <Letters
-                  text={t(lang, GREET[tod])}
-                  tail={<span className="ck-wave" aria-hidden="true">👋</span>}
-                />
-              )}
+            <h1 className="mt-7">
+              <span className={`block ${heavy} text-[26px] leading-none text-neutral-300`}>
+                <Letters text={t(lang, 'welcomeToXFitness')} />
+              </span>
+              <Image
+                src="/report-wordmark.png"
+                alt="X FITNESS"
+                width={482}
+                height={54}
+                priority
+                className="block w-full max-w-[340px] h-auto mt-3.5 invert xd-rise xd-d5"
+              />
             </h1>
           </div>
 
-          <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mt-7 mb-3 xd-rise xd-d6">
+          <p className="font-mono text-[10px] tracking-[0.3em] text-neutral-500 mt-10 mb-3 xd-rise xd-d6">
             {t(lang, 'chooseNationality')}
           </p>
 
@@ -288,41 +296,5 @@ function OpenPill({ tod, lang }: { tod: TimeOfDay; lang: Lang }) {
       <span className="ck-dot" aria-hidden="true" />
       {t(lang, closed ? 'closedNow' : 'openNow')}
     </span>
-  );
-}
-
-function TodIcon({ tod }: { tod: TimeOfDay }) {
-  const night = tod === 'evening' || tod === 'closed';
-  return (
-    <svg className="absolute right-0 top-0 w-[54px] h-[54px] xd-rise xd-d3" viewBox="0 0 54 54" aria-hidden="true">
-      {night ? (
-        <>
-          <g className="ck-moon">
-            <path d="M34 10a17 17 0 1 0 12 26A14 14 0 0 1 34 10z" fill="#FFD60A" />
-          </g>
-          <path className="ck-star" d="M12 10l1.2 3 3 1.2-3 1.2L12 18.4l-1.2-3-3-1.2 3-1.2z" fill="#fff" />
-          <path className="ck-star" d="M46 6l.9 2.1 2.1.9-2.1.9L46 12l-.9-2.1-2.1-.9 2.1-.9z" fill="#FFD60A" />
-          <path className="ck-star" d="M8 38l.8 1.8 1.8.8-1.8.8L8 43.2l-.8-1.8-1.8-.8 1.8-.8z" fill="#fff" />
-        </>
-      ) : (
-        <>
-          <g className="ck-sun-rays" stroke="#FFD60A" strokeWidth="3" strokeLinecap="round">
-            {Array.from({ length: 8 }).map((_, i) => {
-              const a = (i * Math.PI) / 4;
-              return (
-                <line
-                  key={i}
-                  x1={27 + Math.cos(a) * 18}
-                  y1={27 + Math.sin(a) * 18}
-                  x2={27 + Math.cos(a) * 24}
-                  y2={27 + Math.sin(a) * 24}
-                />
-              );
-            })}
-          </g>
-          <circle className="ck-sun-core" cx="27" cy="27" r="12" fill={tod === 'morning' ? '#FFB020' : '#FFD60A'} />
-        </>
-      )}
-    </svg>
   );
 }
