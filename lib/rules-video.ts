@@ -1,11 +1,10 @@
 // v2.23.0 — first-visit rules video (made in Remotion, project `xf-video`).
 //
-// Who must watch it (once, to the end, before CHECK IN):
-//   - new customers (flag set by /checkin/register), and
-//   - everyone whose last approved visit is before RULES_VIDEO_SINCE — i.e.
-//     every existing customer watches it once after launch.
-// Bump RULES_VIDEO_SINCE (and the file version) after the rules change to
-// make everyone watch the new video once.
+// Who must watch it (once, to the end, before CHECK IN): first visits only —
+//   - new customers (flag set by /checkin/register), or
+//   - customers with no approved visit yet (last_visit_at is null).
+// Existing customers keep the static rule images (Ron, Oct 2026: no
+// "everyone watches once after launch").
 //
 // Files live in public/rules/ with a version in the name and are served with
 // an immutable cache header (vercel.json). One video per language — the
@@ -13,10 +12,7 @@
 
 import type { Lang } from './i18n';
 
-export const RULES_VIDEO_VERSION = 'v2';
-
-/** Set to the production launch moment of this video (Malaysia time). */
-export const RULES_VIDEO_SINCE = '2026-10-12T00:00:00+08:00';
+export const RULES_VIDEO_VERSION = 'v3';
 
 export const rulesVideoSrc = (lang: Lang) => `/rules/rules-${RULES_VIDEO_VERSION}-${lang}.mp4`;
 export const rulesPosterSrc = (lang: Lang) => `/rules/rules-${RULES_VIDEO_VERSION}-${lang}-poster.webp`;
@@ -27,10 +23,7 @@ export const RULES_VIDEO_FLAG = 'xf-rules-video';
 export const RULES_WATCHED_KEY = 'xf-rules-watched';
 
 export function mustWatchRules(lastVisitAt: string | null): boolean {
-  if (!lastVisitAt) return true;
-  const last = Date.parse(lastVisitAt);
-  if (Number.isNaN(last)) return false;
-  return last < Date.parse(RULES_VIDEO_SINCE);
+  return !lastVisitAt;
 }
 
 // ---------- prefetch ----------
