@@ -95,6 +95,9 @@ export default function RemindersPage() {
     }
 
     safeSession.setItem('xf-success-name', customer.name);
+    // v2.23.0: this visit's number (approved visits before + this one) for the
+    // milestone stamp on /checkin/approved. Skipped if stats never loaded.
+    if (stats) safeSession.setItem('xf-visit-number', String(stats.totalVisits + 1));
     router.push('/checkin/approved');
   };
 

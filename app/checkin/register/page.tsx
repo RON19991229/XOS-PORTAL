@@ -72,6 +72,8 @@ export default function RegisterPage() {
   const [guardianIc, setGuardianIc] = useState('');
   const [guardianPhone, setGuardianPhone] = useState({ code: '+60', digits: '' });
 
+  // Foreigners pick gender here; Malaysians get it from the IC (DB trigger customers_autofill_gender).
+  const [gender, setGender] = useState<'' | 'male' | 'female'>('');
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -110,7 +112,8 @@ export default function RegisterPage() {
   const guardianIcOk = !isMinor || validateMyIC(guardianIc) === null;
   const guardianPhoneOk =
     !isMinor || (guardianPhone.digits.length > 0 && validatePhone(guardianPhone.code, guardianPhone.digits) === null);
-  const remaining = [nameOk, phoneOk, !!relationship, emergencyOk, guardianIcOk, guardianPhoneOk, agreed]
+  const genderOk = nationality === 'malaysian' || gender !== '';
+  const remaining = [nameOk, genderOk, phoneOk, !!relationship, emergencyOk, guardianIcOk, guardianPhoneOk, agreed]
     .filter((ok) => !ok).length;
   const displayId =
     nationality === 'malaysian' && ic.length === 12
@@ -123,6 +126,11 @@ export default function RegisterPage() {
 
     if (!name.trim()) {
       setError(t(lang, 'fillAllFields'));
+      return;
+    }
+
+    if (nationality === 'foreigner' && !gender) {
+      setError(t(lang, 'genderRequired'));
       return;
     }
 
@@ -234,6 +242,8 @@ export default function RegisterPage() {
         emergency_phone: fullEmergencyPhone,
         guardian_ic: isMinor ? guardianIc : null,
         guardian_phone: fullGuardianPhone,
+        // Only sent for foreigners — Malaysian gender is derived from the IC by the DB trigger.
+        ...(nationality === 'foreigner' && gender ? { gender } : {}),
       });
 
     if (insertError) {
@@ -265,7 +275,8 @@ export default function RegisterPage() {
     }
 
     safeSession.setItem('xf-customer', JSON.stringify(customer));
-    router.push('/checkin/reminders');
+    // v2.23.0: first registration → one-time care page, then the rules.
+    router.push('/checkin/care');
   };
 
   return (
@@ -323,7 +334,7 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="xd-rise xd-d5">
           {/* ABOUT YOU */}
           <div className="mb-7">
-            <SectionHead title={t(lang, 'regAboutYou')} done={nameOk && phoneOk} doneLabel={t(lang, 'regDone')} />
+            <SectionHead title={t(lang, 'regAboutYou')} done={nameOk && genderOk && phoneOk} doneLabel={t(lang, 'regDone')} />
             <div className="mb-3.5">
               <label className="field-label">
                 {t(lang, 'fullName')} <span className="text-danger">*</span>
@@ -338,6 +349,28 @@ export default function RegisterPage() {
                 autoCapitalize="characters"
               />
             </div>
+            {nationality === 'foreigner' && (
+              <div className="mb-3.5">
+                <label className="field-label">
+                  {t(lang, 'gender')} <span className="text-danger">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup">
+                  {(['male', 'female'] as const).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      role="radio"
+                      aria-checked={gender === g}
+                      onClick={() => setGender(g)}
+                      className={`reg-chip gender-${g === 'male' ? 'm' : 'f'} ${gender === g ? 'on' : ''} !py-3.5 font-display !text-sm tracking-wider`}
+                    >
+                      <span className="text-lg mr-2" aria-hidden="true">{g === 'male' ? '♂' : '♀'}</span>
+                      {t(lang, g)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
               <label className="field-label">
                 {t(lang, 'phone')} <span className="text-danger">*</span>

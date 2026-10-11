@@ -5,6 +5,45 @@
 
 ---
 
+## ✨ v2.23.0 (2026-10-12) — 顾客端改版：温馨首页、新注册页、关怀页
+
+Ron 批准的 mockup：`mockups/register-redesign.html`、`mockups/landing-warm.html`、`mockups/checkin-wow.html`。
+
+- **语言自动**：第一次打开时读手机系统语言（中文 → 中文，马来文 / 印尼文 → BM，其他 → EN）。客人自己点过 EN / 中 / BM 之后，以后都用他选的
+- **首页 `/checkin`**：
+  - 依马来西亚时间问好（GOOD MORNING / 午安 / 晚上好，凌晨 1–6 点显示 “night owl”），配会转的太阳或会闪的月亮，👋 挥手
+  - 暖色背景光慢慢飘；“OPEN NOW · UNTIL 1:00 AM” 绿点（营业时间 6AM–1AM 写死在 `lib/checkin-content.ts`）
+  - 三语轮播标语拿掉，改成当前语言一句话；国籍卡一打开就看得到
+  - 新增：FIRST TIME HERE? 须知（可展开）、今日一句（每天换）、Instagram / Facebook / Spotify 歌单
+  - 记住手机的回头客：按时段问好 + 名字；**生日当天**（马来西亚 IC 第 3–6 位）撒彩纸 🎂
+  - 不显示任何人数（不泄露生意量）
+- **注册页**：
+  - 去掉绿色 X FITNESS 框；IC 变成卡片（可 CHANGE）
+  - 资料分 3 段并显示完成 ✓；“关系”改成 9 个按钮
+  - 按钮显示“还差 N 项”
+  - 紧急电话不能填自己的号码
+  - 条款加阅读进度条
+  - **外国人新增必填的 MALE / FEMALE**（写进 `customers.gender`；马来西亚人照旧由 IC 尾号自动判断）
+- **关怀页 `/checkin/care`（新）**：注册完成后、规则页之前出现一次
+  - 女生：“HEY GIRLS, WE'VE GOT YOUR BACK.”，跟店内海报一致（粉色、盾牌）
+    - 三个求助方式：柜台、私下报告（/report）、WhatsApp
+    - 附海报小图，提醒店里扫 QR 也能报告
+    - 一句保密承诺
+  - 男生 / 未知：“NEED HELP? JUST ASK.” 找柜台
+- **入场成功页**：
+  - 第 1 / 10 / 25 / 50 / 100 次（之后每 50 次）盖黄色印章 + 彩纸
+  - 其他次数显示 “VISIT #N”
+- **全部 /checkin 页面**：
+  - 主按钮每 3 秒一道光；按下去会缩、有涟漪
+  - Android 轻震
+  - 选中时“啵”一下
+  - 开了“减少动画”的手机全部关闭
+- 顺手修：在 IC 输入页换语言，之后的注册页没跟着换
+
+**改动文件**：新增 `app/checkin/layout.tsx`、`app/checkin/care/page.tsx`、`components/CheckinFxLayer.tsx`、`components/Confetti.tsx`、`lib/checkin-content.ts`、`public/safety-poster.webp`；重写 `app/checkin/page.tsx`、`app/checkin/register/page.tsx`、`components/TermsContent.tsx`；小改 `app/checkin/approved/page.tsx`、`app/checkin/reminders/page.tsx`、`app/checkin/id-input/page.tsx`、`lib/i18n.ts`、`app/globals.css`；删除 `components/TaglineMarquee.tsx`。**无 SQL**（anon 本来就能写 `customers.gender`，sanitize trigger 不会清掉它）。
+
+---
+
 ## 🖥 v2.22.0 (2026-10-01) — 后台改版：A · Control Room 浅色版
 
 Ron 选定 mockup `mockups/dashboard-A-light.html`，Staff 和 Admin 都换成新外壳：

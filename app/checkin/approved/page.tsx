@@ -6,6 +6,8 @@ import { Lang, t } from '@/lib/i18n';
 import { formatDateTime } from '@/lib/utils';
 import { safeSession, safeJsonParse } from '@/lib/safe-storage';
 import { Customer } from '@/lib/types';
+import { isMilestone, milestoneLabel, visitLabel } from '@/lib/checkin-content';
+import Confetti from '@/components/Confetti';
 import {
   getRemembered,
   saveRemembered,
@@ -30,6 +32,7 @@ export default function ApprovedPage() {
   const [lang, setLang] = useState<Lang>('en');
   const [name, setName] = useState('');
   const [now, setNow] = useState('');
+  const [visitNo, setVisitNo] = useState<number | null>(null);
   const [offer, setOffer] = useState<{ ic: string; nationality: Customer['nationality']; name: string } | null>(null);
   const [offerState, setOfferState] = useState<'ask' | 'saved' | 'declined'>('ask');
 
@@ -44,6 +47,8 @@ export default function ApprovedPage() {
     if (savedLang) setLang(savedLang);
     setName(savedName);
     setNow(formatDateTime(new Date()));
+    const vn = Number(safeSession.getItem('xf-visit-number'));
+    if (Number.isInteger(vn) && vn > 0) setVisitNo(vn);
 
     const c = safeJsonParse<Customer>(safeSession.getItem('xf-customer'));
     const nationality =
@@ -93,6 +98,19 @@ export default function ApprovedPage() {
           </p>
         </div>
 
+        {/* v2.23.0: visit milestone stamp (1/10/25/50/100, then every 50) or a quiet visit number */}
+        {visitNo !== null &&
+          (isMilestone(visitNo) ? (
+            <>
+              <div className={`ck-stamp -mt-3 mb-6 ${lang === 'zh' ? 'font-sans font-black' : 'font-display'} text-[15px] tracking-[0.04em]`}>
+                {milestoneLabel(lang, visitNo)}
+              </div>
+              <Confetti count={50} delay={900} />
+            </>
+          ) : (
+            <p className="font-mono text-xs tracking-[0.2em] text-ink/70 -mt-4 mb-6 xd-rise xd-d6">{visitLabel(lang, visitNo)}</p>
+          ))}
+
         <p className="font-display text-sm md:text-base tracking-wider max-w-md text-ink xd-rise xd-d6 mb-2">
           {t(lang, 'approvedSub')}
         </p>
@@ -115,7 +133,7 @@ export default function ApprovedPage() {
                     saveRemembered(offer.ic, offer.nationality, offer.name);
                     setOfferState('saved');
                   }}
-                  className="w-full py-4 bg-accent text-ink font-display text-sm tracking-wider"
+                  className="ck-press ck-shine w-full py-4 bg-accent text-ink font-display text-sm tracking-wider"
                 >
                   {t(lang, 'rememberBtn')}
                 </button>

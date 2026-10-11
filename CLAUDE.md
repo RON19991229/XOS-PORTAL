@@ -48,6 +48,7 @@ Three frontends:
 **Customer flow:** language → nationality (Malaysian IC / Foreigner passport) → `/checkin/id-input` → 30-min cooldown check → branch to `register` / `reminders` / `banned` / `under-age` → `approved` (full-screen green `#16c75b`) or `banned` (full-screen red).
 
 - **Remembered phone (v2.21.0):** opt-in on `/checkin/approved` saves IC + first name in the customer's localStorage (`lib/remember-me.ts`). `/checkin` then offers CONTINUE, which runs `lib/checkin-lookup.ts` (the same cooldown/lookup/age/ban code as `/checkin/id-input`) and still goes through the **full** reminders page — Ron wants every rule shown on every visit; don't add a "compact rules" shortcut.
+- **v2.23.0 customer flow:** register → **`/checkin/care`** (one-time; women get "HEY GIRLS" + front desk / `/report` / WhatsApp + the in-gym safety poster, everyone else a short "ask the front desk") → reminders. Foreigners pick MALE/FEMALE on register (sent as `customers.gender`); Malaysians are derived from the IC by trigger — don't send gender for them. Landing language = saved pick, else phone language (`detectLang` in `lib/checkin-content.ts`, which also holds gym hours 6AM–1AM, daily lines, first-time tips, social links, milestone labels). `app/checkin/layout.tsx` wraps all /checkin pages in `.ck-fx` (button shine / press / ripple / haptic via `CheckinFxLayer`) — keep those styles scoped so dashboard `.btn-primary` is unaffected. Never show live head counts on customer pages.
 - Anon lookups go through RPCs (`lookup_customer_for_checkin`, `lookup_customer_by_phone`), **not** direct `select` on `customers`.
 - Admin nav: TODAY · HISTORY · CUSTOMERS · ATTENTION · COMPLAINT · REPORTS · IMPORT · AUDIT · EXIT
 - Staff nav: TODAY · HISTORY · CUSTOMERS · ATTENTION · COMPLAINT
@@ -136,9 +137,9 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 ## Ways of working
 
-- **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles, staff/admin paths when working on `/checkin`.
+- **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles (outside the `.ck-fx` scope), staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.22.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.23.0**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`. The only intended exceptions are the existing **+ WARNING** / **+ NOTE** buttons on customer detail (Ron wants front desk to be able to warn and annotate). Attention List photos are intentionally **not** blurred in privacy mode (staff must recognise faces).

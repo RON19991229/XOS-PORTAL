@@ -94,7 +94,7 @@ export default function IdInputPage() {
 
       <CheckinHeader
         lang={lang}
-        onLangChange={(l) => { setLang(l); safeLocal.setItem('xf-lang', l); }}
+        onLangChange={(l) => { setLang(l); safeLocal.setItem('xf-lang', l); safeSession.setItem('xf-lang', l); }}
         className="xd-rise xd-d1"
       />
 
