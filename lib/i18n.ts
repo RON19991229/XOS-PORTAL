@@ -177,6 +177,12 @@ export const translations = {
     careGotIt: 'GOT IT',
     careTitleM: 'NEED HELP? JUST ASK.',
     careBodyM: 'Equipment, a spot, directions, or anything that doesn’t feel right — our front desk team is here to help.',
+    // v2.23.0 — first-visit rules video
+    rvPlay: '▶ PLAY THE RULES',
+    rvHint: '40 SEC · SOUND ON 🔊',
+    rvWatching: 'WATCH TO THE END TO CHECK IN',
+    rvResume: '▶ RESUME',
+    rvReplay: 'WATCH AGAIN',
   },
   zh: {
     chooseNationality: '请选择国籍',
@@ -341,6 +347,11 @@ export const translations = {
     careGotIt: '知道了',
     careTitleM: '需要帮忙？尽管开口。',
     careBodyM: '器材、帮忙 spot、找不到东西，或任何觉得不对劲的事 —— 柜台的工作人员随时帮你。',
+    rvPlay: '▶ 播放店规',
+    rvHint: '40 秒 · 请打开声音 🔊',
+    rvWatching: '看完才能 CHECK IN',
+    rvResume: '▶ 继续播放',
+    rvReplay: '再看一次',
   },
   ms: {
     chooseNationality: 'PILIH KEWARGANEGARAAN',
@@ -505,6 +516,11 @@ export const translations = {
     careGotIt: 'FAHAM',
     careTitleM: 'PERLU BANTUAN? TANYA SAJA.',
     careBodyM: 'Peralatan, spotter, arah, atau apa-apa yang rasa tak kena — pasukan kaunter kami sedia membantu.',
+    rvPlay: '▶ MAIN PERATURAN',
+    rvHint: '40 SAAT · BUKA BUNYI 🔊',
+    rvWatching: 'TONTON SAMPAI HABIS UNTUK DAFTAR MASUK',
+    rvResume: '▶ SAMBUNG',
+    rvReplay: 'TONTON SEMULA',
   },
 };
 

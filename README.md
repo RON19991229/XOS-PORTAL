@@ -5,7 +5,7 @@
 
 ---
 
-## ✨ v2.23.0 (2026-10-12) — 顾客端改版：温馨首页、新注册页、关怀页
+## ✨ v2.23.0 (2026-10-12) — 顾客端改版：温馨首页、新注册页、关怀页、规则影片
 
 Ron 批准的 mockup：`mockups/register-redesign.html`、`mockups/landing-warm.html`、`mockups/checkin-wow.html`。
 
@@ -38,9 +38,17 @@ Ron 批准的 mockup：`mockups/register-redesign.html`、`mockups/landing-warm.
   - Android 轻震
   - 选中时“啵”一下
   - 开了“减少动画”的手机全部关闭
+- **规则影片（新）**：第一次来的人、以及上线后每个旧顾客的下一次，规则页换成一支 40 秒的全屏影片
+  - 影片用 Remotion 做（项目在 `MyClaude/xf-video`），中文 / EN / BM 各一支，字幕做在影片里，有音效、没有背景音乐，每支约 1.6 MB
+  - 客人按 ▶ 才开始播（这样才能有声音）；不能快转，**看完才出现 CHECK IN**，也可以“再看一次”
+  - 新客在注册页时就在背景下载影片，到规则页立刻能播
+  - 影片出错，或按下播放 8 秒还卡住 → 自动换回原本的静态规则页，**绝不让人卡在门口**
+  - 同一个人看过之后，下次（以及同一个分页重整）就是原本的静态规则页
+  - 谁要看：新注册，或上一次入场早于 `RULES_VIDEO_SINCE`（`lib/rules-video.ts`）。以后改了规则：换新影片档名 + 把这个日期改成新的上线时间，所有人会再看一次
+  - 影片档在 `public/rules/`，`vercel.json` 设了一年的缓存
 - 顺手修：在 IC 输入页换语言，之后的注册页没跟着换
 
-**改动文件**：新增 `app/checkin/layout.tsx`、`app/checkin/care/page.tsx`、`components/CheckinFxLayer.tsx`、`components/Confetti.tsx`、`lib/checkin-content.ts`、`public/safety-poster.webp`；重写 `app/checkin/page.tsx`、`app/checkin/register/page.tsx`、`components/TermsContent.tsx`；小改 `app/checkin/approved/page.tsx`、`app/checkin/reminders/page.tsx`、`app/checkin/id-input/page.tsx`、`lib/i18n.ts`、`app/globals.css`；删除 `components/TaglineMarquee.tsx`。**无 SQL**（anon 本来就能写 `customers.gender`，sanitize trigger 不会清掉它）。
+**改动文件**：新增 `lib/rules-video.ts`、`components/RulesVideo.tsx`、`public/rules/*`；改 `app/checkin/reminders/page.tsx`、`vercel.json`；新增 `app/checkin/layout.tsx`、`app/checkin/care/page.tsx`、`components/CheckinFxLayer.tsx`、`components/Confetti.tsx`、`lib/checkin-content.ts`、`public/safety-poster.webp`；重写 `app/checkin/page.tsx`、`app/checkin/register/page.tsx`、`components/TermsContent.tsx`；小改 `app/checkin/approved/page.tsx`、`app/checkin/reminders/page.tsx`、`app/checkin/id-input/page.tsx`、`lib/i18n.ts`、`app/globals.css`；删除 `components/TaglineMarquee.tsx`。**无 SQL**（anon 本来就能写 `customers.gender`，sanitize trigger 不会清掉它）。
 
 ---
 

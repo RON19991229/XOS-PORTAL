@@ -12,6 +12,7 @@ import {
   type AgeCategory,
 } from '@/lib/utils';
 import { safeSession } from '@/lib/safe-storage';
+import { prefetchRulesVideo, RULES_VIDEO_FLAG } from '@/lib/rules-video';
 import CheckinHeader from '@/components/CheckinHeader';
 import PhoneInput from '@/components/PhoneInput';
 import TermsContent from '@/components/TermsContent';
@@ -81,6 +82,9 @@ export default function RegisterPage() {
   useEffect(() => {
     const savedLang = safeSession.getItem('xf-lang') as Lang | null;
     if (savedLang) setLang(savedLang);
+    // v2.23.0: new customers must watch the rules video — start downloading it
+    // now (~1.6 MB) so it plays instantly after the form + care page.
+    prefetchRulesVideo(savedLang ?? 'en');
 
     const nat = safeSession.getItem('xf-nationality') as 'malaysian' | 'foreigner' | null;
     if (!nat) { router.replace('/checkin'); return; }
@@ -275,7 +279,8 @@ export default function RegisterPage() {
     }
 
     safeSession.setItem('xf-customer', JSON.stringify(customer));
-    // v2.23.0: first registration → one-time care page, then the rules.
+    safeSession.setItem(RULES_VIDEO_FLAG, customer.ic);
+    // v2.23.0: first registration → one-time care page, then the rules video.
     router.push('/checkin/care');
   };
 

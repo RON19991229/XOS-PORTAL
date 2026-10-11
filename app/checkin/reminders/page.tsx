@@ -12,6 +12,8 @@ import CheckinHeader from '@/components/CheckinHeader';
 import { Atmo, StepRail, XdReveal } from '@/components/CheckinFX';
 import TermsModal from '@/components/TermsModal';
 import ScrollHint from '@/components/ScrollHint';
+import RulesVideo from '@/components/RulesVideo';
+import { mustWatchRules, RULES_VIDEO_FLAG, RULES_WATCHED_KEY } from '@/lib/rules-video';
 
 /** "RULE #1 — RE-RACK" → "RE-RACK" (all 3 langs use the same — separator;
  *  falls back to the full string if the separator is missing). */
@@ -35,6 +37,9 @@ export default function RemindersPage() {
   const [showTerms, setShowTerms] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
+  // v2.23.0: first visit (and everyone once after launch) watches the rules
+  // video instead of the static page. 'checking' until visit stats arrive.
+  const [video, setVideo] = useState<'checking' | 'show' | 'no'>('checking');
 
   useEffect(() => {
     const savedLang = safeSession.getItem('xf-lang') as Lang | null;
@@ -48,19 +53,31 @@ export default function RemindersPage() {
     }
     setCustomer(c);
 
+    const watched = safeSession.getItem(RULES_WATCHED_KEY) === c.ic;
+    const isNew = safeSession.getItem(RULES_VIDEO_FLAG) === c.ic;
+    if (watched) setVideo('no');
+    else if (isNew) setVideo('show');
+    // Never hold the page more than 3 s waiting for stats.
+    const decide = setTimeout(() => setVideo((v) => (v === 'checking' ? 'no' : v)), 3000);
+
     // Fetch visit stats (best-effort, non-blocking).
     // v2.18.3: exact-IC RPC (approved count + last approved visit) — anon
     // can no longer SELECT the visits table directly.
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .rpc('checkin_visit_stats', { p_ic: c.ic });
       const row = data && data.length > 0 ? data[0] : null;
+
+      // Stats failed → static page (don't force the video on a guess).
+      const must = !error && mustWatchRules(row?.last_visit_at ?? null);
+      setVideo((v) => (v === 'checking' ? (must && !watched ? 'show' : 'no') : v));
 
       setStats({
         totalVisits: row?.total_visits ?? 0,
         lastVisitAt: row?.last_visit_at ?? null,
       });
     })();
+    return () => clearTimeout(decide);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
@@ -102,6 +119,31 @@ export default function RemindersPage() {
   };
 
   if (!customer) return null;
+
+  if (video === 'checking') {
+    return (
+      <main className="min-h-screen bg-ink grid place-items-center">
+        <span className="flex gap-1.5">
+          <span className="loading-dot inline-block w-2 h-2 bg-accent rounded-full" />
+          <span className="loading-dot inline-block w-2 h-2 bg-accent rounded-full" />
+          <span className="loading-dot inline-block w-2 h-2 bg-accent rounded-full" />
+        </span>
+      </main>
+    );
+  }
+
+  if (video === 'show') {
+    return (
+      <RulesVideo
+        lang={lang}
+        loading={loading}
+        errorMsg={errorMsg}
+        onCheckIn={handleAcknowledge}
+        onWatched={() => safeSession.setItem(RULES_WATCHED_KEY, customer.ic)}
+        onFallback={() => setVideo('no')}
+      />
+    );
+  }
 
   // Format last-visit date in user's language
   const formatLastVisit = (iso: string) => {
