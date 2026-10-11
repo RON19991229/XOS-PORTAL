@@ -12,7 +12,7 @@
 
 import type { Lang } from './i18n';
 
-export const RULES_VIDEO_VERSION = 'v3';
+export const RULES_VIDEO_VERSION = 'v4';
 
 export const rulesVideoSrc = (lang: Lang) => `/rules/rules-${RULES_VIDEO_VERSION}-${lang}.mp4`;
 export const rulesPosterSrc = (lang: Lang) => `/rules/rules-${RULES_VIDEO_VERSION}-${lang}-poster.webp`;
