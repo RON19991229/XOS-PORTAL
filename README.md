@@ -7,7 +7,7 @@
 
 ## ✨ v2.24.0 (2026-10-12) — 顾客端精简：少字、注册页重新分组
 
-起因：会员反馈注册页“字很多、分类很怪”，Ron 也觉得首页太多字。Ron 批准的 mockup：`mockups/checkin-simplify.html`。首页的 3 个 grand 方向 mockup Ron 没有采用（已删），改成简单的 WELCOME TO + 文字 logo。
+起因：会员反馈注册页“字很多、分类很怪”，Ron 也觉得首页太多字。Ron 批准的 mockup：`mockups/checkin-simplify.html`、`mockups/checkin-fixes.html`（第二轮：紧急联络人选 B、男生关怀页选 B）。首页的 3 个 grand 方向 mockup Ron 没有采用（已删），改成简单的 WELCOME TO + 文字 logo。
 
 - **全部 /checkin 页面**：顶部「01 ID — 02 RULES — 03 TRAIN」改成没有字的 3 格细进度条
 - **首页 `/checkin`**：
@@ -19,13 +19,17 @@
   - 分成编号的 3 块：① YOU（IC + 名字 + 外国人性别 + 电话）② EMERGENCY CONTACT ③ 同意条款
   - 删掉开头介绍句和红色 *（全部栏位本来就必填）
   - 紧急联络人关系从 9 个减到 6 个：Father / Mother / Partner / Sibling / Friend / Other。旧资料不变，admin 编辑客户时仍可选全部 9 个
+  - 紧急联络人整块加红色左边线 + 红色「盾牌 + 十字」图标，说明句放进浅红色框：“For your safety. We only call them if something happens to you here.”
   - 17 段的条款滚动框改成一行勾选；点「Terms & Conditions」弹出全文（`TermsModal`），里面有 I AGREE；PDPA 说明并进同意那一句。条款全文一字未改
   - 送出按钮固定在屏幕底部，显示 “还差 N 项”
-- **关怀页**：删掉 “ONE MORE THING”、三个选项下面的小字、独立的保密框（保密并进主句）
+- **关怀页**：
+  - 女生：删掉 “ONE MORE THING”、三个选项下面的小字、独立的保密框（保密并进主句）；**海报点一下全屏放大**（新增高清图 `public/safety-poster-lg.webp`，约 100 KB，只有点开才下载；网站关了两指缩放，所以改成点海报切换 2 倍放大、滑动看）
+  - 男生：原本一句 “NEED HELP? JUST ASK.” 改成 “TRAIN SAFE. WE'VE GOT YOU.” + 三个实用提示（不会用器材→问我们 / 做大重量→找柜台 spot / 看到危险→马上说）+ 小字的私下报告链接
 - **规则页（回头客）**：删掉 “WELCOME BACK”、上次入场时间、“GYM RULES REMINDER”、“IMPORTANT RULES”、“DO & DON'T” 标题；改成一行 “HELLO, RON 👋 VISIT #N”。4 张规则图全部保留
 - **入场成功页**：“WALK-IN ACCESS APPROVED” 改成一个大字 “APPROVED”（中文「入场通过」、BM「DILULUSKAN」）；付款提示变成框；记住手机只问一句。时间戳保留（柜台用来分辨截图）
+- **规则影片按钮（中文）**：「▶ 播放店规」改成「▶ 播放规则」（影片内容不变）
 - 清理：删掉用不到的 44 个 i18n key、今日一句 / 须知 / 社交链接、`components/TermsContent.tsx` 和对应 CSS
-- 改动档案：`app/checkin/{page,id-input/page,register/page,care/page,reminders/page,approved/page}.tsx`、`components/{CheckinFX,TermsModal}.tsx`、`lib/{i18n,checkin-content,terms}.ts`、`app/globals.css`
+- 改动档案：`app/checkin/{page,id-input/page,register/page,care/page,reminders/page,approved/page}.tsx`、`public/safety-poster-lg.webp`、`components/{CheckinFX,TermsModal}.tsx`、`lib/{i18n,checkin-content,terms}.ts`、`app/globals.css`
 - **不需要跑 SQL**（6 个关系值都在原本的 DB CHECK 里）
 
 ## ✨ v2.23.0 (2026-10-12) — 顾客端改版：温馨首页、新注册页、关怀页、规则影片

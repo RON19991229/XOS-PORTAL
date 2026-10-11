@@ -361,9 +361,16 @@ export default function RegisterPage() {
             </Field>
           </RegBlock>
 
-          {/* 2 · EMERGENCY CONTACT */}
-          <RegBlock n={2} title={t(lang, 'regEmergency')} done={emergencyDone}>
-            <p className="text-xs text-neutral-500 -mt-2 mb-3">{t(lang, 'regEmergencyHint')}</p>
+          {/* 2 · EMERGENCY CONTACT — red safety accent (Ron picked option B) */}
+          <RegBlock n={2} title={t(lang, 'regEmergency')} done={emergencyDone} safety>
+            <div className="flex gap-2 items-start bg-danger/[0.08] border border-danger/30 px-2.5 py-2 -mt-1 mb-3.5 text-xs leading-snug text-[#f0b5b0]">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#ff6b62" className="flex-none mt-px" aria-hidden="true">
+                <path d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" />
+              </svg>
+              <span>
+                <b className="text-bone">{t(lang, 'regEmergencySafety')}</b> {t(lang, 'regEmergencyHint')}
+              </span>
+            </div>
             <Field label={t(lang, 'regWho')}>
               <div className="grid grid-cols-3 gap-2" role="radiogroup">
                 {RELATIONSHIPS.map((r) => (
@@ -488,9 +495,24 @@ export default function RegisterPage() {
   );
 }
 
-function RegBlock({ n, title, done, children }: { n: number; title: string; done: boolean; children: React.ReactNode }) {
+function RegBlock({
+  n,
+  title,
+  done,
+  safety = false,
+  children,
+}: {
+  n: number;
+  title: string;
+  done: boolean;
+  /** Red left edge + shield-with-cross icon (emergency contact). */
+  safety?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className={`border bg-[#111] px-3.5 py-4 mb-3.5 transition-colors ${done ? 'border-success-green/45' : 'border-[#262626]'}`}>
+    <div
+      className={`border bg-[#111] px-3.5 py-4 mb-3.5 transition-colors ${done ? 'border-success-green/45' : 'border-[#262626]'} ${safety ? '!border-l-[3px] !border-l-danger' : ''}`}
+    >
       <div className="flex items-center gap-2.5 mb-3.5">
         <span
           className={`w-6 h-6 grid place-items-center flex-none font-display text-[13px] text-ink transition-colors ${done ? 'bg-success-green' : 'bg-accent'}`}
@@ -499,6 +521,12 @@ function RegBlock({ n, title, done, children }: { n: number; title: string; done
           {done ? '✓' : n}
         </span>
         <h2 className="font-display text-[15px] tracking-[0.03em]">{title}</h2>
+        {safety && (
+          <svg width="22" height="25" viewBox="0 0 78 88" className="ml-auto flex-none" aria-hidden="true">
+            <path d="M39 4 72 16v26c0 21-14 36-33 42C20 78 6 63 6 42V16z" fill="#ff3b30" />
+            <path d="M33 26h12v13h13v12H45v13H33V51H20V39h13z" fill="#0a0a0a" />
+          </svg>
+        )}
       </div>
       {children}
     </div>

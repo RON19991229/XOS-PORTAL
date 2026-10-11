@@ -18,6 +18,10 @@
  *
  * v2.24.0: shorter copy — no kicker, one-line body (confidentiality folded
  * in), no sub-lines under the three options, no separate promise box.
+ *   Poster thumbnail opens a full-screen viewer (hi-res
+ *   /safety-poster-lg.webp, loaded only on tap; tap the poster to zoom 2×,
+ *   since the site disables pinch-zoom). Men get "TRAIN SAFE" with three
+ *   practical tips + a small private-report link (Ron picked option B).
  */
 
 import { useEffect, useState } from 'react';
@@ -36,6 +40,7 @@ export default function CarePage() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>('en');
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [posterOpen, setPosterOpen] = useState(false);
 
   useEffect(() => {
     const savedLang = safeSession.getItem('xf-lang') as Lang | null;
@@ -105,34 +110,127 @@ export default function CarePage() {
               </a>
             </div>
 
-            <div className="flex gap-3.5 items-center mt-4 p-3 border border-[#2e2e2e] bg-[#111] xd-rise xd-d6">
-              <Image
-                src="/safety-poster.webp"
-                alt=""
-                width={72}
-                height={102}
-                className="flex-none w-[72px] h-auto border border-[#2e2e2e]"
-              />
-              <p className="text-[12.5px] leading-snug text-neutral-300">{t(lang, 'carePosterNote')}</p>
-            </div>
+            <button
+              type="button"
+              onClick={() => setPosterOpen(true)}
+              className="ck-press ck-press-dark flex gap-3.5 items-center mt-4 p-3 border border-[#2e2e2e] bg-[#111] text-left cursor-zoom-in xd-rise xd-d6"
+            >
+              <span className="relative flex-none w-[72px]">
+                <Image
+                  src="/safety-poster.webp"
+                  alt=""
+                  width={72}
+                  height={102}
+                  className="block w-[72px] h-auto border border-[#2e2e2e]"
+                />
+                <span
+                  className="absolute -right-1.5 -bottom-1.5 w-6 h-6 rounded-full grid place-items-center shadow-[0_2px_8px_rgba(0,0,0,.5)]"
+                  style={{ background: PINK }}
+                  aria-hidden="true"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0a0a0a" strokeWidth="3" strokeLinecap="round">
+                    <circle cx="10" cy="10" r="6.5" />
+                    <path d="M15 15l6 6M10 7.5v5M7.5 10h5" />
+                  </svg>
+                </span>
+              </span>
+              <span className="text-[12.5px] leading-snug text-neutral-300">
+                {t(lang, 'carePosterNote')}
+                <span className="block font-mono text-[10px] tracking-[0.14em] mt-1.5" style={{ color: PINK }}>
+                  {t(lang, 'carePosterZoom')} ⤢
+                </span>
+              </span>
+            </button>
 
           </>
         ) : (
           <>
-            <h1 className={`${heavy} text-center text-[36px] leading-[0.98] mt-6 xd-rise xd-d4`}>
+            <h1 className={`${heavy} text-center text-[34px] leading-[0.98] mt-6 xd-rise xd-d4`}>
               {t(lang, 'careTitleM')}
             </h1>
-            <p className="text-center text-[15px] leading-relaxed text-neutral-300 mt-4 px-1 xd-rise xd-d5">
-              {t(lang, 'careBodyM')}
-            </p>
+
+            <div className="grid gap-2.5 mt-6 xd-rise xd-d5">
+              {(
+                [
+                  ['🏋️', 'careTip1', 'careTip1Sub'],
+                  ['🤝', 'careTip2', 'careTip2Sub'],
+                  ['⚠️', 'careTip3', 'careTip3Sub'],
+                ] as const
+              ).map(([icon, title, sub]) => (
+                <div key={title} className="ck-opt">
+                  <span className="ck-opt-ic gold" aria-hidden="true">{icon}</span>
+                  <span className="flex-1">
+                    <span className={`block ${heavy} text-sm`}>{t(lang, title)}</span>
+                    <span className="block text-[12.5px] text-neutral-400 mt-0.5 leading-snug">{t(lang, sub)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href="/report"
+              target="_blank"
+              rel="noopener"
+              className="self-start mt-3.5 text-[12.5px] text-accent underline underline-offset-[3px] xd-rise xd-d6"
+            >
+              {t(lang, 'careReportLink')}
+            </a>
           </>
         )}
 
-        <button type="button" onClick={next} className={`btn-primary ${female ? 'mt-6' : 'mt-9'} xd-rise xd-d7`}>
+        <button type="button" onClick={next} className="btn-primary mt-6 xd-rise xd-d7">
           {t(lang, 'careGotIt')} →
         </button>
       </section>
+
+      {posterOpen && <PosterViewer lang={lang} onClose={() => setPosterOpen(false)} />}
     </main>
+  );
+}
+
+/** Full-screen safety poster. Tap the poster to toggle 2× zoom (scroll to pan). */
+function PosterViewer({ lang, onClose }: { lang: Lang; onClose: () => void }) {
+  const [zoom, setZoom] = useState(false);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="flex-none flex items-center justify-between px-4 pt-[max(12px,env(safe-area-inset-top))] pb-3">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-neutral-400">{t(lang, 'carePosterZoomHint')}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t(lang, 'close')}
+          className="w-10 h-10 grid place-items-center border border-[#444] bg-[#161616] text-bone text-lg"
+        >
+          ✕
+        </button>
+      </div>
+      <div className={`flex-1 overflow-auto px-3 pb-[max(16px,env(safe-area-inset-bottom))] ${zoom ? '' : 'grid place-items-center'}`}>
+        <Image
+          src="/safety-poster-lg.webp"
+          alt="Do you feel unsafe during workout? — X FITNESS safety poster"
+          width={1080}
+          height={1528}
+          priority
+          onClick={(e) => {
+            e.stopPropagation();
+            setZoom((z) => !z);
+          }}
+          className={`block h-auto max-w-none ${zoom ? 'w-[200%] cursor-zoom-out' : 'w-full max-h-full object-contain cursor-zoom-in'}`}
+        />
+      </div>
+    </div>
   );
 }
 

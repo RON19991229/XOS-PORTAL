@@ -1139,6 +1139,7 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
   width: 42px; height: 42px; flex: none; display: grid; place-items: center; font-size: 19px;
   background: rgba(255, 122, 200, .1); border: 1px solid rgba(255, 122, 200, .4);
 }
+.ck-opt-ic.gold { background: rgba(255, 214, 10, .1); border-color: rgba(255, 214, 10, .35); }
 
 @media (prefers-reduced-motion: reduce) {
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after,
