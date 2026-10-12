@@ -154,12 +154,6 @@ export const translations = {
     careReportLink: 'Report something privately →',
     carePosterZoom: 'TAP TO ENLARGE',
     carePosterZoomHint: 'Tap the poster to zoom in',
-    // v2.23.0 — first-visit rules video
-    rvPlay: '▶ PLAY THE RULES',
-    rvHint: '40 SEC · SOUND ON 🔊',
-    rvWatching: 'WATCH TO THE END TO CHECK IN',
-    rvResume: '▶ RESUME',
-    rvReplay: 'WATCH AGAIN',
   },
   zh: {
     chooseNationality: '请选择国籍',
@@ -301,11 +295,6 @@ export const translations = {
     careReportLink: '线上私下报告 →',
     carePosterZoom: '点击放大',
     carePosterZoomHint: '点海报可以再放大',
-    rvPlay: '▶ 播放规则',
-    rvHint: '40 秒 · 请打开声音 🔊',
-    rvWatching: '看完才能 CHECK IN',
-    rvResume: '▶ 继续播放',
-    rvReplay: '再看一次',
   },
   ms: {
     chooseNationality: 'PILIH KEWARGANEGARAAN',
@@ -447,11 +436,6 @@ export const translations = {
     careReportLink: 'Lapor secara peribadi →',
     carePosterZoom: 'KETIK UNTUK BESARKAN',
     carePosterZoomHint: 'Ketik poster untuk zum',
-    rvPlay: '▶ MAIN PERATURAN',
-    rvHint: '40 SAAT · BUKA BUNYI 🔊',
-    rvWatching: 'TONTON SAMPAI HABIS UNTUK DAFTAR MASUK',
-    rvResume: '▶ SAMBUNG',
-    rvReplay: 'TONTON SEMULA',
   },
 };
 

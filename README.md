@@ -5,6 +5,20 @@
 
 ---
 
+## 🔧 v2.24.1 (2026-10-12) — 移除规则影片，改回静态图片
+
+起因：很多新客的手机 load 不出规则影片，卡在 /checkin/reminders 进不去。Ron 决定移除影片，所有人都看原本的 4 张规则图片（RE-RACK / NO SLIPPERS / DO / DON'T）。
+
+- `/checkin/reminders`：不再判断“第一次来要看影片”，直接显示静态规则页 + CHECK IN 按钮；也拿掉了等待 visit stats 的 loading 画面
+- `/checkin/register`：不再预先下载影片
+- 删除 `components/RulesVideo.tsx`、`lib/rules-video.ts`、`public/rules/`（3 支 MP4 + 封面，约 5.5 MB）、i18n 的 `rv*` 文字、`vercel.json` 里 /rules 的 cache header
+- 影片原档仍在 `xf-video` project 和 git 历史里，日后要重新上线可以从 v2.24.0 找回
+
+文件：`app/checkin/reminders/page.tsx`、`app/checkin/register/page.tsx`、`lib/i18n.ts`、`vercel.json`、`package.json`、`CLAUDE.md`
+部署：**不需要 SQL**，push 到 main 即可。
+
+---
+
 ## ✨ v2.24.0 (2026-10-12) — 顾客端精简：少字、注册页重新分组
 
 起因：会员反馈注册页“字很多、分类很怪”，Ron 也觉得首页太多字。Ron 批准的 mockup：`mockups/checkin-simplify.html`、`mockups/checkin-fixes.html`（第二轮：紧急联络人选 B、男生关怀页选 B）。首页的 3 个 grand 方向 mockup Ron 没有采用（已删），改成简单的 WELCOME TO + 文字 logo。
