@@ -5,11 +5,12 @@
 
 ---
 
-## 🪪 v2.24.4 (2026-10-29) — IC / Passport 页加一行说明
+## 🪪 v2.24.4 (2026-10-29) — IC / Passport 页加一行说明 + 主页标明 Singapore IC
 
-起因：有些客人乱填 IC / 护照号码。
+起因：有些客人乱填 IC / 护照号码；新加坡客人多，不知道该选哪张卡。
 
 - `/checkin/id-input`：标题下面加一行「This will be your check-in ID for every future visit. / 这将是你以后每次入场的 check-in ID。/ Ini akan menjadi ID daftar masuk anda untuk setiap lawatan akan datang.」，IC 和 Passport 都显示（Ron 要求的说明，属于 less-text 规则的例外）
+- `/checkin` 主页：FOREIGNER 卡下面的小字从 PASSPORT 改成 **PASSPORT / SINGAPORE IC**（中文「护照 / 新加坡 IC」、BM「PASPORT / IC SINGAPURA」）。只改这行字，输入页、注册页和验证逻辑不变（新加坡 IC 本来就能通过护照格式检查）
 
 文件：`app/checkin/id-input/page.tsx`、`lib/i18n.ts`、`package.json`、`CLAUDE.md`
 部署：**不需要 SQL**，push 到 main 即可。

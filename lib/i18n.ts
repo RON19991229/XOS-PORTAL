@@ -7,7 +7,7 @@ export const translations = {
     malaysian: 'MALAYSIAN',
     foreigner: 'FOREIGNER',
     icSubtitle: 'IC NUMBER',
-    passportSubtitle: 'PASSPORT',
+    passportSubtitle: 'PASSPORT / SINGAPORE IC',
 
     welcome: 'WELCOME',
     walkInCheckIn: 'WALK-IN CHECK-IN',
@@ -162,7 +162,7 @@ export const translations = {
     malaysian: '马来西亚人',
     foreigner: '外国人',
     icSubtitle: '身份证号码',
-    passportSubtitle: '护照',
+    passportSubtitle: '护照 / 新加坡 IC',
 
     welcome: '欢迎',
     walkInCheckIn: 'WALK-IN 入场',
@@ -305,7 +305,7 @@ export const translations = {
     malaysian: 'WARGANEGARA',
     foreigner: 'WARGA ASING',
     icSubtitle: 'NOMBOR IC',
-    passportSubtitle: 'PASPORT',
+    passportSubtitle: 'PASPORT / IC SINGAPURA',
 
     welcome: 'SELAMAT DATANG',
     walkInCheckIn: 'DAFTAR MASUK WALK-IN',
