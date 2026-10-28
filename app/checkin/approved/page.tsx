@@ -148,7 +148,7 @@ export default function ApprovedPage() {
                     saveRemembered(offer.ic, offer.nationality, offer.name);
                     setOfferState('saved');
                   }}
-                  className="ck-press ck-shine w-full py-4 bg-accent text-ink font-display text-sm tracking-wider"
+                  className="ck-press ck-shine w-full py-4 rounded-full bg-accent text-ink font-display text-sm tracking-wider shadow-[0_0_0_5px_rgba(255,214,10,.16),0_10px_26px_rgba(255,214,10,.28)]"
                 >
                   {t(lang, 'rememberBtn')}
                 </button>

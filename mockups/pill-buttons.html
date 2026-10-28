@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pill buttons</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600;800&family=JetBrains+Mono&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0a0a0a; --soft:#161616; --line:#2a2a2a; --accent:#FFD60A; --bone:#f5f5f5; --green:#16c75b; --mute:#9a9a9a; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #050505; color: var(--bone); font-family: Inter, 'Noto Sans SC', sans-serif; padding: 20px 16px 60px; line-height: 1.55; }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  h1 { font: 24px/1.1 'Archivo Black', 'Noto Sans SC'; }
+  .lede { color: var(--mute); font-size: 13px; margin-top: 8px; }
+
+  .switch { position: sticky; top: 0; z-index: 9; background: #050505ee; backdrop-filter: blur(6px); padding: 12px 0; margin-top: 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .switch button { font: 600 12.5px Inter, 'Noto Sans SC'; padding: 9px 4px; border: 1px solid #444; background: transparent; color: var(--bone); cursor: pointer; line-height: 1.3; }
+  .switch button small { display: block; font-weight: 400; color: #999; font-size: 10.5px; }
+  .switch button.on { background: var(--bone); color: var(--ink); border-color: var(--bone); }
+  .switch button.on small { color: #555; }
+  .desc { font-size: 13px; color: #ccc; margin: 4px 0 6px; min-height: 40px; }
+
+  .lbl { font: 10px 'JetBrains Mono'; letter-spacing: .16em; color: var(--mute); margin: 26px 0 8px; }
+  .phone { max-width: 340px; margin: 0 auto; border: 8px solid #1d1d1d; border-radius: 26px; background: var(--ink); padding: 18px 16px 20px; }
+  .ttl { font: 28px/0.95 'Archivo Black', 'Noto Sans SC'; }
+  .sub { font-size: 12.5px; color: #cfcfcf; margin: 8px 0 14px; }
+  .inp { font: 18px 'JetBrains Mono'; letter-spacing: .06em; padding: 14px; background: var(--soft); border: 2px solid #333; color: var(--bone); }
+  .y { color: var(--accent); }
+  .muted-link { display: block; text-align: center; font-size: 12px; color: #999; text-decoration: underline; text-underline-offset: 4px; margin-top: 14px; }
+  .sticky { margin: 14px -16px -20px; padding: 22px 16px 18px; background: linear-gradient(to bottom, transparent, rgba(10,10,10,.95) 40%, var(--ink)); border-top: 1px dashed #2a2a2a; }
+
+  /* ---------- button styles ---------- */
+  .btn { display: block; width: 100%; border: 0; cursor: pointer; text-align: center; font: 17px 'Archivo Black', 'Noto Sans SC'; letter-spacing: .05em; padding: 19px 20px; margin-top: 14px; background: var(--accent); color: var(--ink); position: relative; overflow: hidden; transition: transform .12s; }
+  .btn:active { transform: scale(.97); }
+  .btn.off { background: #262626; color: #8a8a8a; }
+  .btn.dis { background: #404040; color: #737373; }
+  .btn.small { font-size: 13px; padding: 14px; }
+  .btn.green { background: var(--green); color: var(--ink); border-radius: 999px; padding: 22px 20px;
+    box-shadow: 0 0 0 5px rgba(22,199,91,.18), 0 10px 28px rgba(22,199,91,.4); animation: breatheG 2s ease-in-out infinite; }
+  .btn:not(.off):not(.dis)::after { content: ''; position: absolute; top: 0; bottom: 0; width: 45%; left: -60%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent); animation: shine 3.2s 1.2s ease-in-out infinite; }
+  @keyframes shine { 0% { left: -60%; } 35%, 100% { left: 130%; } }
+  @keyframes breatheG { 50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(22,199,91,.25), 0 14px 36px rgba(22,199,91,.55); } }
+  @keyframes breatheY { 50% { transform: scale(1.03); box-shadow: 0 0 0 8px rgba(255,214,10,.22), 0 14px 36px rgba(255,214,10,.45); } }
+
+  /* A: yellow pill + still glow */
+  body.A .btn:not(.green), body.B .btn:not(.green) { border-radius: 999px; padding: 21px 20px; }
+  body.A .btn.small, body.B .btn.small { padding: 15px; }
+  body.A .btn:not(.green):not(.off):not(.dis), body.B .btn:not(.green):not(.off):not(.dis) {
+    box-shadow: 0 0 0 5px rgba(255,214,10,.16), 0 10px 26px rgba(255,214,10,.28); }
+  /* B: + breathing like CHECK IN */
+  body.B .btn:not(.green):not(.off):not(.dis):not(.small) { animation: breatheY 2s ease-in-out infinite; }
+
+  .note { font-size: 12.5px; color: #bbb; border-left: 3px solid var(--accent); padding: 6px 10px; margin-top: 30px; background: #ffd60a0d; }
+  .note b { color: var(--bone); }
+  @media (prefers-reduced-motion: reduce) { .btn, .btn::after { animation: none !important; } }
+</style>
+</head>
+<body class="A">
+<div class="wrap">
+  <h1>下一页按钮 → 圆角胶囊</h1>
+  <p class="lede">跟 CHECK IN 一样的胶囊形状。颜色维持黄色，绿色只留给 CHECK IN 和绿页（绿 = 可以进场）。点上面切换三种看看。</p>
+
+  <div class="switch">
+    <button data-s="now">现在<small>方角</small></button>
+    <button data-s="A" class="on">A 胶囊<small>黄色 + 光圈</small></button>
+    <button data-s="B">B 胶囊 + 呼吸<small>跟 CHECK IN 一样会动</small></button>
+  </div>
+  <p class="desc" id="desc"></p>
+
+  <div class="lbl">主页 · 记住我的手机（CONTINUE）</div>
+  <div class="phone">
+    <p class="ttl">GOOD EVENING,</p>
+    <p class="ttl y" style="font-size:40px;margin-top:4px">AISYAH</p>
+    <button class="btn">CONTINUE →</button>
+    <span class="muted-link">Not AISYAH? Use another IC / passport</span>
+  </div>
+
+  <div class="lbl">IC / PASSPORT 页（CONTINUE，还没填时是灰色）</div>
+  <div class="phone">
+    <p class="ttl">ENTER IC</p>
+    <p class="sub">This will be your check-in ID for every future visit.</p>
+    <div class="inp">900101015555</div>
+    <button class="btn">CONTINUE →</button>
+    <button class="btn dis">CONTINUE →</button>
+  </div>
+
+  <div class="lbl">注册页（底部固定按钮：还差几项 → SUBMIT）</div>
+  <div class="phone">
+    <p class="ttl">REGISTER</p>
+    <p class="sub">ONE-TIME · ABOUT 1 MIN</p>
+    <div class="inp" style="font-size:14px">TAN WEI LING</div>
+    <div class="sticky">
+      <button class="btn off">3 MORE TO FILL</button>
+      <button class="btn">SUBMIT →</button>
+    </div>
+  </div>
+
+  <div class="lbl">CARE 页（NEXT: GYM RULES）</div>
+  <div class="phone">
+    <p class="ttl" style="color:#ff7ac8;font-size:22px;text-align:center">HEY GIRLS,</p>
+    <p class="ttl" style="text-align:center;margin-top:4px">WE’VE GOT YOUR BACK.</p>
+    <div class="sticky"><button class="btn">NEXT: GYM RULES →</button></div>
+  </div>
+
+  <div class="lbl">RULES 页 CHECK IN（参考，不变）</div>
+  <div class="phone">
+    <p class="ttl">BEFORE YOU TRAIN</p>
+    <div class="sticky"><button class="btn green">CLICK TO CHECK IN →</button></div>
+  </div>
+
+  <div class="lbl">绿页 · 记住我的手机（小按钮）</div>
+  <div class="phone" style="background:var(--green);color:var(--ink)">
+    <div style="background:var(--ink);color:var(--bone);padding:14px">
+      <p style="font:15px 'Archivo Black'">Faster check-in next time?</p>
+      <button class="btn small">REMEMBER THIS PHONE</button>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><b>我的建议：A。</b>形状跟 CHECK IN 统一，但不呼吸。整个流程只有 CHECK IN 会呼吸，客人一看就知道「这颗是最后一步」。B 每页都在动，CHECK IN 就不特别了。</p>
+    <p style="margin-top:8px"><b>品牌依据：</b>brand.md 写「卡片与 CTA 胶囊」，发光限 CTA、只用暖黄，跟这个方向一致。</p>
+    <p style="margin-top:8px"><b>不改的：</b>输入框、国籍卡片、注册页的选项 chip 维持方角，只改按钮。Dashboard（staff / admin）的按钮不动。</p>
+  </div>
+</div>
+<script>
+const DESC = {
+  now: '现在的样子：黄色方块按钮。',
+  A: '胶囊形状 + 一圈淡淡的黄光，静止不动。灰色状态（还没填完）没有光。',
+  B: '胶囊 + 跟 CHECK IN 一样一直轻轻放大缩小。',
+};
+const set = s => {
+  document.body.className = s;
+  document.querySelectorAll('.switch button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+  document.getElementById('desc').textContent = DESC[s];
+};
+document.querySelectorAll('.switch button').forEach(b => b.onclick = () => set(b.dataset.s));
+set('A');
+</script>
+</body>
+</html>

@@ -1140,6 +1140,22 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
   background: rgba(255, 122, 200, .1); border: 1px solid rgba(255, 122, 200, .4);
 }
 .ck-opt-ic.gold { background: rgba(255, 214, 10, .1); border-color: rgba(255, 214, 10, .35); }
+/* v2.24.6: /checkin next-page buttons are yellow pills that breathe like
+   CHECK IN (Ron picked B, mockups/pill-buttons.html). Scoped to .ck-fx so
+   the dashboard .btn-primary is unchanged. Breathing animates `scale` (not
+   transform) so it doesn't fight xdRise or the :active press. */
+.ck-fx .btn-primary { border-radius: 9999px; padding-top: 1.3rem; padding-bottom: 1.3rem; }
+.ck-fx .btn-primary:not(:disabled):not(.reg-incomplete) {
+  box-shadow: 0 0 0 5px rgba(255, 214, 10, .16), 0 10px 26px rgba(255, 214, 10, .28);
+  animation: ckBreatheY 2s 1.2s ease-in-out infinite;
+}
+.ck-fx .btn-primary.xd-rise:not(:disabled):not(.reg-incomplete) {
+  animation: xdRise .6s cubic-bezier(.2, .9, .25, 1) .5s both, ckBreatheY 2s 1.2s ease-in-out infinite;
+}
+.ck-fx .btn-primary:not(:disabled):active { animation-play-state: paused; }
+@keyframes ckBreatheY {
+  50% { scale: 1.03; box-shadow: 0 0 0 8px rgba(255, 214, 10, .22), 0 14px 36px rgba(255, 214, 10, .45); }
+}
 /* v2.24.3: arrow on the pinned NEXT button nudges right ("there's another page") */
 .ck-nudge { display: inline-block; animation: ckNudge 1.4s ease-in-out infinite; }
 @keyframes ckNudge { 50% { transform: translateX(5px); } }
@@ -1163,7 +1179,7 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 
 @media (prefers-reduced-motion: reduce) {
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after,
-  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-nudge, .ck-bob, .btn-checkin-cta.ck-pop, .ck-live,
+  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-nudge, .ck-bob, .btn-checkin-cta.ck-pop, .ck-live, .ck-fx .btn-primary,
   .ck-cake, .ck-stamp, .ck-halo, .ck-fx .reg-chip.on, .ck-fx .reg-agree.on .reg-agree-box {
     animation: none !important;
   }

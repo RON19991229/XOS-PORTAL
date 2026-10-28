@@ -5,6 +5,19 @@
 
 ---
 
+## 💊 v2.24.6 (2026-10-29) — 下一页按钮改成黄色胶囊
+
+Ron 选了 `mockups/pill-buttons.html` 的 B：check-in 流程的下一页按钮改成跟 CHECK IN 一样的圆角胶囊，维持黄色，外面一圈黄光，会轻轻呼吸。
+
+- 改到的按钮：主页 CONTINUE（记住手机的客人）、IC / Passport 页 CONTINUE、注册页底部 SUBMIT（还没填完时是灰色胶囊，没有光、不呼吸）、Care 页 NEXT、绿页 REMEMBER THIS PHONE（胶囊 + 光，不呼吸）
+- CHECK IN 维持绿色；输入框、国籍卡片、选项 chip 维持方角；staff / admin 后台按钮不变（样式只套用在 /checkin 里）
+- 手机开了「减少动态效果」时不呼吸
+
+文件：`app/globals.css`、`app/checkin/approved/page.tsx`、`package.json`、`CLAUDE.md`
+部署：**不需要 SQL**，push 到 main 即可。
+
+---
+
 ## 🛂 v2.24.5 (2026-10-29) — 防乱填 + 错误讯息三语 + 绿页活时钟
 
 来自 check-in 流程检视（`mockups/checkin-review-2026-10.html`）Ron 批准的第 1、3、4、5 项；第 2（外国人年龄，staff 当面问）和第 6 项不做。

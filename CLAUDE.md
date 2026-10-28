@@ -136,6 +136,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 - **Mockup first.** Any UI/visual change → standalone interactive HTML mockup for Ron's approval **before** touching production code. Once Ron says "可以 / OK", implement with no further back-and-forth.
 - Brand colours: accent `#FFD60A`, ink `#0a0a0a`, ink-soft `#161616`, ink-line `#2a2a2a`, bone `#f5f5f5`, danger `#ff3b30`, success-green `#16c75b`. `/report` pages use gold `#C99700` (not yellow, not coral).
 - Status must be unmistakable: green = allowed in, red = banned. Check-in ≤ 3 steps.
+- `/checkin` buttons (v2.24.6, Ron picked B in `mockups/pill-buttons.html`): next-page `.btn-primary` buttons are yellow pills with a yellow glow that breathe like CHECK IN (scoped to `.ck-fx`; dashboard buttons stay square). Green stays reserved for CHECK IN and the approved page. Inputs, nationality cards and chips stay square.
 - `/report` pages: the warm radial glow background (coral→yellow + shield halo) and shield halo breathing animation are **hard requirements** — v2.17.0 was rejected for removing them.
 - Preserve font weights exactly as designed. No unrequested bold/thin changes.
 - Remove trailing punctuation on centred accent lines.
@@ -147,7 +148,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles (outside the `.ck-fx` scope), staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.24.5**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.24.6**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`. The only intended exceptions are the existing **+ WARNING** / **+ NOTE** buttons on customer detail (Ron wants front desk to be able to warn and annotate). Attention List photos are intentionally **not** blurred in privacy mode (staff must recognise faces).
