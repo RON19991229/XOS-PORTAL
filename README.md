@@ -5,6 +5,17 @@
 
 ---
 
+## 🪪 v2.24.4 (2026-10-29) — IC / Passport 页加一行说明
+
+起因：有些客人乱填 IC / 护照号码。
+
+- `/checkin/id-input`：标题下面加一行「This will be your check-in ID for every future visit. / 这将是你以后每次入场的 check-in ID。/ Ini akan menjadi ID daftar masuk anda untuk setiap lawatan akan datang.」，IC 和 Passport 都显示（Ron 要求的说明，属于 less-text 规则的例外）
+
+文件：`app/checkin/id-input/page.tsx`、`lib/i18n.ts`、`package.json`、`CLAUDE.md`
+部署：**不需要 SQL**，push 到 main 即可。
+
+---
+
 ## 👇 v2.24.3 (2026-10-29) — 按钮固定在屏幕底部（care 页 + 规则页）
 
 起因：很多新客注册后停在 HEY GIRLS 那页不知道要按什么。女生版 care 页约 900px 高，手机只看得到 ~650px，GOT IT 按钮在画面外，海报卡看起来像页面结尾。

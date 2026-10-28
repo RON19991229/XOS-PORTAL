@@ -100,7 +100,10 @@ export default function IdInputPage() {
 
       <section className="flex-1 flex flex-col justify-center px-5 py-10 max-w-md mx-auto w-full relative z-[2]">
         {/* v2.24.0: "// MY" kicker, underline bar and "12 DIGITS" label removed */}
-        <h1 className="font-display text-[40px] leading-[0.9] mb-6 xd-rise xd-d3">{title}</h1>
+        <h1 className="font-display text-[40px] leading-[0.9] xd-rise xd-d3">{title}</h1>
+        {/* v2.24.4: some people typed random numbers — tell them this ID is
+            what they'll check in with every time (Ron, Oct 2026). */}
+        <p className="text-[14px] leading-snug text-neutral-300 mt-3 mb-6 xd-rise xd-d3">{t(lang, 'idFutureNote')}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="xd-rise xd-d4">
