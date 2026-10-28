@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rules sticky check-in</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0a0a0a; --accent:#FFD60A; --bone:#f5f5f5; --green:#16c75b; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #e9e6e0; font-family: Inter, sans-serif; color: #111; padding: 24px 16px 48px; }
+  h1.pg { font-family: 'Archivo Black'; font-size: 20px; text-align: center; }
+  .sub { text-align: center; font-size: 13px; color: #555; margin: 6px auto 14px; max-width: 640px; line-height: 1.5; }
+  .langs { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
+  .langs button { font: 700 12px Inter; padding: 6px 12px; border: 1px solid #111; background: #fff; cursor: pointer; }
+  .langs button.on { background: #111; color: #fff; }
+  .row { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .tag { font: 700 12px 'JetBrains Mono'; letter-spacing: .12em; }
+  .note { font-size: 12px; color: #555; max-width: 330px; text-align: center; line-height: 1.5; }
+  .reset { font: 700 11px Inter; padding: 5px 10px; border: 1px solid #999; background: #fff; cursor: pointer; }
+
+  .phone { width: 375px; max-width: calc(100vw - 32px); height: 667px; border: 10px solid #111; border-radius: 34px; overflow: hidden; background: var(--ink); }
+  .scroll { height: 100%; overflow-y: auto; position: relative; color: var(--bone); scroll-behavior: smooth; }
+  .hdr { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(10,10,10,.6); backdrop-filter: blur(6px); }
+  .hdr b { font-family: 'Archivo Black'; font-size: 15px; letter-spacing: .04em; }
+  .hdr span { font: 10px 'JetBrains Mono'; color: #888; letter-spacing: .14em; }
+  .rail { display: flex; gap: 6px; padding: 0 20px; }
+  .rail i { flex: 1; height: 3px; background: var(--accent); }
+  .sec { padding: 22px 20px 0; display: flex; flex-direction: column; }
+  .hello { font-family: 'Archivo Black'; font-size: 19px; }
+  .hello em { font-style: normal; color: var(--accent); }
+  .hello small { font: 10px 'JetBrains Mono'; letter-spacing: .15em; color: #999; margin-left: 6px; }
+  .ttl { font-family: 'Archivo Black'; font-size: 29px; line-height: .95; margin-top: 14px; }
+  .rh { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 9px; }
+  .rh b { font-family: 'Archivo Black'; font-size: 27px; color: var(--accent); font-weight: 400; }
+  .rh span { font-family: 'Archivo Black'; font-size: 14px; letter-spacing: .03em; }
+  .img { border: 1px solid #2a2a2a; margin-bottom: 14px; background: #000; }
+  .img img { display: block; width: 100%; height: auto; }
+  .ph { display: grid; place-items: center; font: 11px 'JetBrains Mono'; color: #666; letter-spacing: .14em; background: repeating-linear-gradient(135deg,#111 0 10px,#151515 10px 20px); }
+  .terms { text-align: center; font-size: 12.5px; margin: 6px 0 22px; }
+  .terms span { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+  .zh .hello, .zh .ttl, .zh .rh span, .zh .cta { font-family: Inter, sans-serif; font-weight: 700; letter-spacing: 0; }
+
+  /* green CTA (same look as .btn-checkin-cta today) */
+  .cta { font-family: 'Archivo Black'; font-size: 17px; letter-spacing: .05em; width: 100%; padding: 22px 20px; border: 0; border-radius: 999px; cursor: pointer;
+         background: var(--green); color: var(--ink); box-shadow: 0 0 0 5px rgba(22,199,91,.18), 0 10px 28px rgba(22,199,91,.4); transition: background .35s, color .35s, box-shadow .35s; }
+  .cta.locked { background: #262626; color: #a3a3a3; box-shadow: 0 0 0 1px #3a3a3a; }
+  .cta.locked .arw { display: inline-block; animation: bob 1.3s ease-in-out infinite; }
+  .cta.pop { animation: pop .45s ease-out; }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+  @keyframes pop { 0% { transform: scale(1); } 45% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  .bar { position: sticky; bottom: 0; z-index: 4; padding: 30px 20px 16px; margin-top: auto; background: linear-gradient(to bottom, transparent, rgba(10,10,10,.95) 40%, var(--ink)); }
+  .inflow { padding: 36px 0 0; position: relative; }
+  .finger { position: absolute; top: 0; left: 50%; transform: translateX(-50%); font-size: 24px; }
+  .hint { position: sticky; bottom: 0; z-index: 4; text-align: center; padding: 34px 0 12px; pointer-events: none; background: linear-gradient(to bottom, transparent, rgba(10,10,10,.95) 60%); }
+  .hint b { display: block; color: var(--accent); font-size: 16px; }
+  .hint span { font: 10px 'JetBrains Mono'; letter-spacing: .2em; color: var(--accent); }
+  @media (prefers-reduced-motion: reduce) { .cta.locked .arw, .cta.pop { animation: none; } .scroll { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+  <h1 class="pg">RULES 页 · CHECK IN 按钮固定在底部</h1>
+  <p class="sub">都是 375 × 667 可视区。在手机框里滑动试试；A 的灰色按钮可以按，会往下滚。按「重来」回到进页面的状态。</p>
+  <div class="langs"><button data-l="en" class="on">EN</button><button data-l="zh">中文</button><button data-l="ms">BM</button></div>
+
+  <div class="row">
+    <div class="col">
+      <span class="tag" style="color:#777">现在 · NOW</span>
+      <div class="phone"><div class="scroll" id="p0"></div></div>
+      <p class="note">按钮在 4 张图最下面，要靠「MORE BELOW」提示 + 自动往下滚一点。</p>
+    </div>
+    <div class="col">
+      <span class="tag" style="color:#0c8a3e">A · 滑完才亮绿</span>
+      <div class="phone"><div class="scroll" id="pA"></div></div>
+      <p class="note">一进来就看到按钮。灰色时按一下＝往下滚一屏；看到 DON'T 图的底部就变绿（弹一下 + 震动），之后一直保持绿色。</p>
+      <button class="reset" data-r="pA">重来</button>
+    </div>
+    <div class="col">
+      <span class="tag" style="color:#0c8a3e">B · 一开始就绿色</span>
+      <div class="phone"><div class="scroll" id="pB"></div></div>
+      <p class="note">跟 care 页一样，随时可以按。最简单，但客人可以不看规则直接 check in。</p>
+      <button class="reset" data-r="pB">重来</button>
+    </div>
+  </div>
+
+<script>
+const T = {
+  en: { hello:'HELLO,', ttl:'BEFORE YOU TRAIN', r1:'RE-RACK', r2:'NO SLIPPERS', go:'CLICK TO CHECK IN', lock:'READ THE RULES', terms:'Terms & Conditions', visit:'VISIT #12' },
+  zh: { hello:'你好，', ttl:'训练前请阅读', r1:'归位器材', r2:'禁止穿拖鞋', go:'点击入场', lock:'往下看规则', terms:'条款与细则', visit:'第 12 次' },
+  ms: { hello:'HELO,', ttl:'SEBELUM ANDA BERSENAM', r1:'RE-RACK', r2:'DILARANG SELIPAR', go:'KLIK UNTUK DAFTAR MASUK', lock:'BACA PERATURAN', terms:'Terma & Syarat', visit:'LAWATAN #12' },
+};
+let lang = 'en';
+const img = (src, ratio, label) =>
+  `<div class="img"><img src="../public/${src}" alt="${label}" style="aspect-ratio:${ratio}" onerror="this.outerHTML='<div class=&quot;ph&quot; style=&quot;aspect-ratio:${ratio}&quot;>${label}</div>'"></div>`;
+
+function page(mode) {
+  const t = T[lang];
+  let cta = '';
+  if (mode === 'now') cta = `<div class="inflow"><span class="finger">👇</span><button class="cta">${t.go} →</button></div>`;
+  const body = `
+    <div class="hdr"><b>X FITNESS</b><span>EN · 中文 · BM</span></div>
+    <div class="rail"><i></i><i></i><i></i></div>
+    <div class="sec">
+      <p class="hello">${t.hello} <em>AISYAH</em> 👋<small>${t.visit}</small></p>
+      <p class="ttl">${t.ttl}</p>
+      <div class="rh"><b>01</b><span>${t.r1}</span></div>${img('rerack.webp','1/1','RE-RACK')}
+      <div class="rh"><b>02</b><span>${t.r2}</span></div>${img('no-slippers.webp','690/260','NO SLIPPERS')}
+      ${img('do.webp','1/1','DO')}
+      ${img('dont.webp','1/1','DON\'T')}<span class="end"></span>
+      ${cta}
+      <p class="terms"><span>${t.terms}</span></p>
+    </div>`;
+  if (mode === 'now') return body + `<div class="hint"><b>▼</b><span>MORE BELOW</span></div>`;
+  const locked = mode === 'A';
+  return body + `<div class="bar"><button class="cta ${locked ? 'locked' : ''}">${locked ? `${t.lock} <span class="arw">↓</span>` : `${t.go} →`}</button></div>`;
+}
+
+function mount(id, mode) {
+  const el = document.getElementById(id);
+  el.className = 'scroll' + (lang === 'zh' ? ' zh' : '');
+  el.innerHTML = page(mode);
+  el.scrollTop = 0;
+  if (mode === 'now') {
+    const hint = el.querySelector('.hint');
+    el.onscroll = () => { hint.style.display = el.scrollTop > 200 ? 'none' : ''; };
+    return;
+  }
+  if (mode !== 'A') return;
+  const btn = el.querySelector('.cta');
+  const end = el.querySelector('.end');
+  const unlock = () => {
+    if (!btn.classList.contains('locked')) return;
+    btn.classList.remove('locked');
+    btn.innerHTML = `${T[lang].go} →`;
+    btn.classList.add('pop');
+    if (navigator.vibrate) navigator.vibrate(15);
+  };
+  // unlocked once the bottom of the DON'T image has been seen (above the sticky bar)
+  new IntersectionObserver(([e]) => e.isIntersecting && unlock(), { root: el, rootMargin: '0px 0px -90px 0px' }).observe(end);
+  btn.onclick = () => { if (btn.classList.contains('locked')) el.scrollBy({ top: el.clientHeight * 0.8 }); };
+}
+
+function renderAll() {
+  mount('p0', 'now'); mount('pA', 'A'); mount('pB', 'B');
+  document.querySelectorAll('.langs button').forEach(b => b.classList.toggle('on', b.dataset.l === lang));
+}
+document.querySelectorAll('.langs button').forEach(b => b.onclick = () => { lang = b.dataset.l; renderAll(); });
+document.querySelectorAll('.reset').forEach(b => b.onclick = () => mount(b.dataset.r, b.dataset.r === 'pA' ? 'A' : 'B'));
+renderAll();
+</script>
+</body>
+</html>

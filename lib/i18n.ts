@@ -27,6 +27,7 @@ export const translations = {
     rule1: 'RULE #1 — RE-RACK',
     rule2: 'RULE #2 — NO SLIPPERS',
     acknowledge: 'CLICK TO CHECK IN',
+    readRules: 'READ THE RULES',
 
     // Registration
     register: 'REGISTER',
@@ -130,7 +131,7 @@ export const translations = {
     careReport: 'Report privately (online)',
     careWhatsApp: 'WhatsApp us',
     carePosterNote: 'See this poster in the gym? Scan its QR to report anytime.',
-    careGotIt: 'GOT IT',
+    careGotIt: 'NEXT: GYM RULES',
     careTitleM: 'TRAIN SAFE. WE’VE GOT YOU.',
     // v2.24.0 — simplified check-in
     regSub: 'ONE-TIME · ABOUT 1 MIN',
@@ -179,6 +180,7 @@ export const translations = {
     rule1: '规则 #1 — 归位器材',
     rule2: '规则 #2 — 禁止穿拖鞋',
     acknowledge: '点击入场',
+    readRules: '往下看规则',
 
     register: '注册',
     fullName: '姓名',
@@ -271,7 +273,7 @@ export const translations = {
     careReport: '线上私下报告',
     careWhatsApp: 'WhatsApp 我们',
     carePosterNote: '店里看到这张海报，扫 QR 就能随时报告。',
-    careGotIt: '知道了',
+    careGotIt: '下一步：看规则',
     careTitleM: '安全训练，我们挺你。',
     // v2.24.0 — simplified check-in
     regSub: '只需一次 · 约 1 分钟',
@@ -320,6 +322,7 @@ export const translations = {
     rule1: 'PERATURAN #1 — RE-RACK',
     rule2: 'PERATURAN #2 — DILARANG SELIPAR',
     acknowledge: 'KLIK UNTUK DAFTAR MASUK',
+    readRules: 'BACA PERATURAN',
 
     register: 'DAFTAR',
     fullName: 'NAMA PENUH',
@@ -412,7 +415,7 @@ export const translations = {
     careReport: 'Lapor secara peribadi (dalam talian)',
     careWhatsApp: 'WhatsApp kami',
     carePosterNote: 'Nampak poster ini di gim? Imbas QR untuk melapor bila-bila masa.',
-    careGotIt: 'FAHAM',
+    careGotIt: 'SETERUSNYA: PERATURAN',
     careTitleM: 'BERLATIH SELAMAT. KAMI BERSAMA ANDA.',
     // v2.24.0 — simplified check-in
     regSub: 'SEKALI SAHAJA · KIRA-KIRA 1 MINIT',

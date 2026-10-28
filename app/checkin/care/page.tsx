@@ -22,6 +22,12 @@
  *   /safety-poster-lg.webp, loaded only on tap; tap the poster to zoom 2×,
  *   since the site disables pinch-zoom). Men get "TRAIN SAFE" with three
  *   practical tips + a small private-report link (Ron picked option B).
+ *
+ * v2.24.3: the women's page is taller than most phone screens, so the
+ * button sat below the fold and people thought the page had ended. The
+ * button is now pinned to the bottom (same as the register submit) and says
+ * where it goes next ("NEXT: GYM RULES"). Ron-approved mockup
+ * `mockups/care-sticky-next.html`.
  */
 
 import { useEffect, useState } from 'react';
@@ -60,7 +66,7 @@ export default function CarePage() {
   const next = () => router.push('/checkin/reminders');
 
   return (
-    <main className="min-h-screen flex flex-col bg-ink relative overflow-hidden">
+    <main className="min-h-screen flex flex-col bg-ink relative">
       <div className={`ck-amb ${female ? 'rose' : ''}`} aria-hidden="true">
         <div className="ck-orb ck-orb-1" />
         <div className="ck-orb ck-orb-2" />
@@ -178,9 +184,11 @@ export default function CarePage() {
           </>
         )}
 
-        <button type="button" onClick={next} className="btn-primary mt-6 xd-rise xd-d7">
-          {t(lang, 'careGotIt')} →
-        </button>
+        <div className="sticky bottom-0 mt-auto -mx-5 -mb-8 px-5 pt-7 pb-[max(18px,env(safe-area-inset-bottom))] bg-gradient-to-b from-transparent via-ink/95 to-ink z-10">
+          <button type="button" onClick={next} className="btn-primary xd-rise xd-d7">
+            {t(lang, 'careGotIt')} <span className="ck-nudge">→</span>
+          </button>
+        </div>
       </section>
 
       {posterOpen && <PosterViewer lang={lang} onClose={() => setPosterOpen(false)} />}

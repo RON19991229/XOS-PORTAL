@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Care page — sticky next</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;600&family=JetBrains+Mono&family=Noto+Sans+SC:wght@900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#0a0a0a; --accent:#FFD60A; --bone:#f5f5f5; --pink:#ff7ac8; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #e9e6e0; font-family: Inter, sans-serif; color: #111; padding: 24px 16px 48px; }
+  h1.pg { font-family: 'Archivo Black'; font-size: 20px; text-align: center; }
+  .sub { text-align: center; font-size: 13px; color: #555; margin: 6px 0 14px; }
+  .langs { display: flex; gap: 6px; justify-content: center; margin-bottom: 20px; }
+  .langs button { font: 600 12px Inter; padding: 6px 12px; border: 1px solid #111; background: #fff; cursor: pointer; }
+  .langs button.on { background: #111; color: #fff; }
+  .row { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .tag { font: 700 12px 'JetBrains Mono'; letter-spacing: .12em; }
+  .tag.bad { color: #c0271d; } .tag.good { color: #0c8a3e; }
+  .note { font-size: 12px; color: #555; max-width: 320px; text-align: center; line-height: 1.45; }
+
+  /* phone: 375 × 667 visible area (iPhone SE / most Android browsers with bars) */
+  .phone { width: 375px; max-width: calc(100vw - 32px); height: 667px; border: 10px solid #111; border-radius: 34px; overflow: hidden; position: relative; background: var(--ink); }
+  .scroll { height: 100%; overflow-y: auto; position: relative; color: var(--bone); }
+  .amb { position: absolute; inset: 0 0 auto 0; height: 520px; pointer-events: none;
+         background: radial-gradient(260px 220px at 10% 0%, rgba(255,214,10,.28), transparent 70%),
+                     radial-gradient(240px 240px at 100% 30%, rgba(255,122,200,.22), transparent 70%); }
+  .hdr { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: rgba(10,10,10,.5); backdrop-filter: blur(6px); }
+  .hdr b { font-family: 'Archivo Black'; font-size: 15px; letter-spacing: .04em; }
+  .hdr span { font: 10px 'JetBrains Mono'; color: #888; letter-spacing: .14em; }
+  .rail { display: flex; gap: 6px; padding: 0 20px; position: relative; z-index: 2; }
+  .rail i { flex: 1; height: 3px; background: #2a2a2a; } .rail i.on { background: var(--accent); }
+  .sec { position: relative; z-index: 2; padding: 22px 20px 32px; display: flex; flex-direction: column; }
+  .shield { width: 84px; height: 84px; margin: 0 auto; display: grid; place-items: center; border-radius: 50%; box-shadow: 0 0 60px rgba(255,122,200,.35); }
+  .hey { font-family: 'Archivo Black'; color: var(--pink); font-size: 24px; text-align: center; margin-top: 16px; }
+  .ttl { font-family: 'Archivo Black'; font-size: 31px; line-height: .98; text-align: center; margin-top: 6px; }
+  .zh .hey, .zh .ttl, .zh .opt b, .zh .cta { font-family: 'Noto Sans SC', sans-serif; font-weight: 900; }
+  .body { text-align: center; font-size: 14.5px; line-height: 1.55; color: #d4d4d4; margin-top: 12px; }
+  .opts { display: grid; gap: 9px; margin-top: 20px; }
+  .opt { display: flex; align-items: center; gap: 13px; border: 1px solid #2e2e2e; background: linear-gradient(160deg,#191919,#111); padding: 14px 15px; }
+  .opt .ic { width: 40px; height: 40px; flex: none; display: grid; place-items: center; font-size: 18px; background: rgba(255,122,200,.1); border: 1px solid rgba(255,122,200,.4); }
+  .opt b { flex: 1; font-family: 'Archivo Black'; font-size: 13px; font-weight: 400; }
+  .opt em { font-style: normal; color: #666; font-family: 'Archivo Black'; }
+  .poster { display: flex; gap: 13px; align-items: center; margin-top: 14px; padding: 11px; border: 1px solid #2e2e2e; background: #111; }
+  .poster .th { width: 68px; height: 96px; flex: none; background: linear-gradient(170deg,#ffd6ec,#ff7ac8 60%,#7a2f5c); border: 1px solid #2e2e2e; }
+  .poster p { font-size: 12px; line-height: 1.4; color: #d4d4d4; }
+  .poster small { display: block; margin-top: 6px; font: 10px 'JetBrains Mono'; letter-spacing: .14em; color: var(--pink); }
+  .cta { font-family: 'Archivo Black'; font-size: 18px; letter-spacing: .05em; padding: 19px 20px; width: 100%; border: 0; background: var(--accent); color: var(--ink); cursor: pointer; }
+  .inline-cta { margin-top: 22px; }
+  .sticky { position: sticky; bottom: 0; z-index: 4; margin: 0 -20px -32px; padding: 26px 20px 18px; background: linear-gradient(to bottom, transparent, rgba(10,10,10,.95) 35%, var(--ink)); }
+  .cta .arw { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+  @keyframes nudge { 0%,100% { transform: translateX(0); } 50% { transform: translateX(5px); } }
+  @media (prefers-reduced-motion: reduce) { .cta .arw { animation: none; } }
+  .fold { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; pointer-events: none; font: 10px 'JetBrains Mono'; color: #ff8a80; text-align: center; padding: 4px; background: rgba(255,59,48,.15); border-top: 1px dashed #ff3b30; }
+</style>
+</head>
+<body>
+  <h1 class="pg">CARE PAGE · GOT IT 看不到</h1>
+  <p class="sub">两部手机都是 375 × 667 可视区（大部分手机浏览器扣掉网址栏后的高度）。可以在手机里滑动试试。</p>
+  <div class="langs">
+    <button data-l="en" class="on">EN</button><button data-l="zh">中文</button><button data-l="ms">BM</button>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <span class="tag bad">现在 · NOW</span>
+      <div class="phone"><div class="scroll" id="now"></div><div class="fold">↓ 第一眼看不到按钮</div></div>
+      <p class="note">按钮在画面外 ~150px。海报卡看起来像页面结尾，客人以为没东西了。</p>
+    </div>
+    <div class="col">
+      <span class="tag good">建议 · PROPOSED</span>
+      <div class="phone"><div class="scroll" id="new"></div></div>
+      <p class="note">按钮固定在底部（和 Register 的 sticky submit 同一做法），字改成「下一步：规则」，箭头轻轻左右动提示还有下一页。</p>
+    </div>
+  </div>
+
+<script>
+const T = {
+  en: { hey:'HEY GIRLS,', ttl:'WE’VE GOT YOUR BACK.', body:'Anyone or anything makes you uncomfortable? Tell us — it stays confidential.',
+        o1:'Tell the front desk', o2:'Report privately (online)', o3:'WhatsApp us',
+        poster:'See this poster in the gym? Scan its QR to report anytime.', zoom:'TAP TO ENLARGE',
+        old:'GOT IT', neu:'NEXT: GYM RULES' },
+  zh: { hey:'HEY 女生们，', ttl:'我们在你身边。', body:'有人或有事让你不舒服？告诉我们 —— 一定保密。',
+        o1:'直接告诉柜台', o2:'线上私下报告', o3:'WhatsApp 我们',
+        poster:'店里看到这张海报，扫 QR 就能随时报告。', zoom:'点击放大',
+        old:'知道了', neu:'下一步：看规则' },
+  ms: { hey:'HAI GIRLS,', ttl:'KAMI BERSAMA ANDA.', body:'Ada sesiapa atau apa-apa buat anda tidak selesa? Beritahu kami — dirahsiakan.',
+        o1:'Beritahu kaunter kami', o2:'Lapor secara peribadi (dalam talian)', o3:'WhatsApp kami',
+        poster:'Nampak poster ini di gim? Imbas QR untuk melapor bila-bila masa.', zoom:'KETIK UNTUK BESARKAN',
+        old:'FAHAM', neu:'SETERUSNYA: PERATURAN' },
+};
+const shield = `<svg width="70" height="78" viewBox="0 0 78 88"><path d="M39 4 72 16v26c0 21-14 36-33 42C20 78 6 63 6 42V16z" fill="#141414" stroke="#ff7ac8" stroke-width="3"/><path d="M39 30c-4-6-14-5-14 3 0 7 9 12 14 17 5-5 14-10 14-17 0-8-10-9-14-3z" fill="#ff7ac8"/></svg>`;
+function page(t, sticky) {
+  const btn = sticky
+    ? `<div class="sticky"><button class="cta">${t.neu} <span class="arw">→</span></button></div>`
+    : `<button class="cta inline-cta">${t.old} →</button>`;
+  return `<div class="amb"></div>
+    <div class="hdr"><b>X FITNESS</b><span>EN · 中文 · BM</span></div>
+    <div class="rail"><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="sec">
+      <div class="shield">${shield}</div>
+      <p class="hey">${t.hey}</p>
+      <p class="ttl">${t.ttl}</p>
+      <p class="body">${t.body}</p>
+      <div class="opts">
+        <div class="opt"><span class="ic">🙋‍♀️</span><b>${t.o1}</b></div>
+        <div class="opt"><span class="ic">📝</span><b>${t.o2}</b><em>→</em></div>
+        <div class="opt"><span class="ic" style="background:rgba(37,211,102,.1);border-color:rgba(37,211,102,.5)">💬</span><b>${t.o3}</b><em>→</em></div>
+      </div>
+      <div class="poster"><span class="th"></span><p>${t.poster}<small>${t.zoom} ⤢</small></p></div>
+      ${btn}
+    </div>`;
+}
+function render(l) {
+  for (const [id, s] of [['now', false], ['new', true]]) {
+    const el = document.getElementById(id);
+    el.className = 'scroll' + (l === 'zh' ? ' zh' : '');
+    el.innerHTML = page(T[l], s);
+    el.scrollTop = 0;
+  }
+  document.querySelectorAll('.langs button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
+}
+document.querySelectorAll('.langs button').forEach(b => b.onclick = () => render(b.dataset.l));
+render('en');
+</script>
+</body>
+</html>

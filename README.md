@@ -5,6 +5,19 @@
 
 ---
 
+## 👇 v2.24.3 (2026-10-29) — 按钮固定在屏幕底部（care 页 + 规则页）
+
+起因：很多新客注册后停在 HEY GIRLS 那页不知道要按什么。女生版 care 页约 900px 高，手机只看得到 ~650px，GOT IT 按钮在画面外，海报卡看起来像页面结尾。
+
+- `/checkin/care`：按钮固定在屏幕底部（跟 register 的 sticky submit 同一做法），字从 GOT IT / 知道了 / FAHAM 改成 **NEXT: GYM RULES / 下一步：看规则 / SETERUSNYA: PERATURAN**，箭头轻轻往右动，提示还有下一页。男生版一起改
+- `/checkin/reminders`：CHECK IN 按钮也固定在底部。一进来是**灰色「READ THE RULES ↓ / 往下看规则 / BACA PERATURAN」**，按了会往下滚；滑到 DON'T 图底部才**变绿 CLICK TO CHECK IN**（弹一下 + Android 震动），之后一直保持绿色。所以客人一进来就看得到按钮，但一样要滑过 4 张规则才能 check in。拿掉页面中间的旧按钮、👇 和 MORE BELOW 提示（ScrollHint 只剩 id-input 页在用）
+- Ron 批准的 mockup：`mockups/care-sticky-next.html`、`mockups/rules-sticky-checkin.html`（选 A）
+
+文件：`app/checkin/care/page.tsx`、`app/checkin/reminders/page.tsx`、`app/globals.css`、`lib/i18n.ts`、`package.json`、`CLAUDE.md`
+部署：**不需要 SQL**，push 到 main 即可。
+
+---
+
 ## 🏢 v2.24.2 (2026-10-29) — 公司名改成 X FITNESS GYM SDN. BHD.
 
 起因：11 月 1 日起由 X FITNESS GYM SDN. BHD.（202601032434 (1694529-U)）接手营运，取代 partnership X FITNESS CENTRE。Membership T&C 已同步出 V05。

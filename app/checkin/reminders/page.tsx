@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase-client';
@@ -11,7 +11,6 @@ import { safeSession, safeJsonParse } from '@/lib/safe-storage';
 import CheckinHeader from '@/components/CheckinHeader';
 import { Atmo, StepRail, XdReveal } from '@/components/CheckinFX';
 import TermsModal from '@/components/TermsModal';
-import ScrollHint from '@/components/ScrollHint';
 
 /** "RULE #1 — RE-RACK" → "RE-RACK" (all 3 langs use the same — separator;
  *  falls back to the full string if the separator is missing). */
@@ -35,6 +34,37 @@ export default function RemindersPage() {
   const [showTerms, setShowTerms] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState('');
+  // v2.24.3: the pinned CHECK IN unlocks once the end of the last rule
+  // image has scrolled into view above it (Ron picked option A,
+  // `mockups/rules-sticky-checkin.html`).
+  const rulesEndRef = useRef<HTMLDivElement>(null);
+  const [rulesSeen, setRulesSeen] = useState(false);
+
+  useEffect(() => {
+    if (!customer || rulesSeen) return;
+    const el = rulesEndRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setRulesSeen(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        setRulesSeen(true);
+        navigator.vibrate?.(15);
+      },
+      // ignore the strip hidden behind the pinned button
+      { rootMargin: '0px 0px -110px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [customer, rulesSeen]);
+
+  const scrollToRules = () => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollBy({ top: window.innerHeight * 0.8, behavior: reduce ? 'auto' : 'smooth' });
+  };
 
   useEffect(() => {
     const savedLang = safeSession.getItem('xf-lang') as Lang | null;
@@ -200,21 +230,33 @@ export default function RemindersPage() {
           </div>
         </div>
         </XdReveal>
+        <div ref={rulesEndRef} aria-hidden="true" />
 
-        {/* CTA — comes BEFORE T&C now (Option C). The CTA is the highest
-            priority thing on this page; users have already agreed to T&C
-            at registration. data-scroll-target tells ScrollHint where to
-            scroll to on mount (so the button is visible above the fold). */}
-        <XdReveal>
-        <div className="checkin-cta-wrap" data-scroll-target>
-          {!loading && (
-            <span className="checkin-cta-finger" aria-hidden="true">👇</span>
+        {/* T&C — small underlined link below the rules. Customers already
+            agreed at registration, so this is reference-only. */}
+        <button
+          type="button"
+          onClick={() => setShowTerms(true)}
+          className="w-full mt-1 mb-2 text-center text-[12.5px] hover:opacity-80 transition-opacity"
+        >
+          <span className="text-accent underline underline-offset-4">{t(lang, 'viewTerms')}</span>
+        </button>
+
+        {/* v2.24.3: CTA pinned to the bottom of the screen (replaces the
+            in-page button + 👇 + ScrollHint). Grey "READ THE RULES ↓"
+            until the rules have been scrolled past — tapping it scrolls
+            down — then green CLICK TO CHECK IN. */}
+        <div className="sticky bottom-0 -mx-5 -mb-6 px-5 pt-8 pb-[max(18px,env(safe-area-inset-bottom))] bg-gradient-to-b from-transparent via-ink/95 to-ink z-10">
+          {errorMsg && (
+            <div className="bg-danger text-bone px-4 py-3 mb-3 font-display text-sm tracking-wider animate-shake">
+              {errorMsg}
+            </div>
           )}
           <button
-            onClick={handleAcknowledge}
+            onClick={rulesSeen ? handleAcknowledge : scrollToRules}
             disabled={loading}
-            className={`btn-checkin-cta ${
-              lang === 'zh' ? 'btn-checkin-cta-zh' : ''
+            className={`btn-checkin-cta ${lang === 'zh' ? 'btn-checkin-cta-zh' : ''} ${
+              rulesSeen ? 'ck-pop' : 'is-locked'
             }`}
           >
             {loading ? (
@@ -223,44 +265,19 @@ export default function RemindersPage() {
                 <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
                 <span className="loading-dot inline-block w-2 h-2 bg-ink rounded-full" />
               </span>
-            ) : (
+            ) : rulesSeen ? (
               <>{t(lang, 'acknowledge')} →</>
+            ) : (
+              <>
+                {t(lang, 'readRules')} <span className="ck-bob">↓</span>
+              </>
             )}
           </button>
         </div>
-        </XdReveal>
-
-        {errorMsg && (
-          <div className="bg-danger text-bone px-4 py-3 mt-4 font-display text-sm tracking-wider animate-shake">
-            {errorMsg}
-          </div>
-        )}
-
-        {/* T&C — small underlined link below the CTA. Customers already
-            agreed at registration, so this is reference-only. Keeping it
-            visible (just less prominent) preserves the "always available"
-            promise without competing with the CTA. */}
-        <button
-          type="button"
-          onClick={() => setShowTerms(true)}
-          className="w-full mt-4 text-center text-[12.5px] hover:opacity-80 transition-opacity"
-        >
-          <span className="text-accent underline underline-offset-4">{t(lang, 'viewTerms')}</span>
-        </button>
-
-        {/* Bottom spacer — gives users a visual cue that page has ended,
-            and prevents the CTA from being flush with bottom edge.
-            Important UX: when content ends right at screen bottom, users
-            don't realize they need to scroll. */}
-        <div className="h-20" aria-hidden="true" />
       </section>
 
       {/* T&C modal popup */}
       <TermsModal open={showTerms} onClose={() => setShowTerms(false)} />
-
-      {/* Scroll-down hint at bottom of viewport — auto-hides once user
-          reaches the bottom or has scrolled past 200px */}
-      <ScrollHint />
     </main>
   );
 }

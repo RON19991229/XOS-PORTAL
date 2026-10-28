@@ -1140,10 +1140,24 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
   background: rgba(255, 122, 200, .1); border: 1px solid rgba(255, 122, 200, .4);
 }
 .ck-opt-ic.gold { background: rgba(255, 214, 10, .1); border-color: rgba(255, 214, 10, .35); }
+/* v2.24.3: arrow on the pinned NEXT button nudges right ("there's another page") */
+.ck-nudge { display: inline-block; animation: ckNudge 1.4s ease-in-out infinite; }
+@keyframes ckNudge { 50% { transform: translateX(5px); } }
+/* v2.24.3: rules page — pinned CHECK IN stays grey ("READ THE RULES ↓",
+   tap = scroll down) until the end of the DON'T image has been seen,
+   then turns green with one pop. */
+.btn-checkin-cta.is-locked {
+  background: #262626; color: #a3a3a3; box-shadow: 0 0 0 1px #3a3a3a; animation: none;
+}
+.ck-fx .btn-checkin-cta.is-locked::after { display: none; }
+.ck-bob { display: inline-block; animation: ckBob 1.3s ease-in-out infinite; }
+@keyframes ckBob { 50% { transform: translateY(4px); } }
+.btn-checkin-cta.ck-pop { animation: ckPop .45s ease-out, btn-checkin-breathe 2s .45s ease-in-out infinite; }
+@keyframes ckPop { 45% { transform: scale(1.06); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after,
-  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch,
+  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-nudge, .ck-bob, .btn-checkin-cta.ck-pop,
   .ck-cake, .ck-stamp, .ck-halo, .ck-fx .reg-chip.on, .ck-fx .reg-agree.on .reg-agree-box {
     animation: none !important;
   }
