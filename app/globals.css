@@ -1154,10 +1154,16 @@ textarea.rl-input { min-height: 96px; resize: vertical; line-height: 1.6; }
 @keyframes ckBob { 50% { transform: translateY(4px); } }
 .btn-checkin-cta.ck-pop { animation: ckPop .45s ease-out, btn-checkin-breathe 2s .45s ease-in-out infinite; }
 @keyframes ckPop { 45% { transform: scale(1.06); } }
+/* v2.24.5: blinking dot beside the live clock on /checkin/approved */
+.ck-live {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #0a0a0a;
+  margin-right: 8px; vertical-align: 1px; animation: ckLive 1s steps(2, jump-none) infinite;
+}
+@keyframes ckLive { 50% { opacity: .15; } }
 
 @media (prefers-reduced-motion: reduce) {
   .ck-fx .btn-primary::after, .ck-fx .btn-checkin-cta::after, .ck-fx .ck-shine::after,
-  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-nudge, .ck-bob, .btn-checkin-cta.ck-pop,
+  .ck-ripple, .ck-orb, .ck-dot::after, .ck-ch, .ck-nudge, .ck-bob, .btn-checkin-cta.ck-pop, .ck-live,
   .ck-cake, .ck-stamp, .ck-halo, .ck-fx .reg-chip.on, .ck-fx .reg-agree.on .reg-agree-box {
     animation: none !important;
   }

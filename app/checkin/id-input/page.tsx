@@ -4,12 +4,20 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Lang, t } from '@/lib/i18n';
-import { validateMyIC, validatePassport, digitsOnly } from '@/lib/utils';
+import { validateMyIC, checkinPassportIssue, digitsOnly, type PassportIssue } from '@/lib/utils';
 import { safeSession, safeLocal } from '@/lib/safe-storage';
 import { runCheckinLookup } from '@/lib/checkin-lookup';
 import CheckinHeader from '@/components/CheckinHeader';
 import { Atmo, StepRail } from '@/components/CheckinFX';
 import ScrollHint from '@/components/ScrollHint';
+
+const PASSPORT_ERROR = {
+  short: 'passportTooShort',
+  long: 'passportTooLong',
+  chars: 'passportChars',
+  junk: 'passportJunk',
+  sgIc: 'sgIcInvalid',
+} as const satisfies Record<PassportIssue, string>;
 
 export default function IdInputPage() {
   const router = useRouter();
@@ -19,6 +27,9 @@ export default function IdInputPage() {
   const [id, setId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // v2.24.5: a Singapore-IC-shaped number with a wrong check letter shows an
+  // error plus "IT'S A PASSPORT" — a few foreign passports may share the shape.
+  const [sgCheckFailed, setSgCheckFailed] = useState(false);
 
   useEffect(() => {
     const savedLang = safeSession.getItem('xf-lang') as Lang | null;
@@ -34,6 +45,7 @@ export default function IdInputPage() {
 
   const handleIdChange = (raw: string) => {
     setError('');
+    setSgCheckFailed(false);
     if (nationality === 'malaysian') {
       const cleaned = digitsOnly(raw).slice(0, 12);
       setId(cleaned);
@@ -43,9 +55,14 @@ export default function IdInputPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    submit(false);
+  };
+
+  const submit = async (treatAsPassport: boolean) => {
     setError('');
+    setSgCheckFailed(false);
 
     let validationError: string | null = null;
     if (nationality === 'malaysian') {
@@ -57,8 +74,14 @@ export default function IdInputPage() {
       if (validateMyIC(id) !== null) {
         validationError = t(lang, 'invalidIc');
       }
-    } else {
-      validationError = validatePassport(id);
+    } else if (validateMyIC(id) !== null) {
+      // A valid Malaysian IC on this path is switched to Malaysian inside
+      // runCheckinLookup, so only non-MyKad input gets the passport rules.
+      const issue = checkinPassportIssue(id);
+      if (issue && !(issue === 'sgIc' && treatAsPassport)) {
+        validationError = t(lang, PASSPORT_ERROR[issue]);
+        setSgCheckFailed(issue === 'sgIc');
+      }
     }
     if (validationError) {
       setError(validationError);
@@ -136,6 +159,15 @@ export default function IdInputPage() {
             <div className="bg-danger text-bone px-4 py-3 font-display text-sm tracking-wider animate-shake">
               {error}
             </div>
+          )}
+          {sgCheckFailed && !loading && (
+            <button
+              type="button"
+              onClick={() => submit(true)}
+              className="block mx-auto py-2 text-[12.5px] text-neutral-300 underline underline-offset-4"
+            >
+              {t(lang, 'sgIcItsPassport')}
+            </button>
           )}
 
           <button

@@ -29,12 +29,19 @@ import {
  *   - v2.24.0: "// STATUS: ACTIVE" removed; one big localized APPROVED word;
  *     PAY AT THE COUNTER in an outlined box; the remember box asks one
  *     question. The timestamp stays — front desk uses it to spot screenshots.
+ *   - v2.24.5: the timestamp ticks every second next to a blinking dot (a
+ *     screenshot is frozen, so front desk can tell). While the remember box
+ *     is still asking, the auto-return waits (up to 60 s) instead of 12 s;
+ *     once answered, the usual 12 s countdown starts.
  */
+const RETURN_MS = 12_000;
+const ASK_MAX_MS = 60_000;
 export default function ApprovedPage() {
   const router = useRouter();
   const [lang, setLang] = useState<Lang>('en');
   const [name, setName] = useState('');
   const [now, setNow] = useState('');
+  const [ready, setReady] = useState(false);
   const [visitNo, setVisitNo] = useState<number | null>(null);
   const [offer, setOffer] = useState<{ ic: string; nationality: Customer['nationality']; name: string } | null>(null);
   const [offerState, setOfferState] = useState<'ask' | 'saved' | 'declined'>('ask');
@@ -59,14 +66,23 @@ export default function ApprovedPage() {
     if (c?.ic && nationality && !getRemembered() && !hasDeclinedRemember()) {
       setOffer({ ic: c.ic, nationality, name: c.name || savedName });
     }
+    setReady(true);
 
+    const clock = setInterval(() => setNow(formatDateTime(new Date())), 1000);
+    return () => clearInterval(clock);
+  }, [router]);
+
+  // Auto-return: 12 s normally; while the remember box is still asking, wait
+  // for an answer (capped at 60 s), then 12 s from the answer.
+  const asking = offer !== null && offerState === 'ask';
+  useEffect(() => {
+    if (!ready) return;
     const timeout = setTimeout(() => {
       safeSession.clear();
       router.replace('/checkin');
-    }, 12000);
-
+    }, asking ? ASK_MAX_MS : RETURN_MS);
     return () => clearTimeout(timeout);
-  }, [router]);
+  }, [ready, asking, router]);
 
   return (
     <main className="min-h-screen bg-success-green text-ink flex flex-col relative overflow-hidden">
@@ -114,7 +130,10 @@ export default function ApprovedPage() {
           {t(lang, 'approvedSub')}
         </p>
 
-        <p className="font-mono text-xs text-ink/60 mt-4 xd-rise xd-d7">{now}</p>
+        <p className="font-mono text-sm font-bold text-ink/80 mt-4 xd-rise xd-d7 tabular-nums">
+          <span className="ck-live" aria-hidden="true" />
+          {now}
+        </p>
       </div>
 
       {offer && (
@@ -163,7 +182,7 @@ export default function ApprovedPage() {
 
       {/* countdown bar — mirrors the 12s auto-return to /checkin so
           customers can see how long the screen stays up */}
-      <div className="xd-countbar" aria-hidden="true" />
+      {ready && !asking && <div className="xd-countbar" aria-hidden="true" />}
     </main>
   );
 }

@@ -5,6 +5,23 @@
 
 ---
 
+## 🛂 v2.24.5 (2026-10-29) — 防乱填 + 错误讯息三语 + 绿页活时钟
+
+来自 check-in 流程检视（`mockups/checkin-review-2026-10.html`）Ron 批准的第 1、3、4、5 项；第 2（外国人年龄，staff 当面问）和第 6 项不做。
+
+- **Foreigner 防乱填**（`/checkin/id-input`，只有客人端，admin 不变）：
+  - 打了合法的马来西亚 IC → 自动当成 Malaysian 处理，不退回上一页；12 岁以下 / 监护人检查照跑
+  - 乱填直接挡：少于 6 个字、完全没有数字（例如打了名字）、同一个字重复（AAAAAA、111111）、1–3 个字一组重复（121212、ABCABC）、连续数字（123456、987654）
+  - 新加坡 IC 格式（S/T/F/G/M + 7 位数字 + 字母）→ 验证检查码，错了显示「这个新加坡 IC 号码不正确」+「这是护照，继续 →」（少数外国护照可能长得一样）
+- **电话已注册**：红色警告保留，后面加「请询问我们的 staff」
+- **错误讯息三语**：护照太短 / 太长 / 只能英文数字、电话太短 / 太长、「紧急联络人：」「监护人：」前缀，原本只有英文
+- **绿页**：时间每秒跳动 + 闪动的点（截图是静止的）；「记住我」还没回答时不倒数（最多等 60 秒），回答后才开始 12 秒
+
+文件：`lib/utils.ts`、`lib/checkin-lookup.ts`、`lib/i18n.ts`、`app/checkin/id-input/page.tsx`、`app/checkin/register/page.tsx`、`app/checkin/approved/page.tsx`、`app/globals.css`、`package.json`、`CLAUDE.md`
+部署：**不需要 SQL**，push 到 main 即可。
+
+---
+
 ## 🪪 v2.24.4 (2026-10-29) — IC / Passport 页加一行说明 + 主页标明 Singapore IC
 
 起因：有些客人乱填 IC / 护照号码；新加坡客人多，不知道该选哪张卡。

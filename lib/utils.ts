@@ -316,14 +316,20 @@ export function buildPhone(countryCode: string, digits: string): string {
  * Returns null if valid, error message string if invalid.
  */
 export function validatePhone(countryCode: string, digits: string): string | null {
-  let len = digits.length;
-  if (digits.startsWith('0')) {
-    len = digits.replace(/^0+/, '').length;
-  }
-  if (len < PHONE_MIN_DIGITS) return `Phone too short (min ${PHONE_MIN_DIGITS} digits)`;
-  if (len > PHONE_MAX_DIGITS) return `Phone too long (max ${PHONE_MAX_DIGITS} digits)`;
+  const issue = phoneIssue(digits);
+  if (issue === 'short') return `Phone too short (min ${PHONE_MIN_DIGITS} digits)`;
+  if (issue === 'long') return `Phone too long (max ${PHONE_MAX_DIGITS} digits)`;
   return null;
 }
+
+/** v2.24.5: same rule as validatePhone, as a code the /checkin pages translate. */
+export function phoneIssue(digits: string): 'short' | 'long' | null {
+  const len = digits.replace(/^0+/, '').length;
+  if (len < PHONE_MIN_DIGITS) return 'short';
+  if (len > PHONE_MAX_DIGITS) return 'long';
+  return null;
+}
+export { PHONE_MIN_DIGITS, PHONE_MAX_DIGITS };
 
 /**
  * Malaysian IC State / Country (BP) codes.
@@ -451,6 +457,65 @@ export function validatePassport(passport: string): string | null {
   if (cleaned.length > 20) return 'Passport too long';
   if (!/^[A-Z0-9]+$/.test(cleaned)) return 'Passport: letters & numbers only';
   return null;
+}
+
+/**
+ * v2.24.5 — stricter passport / Singapore IC check for the customer-facing
+ * /checkin/id-input page only (admin screens keep validatePassport so staff
+ * can type whatever is on the document). Returns a code the page translates:
+ *
+ *   short / long / chars — length 6–20, A–Z and 0–9 only
+ *   junk  — obviously made up: no digit at all (a name typed in), one
+ *           character repeated (AAAAAA, 111111), a short block repeated
+ *           (121212, ABCABC), or a straight digit run (123456, 987654)
+ *   sgIc  — looks like a Singapore NRIC/FIN (S/T/F/G/M + 7 digits + letter)
+ *           but the check letter is wrong. The page lets the customer
+ *           continue anyway ("it's a passport"), since a few foreign
+ *           passports could share the shape.
+ */
+export type PassportIssue = 'short' | 'long' | 'chars' | 'junk' | 'sgIc';
+
+export function checkinPassportIssue(passport: string): PassportIssue | null {
+  const s = passport.trim().toUpperCase();
+  if (s.length < 6) return 'short';
+  if (s.length > 20) return 'long';
+  if (!/^[A-Z0-9]+$/.test(s)) return 'chars';
+  if (isJunkId(s)) return 'junk';
+  if (looksLikeSgIc(s) && !isValidSgIc(s)) return 'sgIc';
+  return null;
+}
+
+function isJunkId(s: string): boolean {
+  if (!/\d/.test(s)) return true;
+  if (/^(.{1,3})\1+$/.test(s)) return true;
+  if (/^\d+$/.test(s)) {
+    const steps = Array.from(s).slice(1).map((c, i) => Number(c) - Number(s[i]));
+    if (steps.every((d) => d === 1) || steps.every((d) => d === -1)) return true;
+  }
+  return false;
+}
+
+export function looksLikeSgIc(s: string): boolean {
+  return /^[STFGM]\d{7}[A-Z]$/.test(s);
+}
+
+/**
+ * Singapore NRIC / FIN check letter. Weights 2,7,6,5,4,3,2 · offset +4 for
+ * T/G, +3 for M · sum mod 11 · M counts the index from the other end.
+ * ICA does not publish this; it follows the widely used community
+ * implementation (github.com/samliew/singapore-nric, with tests).
+ */
+export function isValidSgIc(s: string): boolean {
+  if (!looksLikeSgIc(s)) return false;
+  const first = s[0];
+  const weights = [2, 7, 6, 5, 4, 3, 2];
+  const sum = weights.reduce((acc, w, i) => acc + w * Number(s[i + 1]), 0);
+  const offset = first === 'T' || first === 'G' ? 4 : first === 'M' ? 3 : 0;
+  let index = (offset + sum) % 11;
+  if (first === 'M') index = 10 - index;
+  const table =
+    first === 'S' || first === 'T' ? 'JZIHGFEDCBA' : first === 'M' ? 'KLJNPQRTUWX' : 'XWUTRQPNMLK';
+  return table[index] === s[8];
 }
 
 /**

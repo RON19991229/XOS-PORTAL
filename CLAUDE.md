@@ -119,6 +119,11 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 ### i18n
 - `t()` only type-checks keys against `translations.en`. Missing `zh` / `ms` keys fail **silently** at runtime (empty string). **Always update all three language blocks together.**
 
+### Foreigner ID checks (v2.24.5, customer side only)
+- `/checkin/id-input` Foreigner path uses `checkinPassportIssue` (lib/utils.ts): 6–20 A–Z/0–9, rejects junk (no digit, one char repeated, a 1–3 char block repeated, a straight digit run), and checks the Singapore NRIC/FIN check letter when the input is S/T/F/G/M + 7 digits + letter. A failed SG check offers "IT'S A PASSPORT, CONTINUE" because a few foreign passports could share that shape. Admin screens keep the permissive `validatePassport`.
+- A valid MyKad typed on the Foreigner path is switched to Malaysian inside `runCheckinLookup` (Ron: automatic, no going back), so age/guardian checks still run.
+- Foreigners have no age check by design — staff ask in person (Ron, Oct 2026).
+
 ### Malaysian IC validation
 - 3 layers: 12-digit format → valid past DOB (YYMMDD, round-trip check) → valid JPN place-of-birth (BP) code in digits 7–8.
 - `bad_dob` and `bad_pb` errors intentionally show the **same** public message — do not make them distinguishable (anti reverse-engineering).
@@ -142,7 +147,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles (outside the `.ck-fx` scope), staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.24.4**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.24.5**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`. The only intended exceptions are the existing **+ WARNING** / **+ NOTE** buttons on customer detail (Ron wants front desk to be able to warn and annotate). Attention List photos are intentionally **not** blurred in privacy mode (staff must recognise faces).

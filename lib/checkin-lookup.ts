@@ -15,7 +15,7 @@
 
 import { createClient } from './supabase-client';
 import { Lang, t } from './i18n';
-import { parseICDob, calcAge, ageCategory, parseTimestamp } from './utils';
+import { parseICDob, calcAge, ageCategory, parseTimestamp, validateMyIC } from './utils';
 import { safeSession } from './safe-storage';
 import type { Nationality } from './remember-me';
 
@@ -29,6 +29,14 @@ export async function runCheckinLookup(
   nationality: Nationality,
   lang: Lang,
 ): Promise<CheckinLookupResult> {
+  // v2.24.5: a valid Malaysian IC typed on the Foreigner path is quietly
+  // treated as Malaysian (Ron: switch automatically, don't send them back),
+  // so the under-12 / guardian checks below can't be skipped that way.
+  if (nationality === 'foreigner' && validateMyIC(id) === null) {
+    nationality = 'malaysian';
+    safeSession.setItem('xf-nationality', 'malaysian');
+  }
+
   // ============================================================
   // GLOBAL 30-MINUTE COOLDOWN — based on IC, not customer_id.
   // This applies to ANY recent visit (approved, denied_banned,

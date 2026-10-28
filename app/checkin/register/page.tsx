@@ -9,6 +9,9 @@ import {
   buildPhone,
   validatePhone,
   validateMyIC,
+  phoneIssue,
+  PHONE_MIN_DIGITS,
+  PHONE_MAX_DIGITS,
   type AgeCategory,
 } from '@/lib/utils';
 import { safeSession } from '@/lib/safe-storage';
@@ -117,6 +120,14 @@ export default function RegisterPage() {
       ? `${ic.slice(0, 6)}-${ic.slice(6, 8)}-${ic.slice(8)}`
       : ic;
 
+  // v2.24.5: phone errors in the customer's language (were English-only).
+  const phoneError = (digits: string): string | null => {
+    const issue = phoneIssue(digits);
+    if (issue === 'short') return t(lang, 'phoneTooShort').replace('{n}', String(PHONE_MIN_DIGITS));
+    if (issue === 'long') return t(lang, 'phoneTooLong').replace('{n}', String(PHONE_MAX_DIGITS));
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -131,9 +142,9 @@ export default function RegisterPage() {
       return;
     }
 
-    const phoneError = validatePhone(phone.code, phone.digits);
-    if (phoneError) {
-      setError(phoneError);
+    const ownPhoneError = phoneError(phone.digits);
+    if (ownPhoneError) {
+      setError(ownPhoneError);
       return;
     }
 
@@ -147,9 +158,9 @@ export default function RegisterPage() {
       setError(t(lang, 'emergencyRequired'));
       return;
     }
-    const empPhoneError = validatePhone(emergencyPhone.code, emergencyPhone.digits);
+    const empPhoneError = phoneError(emergencyPhone.digits);
     if (empPhoneError) {
-      setError('Emergency: ' + empPhoneError);
+      setError(t(lang, 'errEmergency') + empPhoneError);
       return;
     }
     if (buildPhone(emergencyPhone.code, emergencyPhone.digits) === buildPhone(phone.code, phone.digits)) {
@@ -161,12 +172,12 @@ export default function RegisterPage() {
       // Same masking as the main IC field — a generic message protects against
       // users probing which constraint failed.
       if (validateMyIC(guardianIc) !== null) {
-        setError('Guardian: ' + t(lang, 'invalidIc'));
+        setError(t(lang, 'errGuardian') + t(lang, 'invalidIc'));
         return;
       }
-      const gphoneError = validatePhone(guardianPhone.code, guardianPhone.digits);
+      const gphoneError = phoneError(guardianPhone.digits);
       if (gphoneError) {
-        setError('Guardian Phone: ' + gphoneError);
+        setError(t(lang, 'errGuardian') + gphoneError);
         return;
       }
     }
