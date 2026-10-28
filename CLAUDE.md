@@ -1,6 +1,6 @@
 # CLAUDE.md — XOS Portal (X FITNESS Walk-in Check-in)
 
-Walk-in check-in + real-time entry-control system for **X FITNESS CENTRE** (Iskandar Puteri, Johor, Malaysia · SSM 202503023755).
+Walk-in check-in + real-time entry-control system for **X FITNESS GYM SDN. BHD.** (Iskandar Puteri, Johor, Malaysia · SSM 202601032434 (1694529-U); took over from the partnership X FITNESS CENTRE on 1 Nov 2026).
 Replaces the old Google Form. Core job: recognise returning walk-ins, and **stop banned customers from entering**.
 ~80 walk-ins/day, ~4,200 customers (Sept 2026). Owner/product lead: **Ron** (solo owner-operator, not a full-time dev).
 
@@ -141,7 +141,7 @@ Frontend rollback = Vercel → Deployments → Promote/Instant Rollback. **After
 
 - **Scoped, surgical changes.** Don't touch unrelated areas unless asked. Specifically leave alone unless in scope: landing-page language cards, `.btn-primary` styles (outside the `.ck-fx` scope), staff/admin paths when working on `/checkin`.
 - **Zero-regression bar** before declaring done: `npx tsc --noEmit` (0 errors) + `npm run build` passes. Test SQL against a real PostgreSQL 17 before handing it over when possible.
-- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.24.1**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
+- **Versioning:** strict semver, bump `version` in `package.json` every release (currently **2.24.2**). Also update the header comment version in any file you substantially change (files carry `// vX.Y` headers). Changelog entries go at the top of `README.md` in Chinese (what changed, files touched, deploy steps, whether SQL is needed).
 - **Delivery (Claude Code):** work directly in the repo → commit → push to `main` → Vercel auto-deploys. If a release includes SQL, **tell Ron to run the migration in Supabase SQL Editor first and wait for his confirmation before pushing the frontend.** Never push frontend that depends on unrun SQL.
 - Never do bulk web uploads to GitHub (flattens folders). Git / GitHub Desktop only.
 - Staff access is read-only by design — never add write actions to `/staff/*`. The only intended exceptions are the existing **+ WARNING** / **+ NOTE** buttons on customer detail (Ron wants front desk to be able to warn and annotate). Attention List photos are intentionally **not** blurred in privacy mode (staff must recognise faces).

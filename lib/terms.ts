@@ -1,7 +1,7 @@
 /**
  * X FITNESS — Terms & Conditions (official)
  *
- * Last updated: 2026-05-08 (v2.7.0)
+ * Last updated: 2026-10-29 (v2.24.2) — company → X FITNESS GYM SDN. BHD.
  * Source: User-provided official document.
  *
  * Used by:
@@ -18,9 +18,9 @@ export interface TermsSection {
   items: string[];
 }
 
-export const termsIntro = `This site and all services offered herein are owned and operated by X FITNESS CENTRE (Business Registration No.: 202503023755, Old Registration No.: IP0604759-X) ("the Company").
+export const termsIntro = `This site and all services offered herein are owned and operated by X FITNESS GYM SDN. BHD. (Registration No.: 202601032434 (1694529-U)) ("the Company").
 
-While the official registered name is X FITNESS CENTRE, the brand is commonly referred to as X FITNESS across all signage, marketing materials, and social media platforms.
+While the official registered name is X FITNESS GYM SDN. BHD., the brand is commonly referred to as X FITNESS across all signage, marketing materials, and social media platforms.
 
 By checking and agreeing to these Terms & Conditions, you acknowledge that you have read, understood, and agreed to be bound by the terms set forth below.`;
 

@@ -24,8 +24,8 @@ import { StoredAnswer, QID } from '@/lib/report-config';
 import { formatDateTime } from '@/lib/utils';
 
 // ---- Company letterhead constants (edit here) ------------------------------
-const COMPANY_NAME = 'X FITNESS CENTRE';
-const COMPANY_SSM = 'SSM Reg. No.: 202503023755 (IP0604759-X)';
+const COMPANY_NAME = 'X FITNESS GYM SDN. BHD.';
+const COMPANY_SSM = 'SSM Reg. No.: 202601032434 (1694529-U)';
 const COMPANY_ADDRESS_1 = 'NO 33A & 33B, JALAN BESTARI 12/2, TAMAN NUSA BESTARI,';
 const COMPANY_ADDRESS_2 = '79150 ISKANDAR PUTERI, JOHOR';
 const COMPANY_TEL = '+60 11-7260 3994';

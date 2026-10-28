@@ -5,6 +5,18 @@
 
 ---
 
+## 🏢 v2.24.2 (2026-10-29) — 公司名改成 X FITNESS GYM SDN. BHD.
+
+起因：11 月 1 日起由 X FITNESS GYM SDN. BHD.（202601032434 (1694529-U)）接手营运，取代 partnership X FITNESS CENTRE。Membership T&C 已同步出 V05。
+
+- 客人 T&C（`/checkin/register` 和 `/checkin/reminders` 的 popup）：公司名和注册号改成 Sdn Bhd，拿掉旧号码 202503023755 / IP0604759-X；其他条款没动
+- 投诉打印报告（admin COMPLAINT → 🖨 PRINT）：抬头、页尾和免责声明的公司名、SSM 号码一起改
+
+文件：`lib/terms.ts`、`lib/complaint-print.ts`、`package.json`、`CLAUDE.md`
+部署：**不需要 SQL**，push 到 main 即可。建议 01/11/2026 才 push，不要提前用新公司名。
+
+---
+
 ## 🔧 v2.24.1 (2026-10-12) — 移除规则影片，改回静态图片
 
 起因：很多新客的手机 load 不出规则影片，卡在 /checkin/reminders 进不去。Ron 决定移除影片，所有人都看原本的 4 张规则图片（RE-RACK / NO SLIPPERS / DO / DON'T）。
